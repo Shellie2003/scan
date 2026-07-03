@@ -1,0 +1,6 @@
+{
+  "name": "SCAN",
+  "description": "Recharge code scanner for Madagascar.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
