@@ -2,6 +2,7 @@ package com.example.ui
 
 import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.media.ToneGenerator
 import android.net.Uri
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
@@ -29,6 +31,8 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.data.DatabaseProvider
@@ -42,6 +46,7 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
+import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
@@ -51,6 +56,7 @@ import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.FlashOn
 import androidx.compose.material.icons.filled.FlashOff
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.CheckCircle
 import com.example.ui.util.SimManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -59,6 +65,8 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 
 import com.example.ui.util.LanguageManager
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +84,23 @@ fun ScanScreen() {
     
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
     val currentLang by LanguageManager.currentLang
+
+    var isLifecycleResumed by remember { mutableStateOf(false) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isLifecycleResumed = true
+            } else if (event == Lifecycle.Event.ON_PAUSE) {
+                isLifecycleResumed = false
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        isLifecycleResumed = lifecycleOwner.lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(Unit) {
         cameraPermissionState.launchPermissionRequest()
@@ -120,9 +145,11 @@ fun ScanScreen() {
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun CameraContent(operators: List<Operator>) {
+    val currentOperators by rememberUpdatedState(operators)
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val haptic = LocalHapticFeedback.current
+    val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
     
     var selectedOperator by remember { mutableStateOf<Operator?>(null) }
     var scannedCode by remember { mutableStateOf("") }
@@ -137,6 +164,66 @@ fun CameraContent(operators: List<Operator>) {
     var dialedCodesHistory by remember { mutableStateOf(setOf<String>()) }
     var safetyWarning by remember { mutableStateOf<String?>(null) }
     
+    // Cooldown/delay state (3 seconds pause after USSD execution)
+    var isCooldownActive by remember { mutableStateOf(false) }
+    var cooldownTimeLeft by remember { mutableStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+    
+    // Visual feedback for automatic operator detection
+    var autoDetectedOperator by remember { mutableStateOf<Operator?>(null) }
+    var showAutoDetectedMessageTimer by remember { mutableStateOf(0) }
+    
+    // Visual success state when a valid 14-digit code is detected
+    var showScanSuccessState by remember { mutableStateOf(false) }
+    
+    LaunchedEffect(scannedCode) {
+        val sanitized = scannedCode.replace(" ", "")
+        if (sanitized.length == 14) {
+            val uniqueDigits = sanitized.toSet()
+            if (uniqueDigits.size > 3 && !dialedCodesHistory.contains(sanitized)) {
+                showScanSuccessState = true
+                delay(1500)
+                showScanSuccessState = false
+            }
+        }
+    }
+    
+    LaunchedEffect(showAutoDetectedMessageTimer) {
+        if (showAutoDetectedMessageTimer > 0) {
+            delay(1000)
+            showAutoDetectedMessageTimer--
+            if (showAutoDetectedMessageTimer == 0) {
+                autoDetectedOperator = null
+            }
+        }
+    }
+    
+    // Common USSD execute function with 3s pause
+    fun executeUssd(ussdCode: String, operatorName: String, codeToHistory: String) {
+        if (isCooldownActive) return
+        
+        isCooldownActive = true
+        cooldownTimeLeft = 3
+        dialedCodesHistory = dialedCodesHistory + codeToHistory
+        
+        val intent = SimManager.createCallIntent(context, ussdCode, operatorName)
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(ussdCode)))
+            context.startActivity(dialIntent)
+        }
+        
+        coroutineScope.launch {
+            while (cooldownTimeLeft > 0) {
+                delay(1000)
+                cooldownTimeLeft--
+            }
+            isCooldownActive = false
+            scannedCode = "" // Clear the code and resume scanning only after the 3-second pause
+        }
+    }
+    
     // Request permission to read active SIM card status
     LaunchedEffect(Unit) {
         if (!phoneStatePermissionState.status.isGranted) {
@@ -150,9 +237,11 @@ fun CameraContent(operators: List<Operator>) {
             selectedOperator = operators.first()
         }
     }
-
+    
     // Automatically trigger dial/call with safety checks and SIM card routing
-    LaunchedEffect(scannedCode, selectedOperator, autoValidation) {
+    LaunchedEffect(scannedCode, selectedOperator, autoValidation, isCooldownActive) {
+        if (isCooldownActive) return@LaunchedEffect
+        
         val sanitizedScannedCode = scannedCode.replace(" ", "")
         if (sanitizedScannedCode.length == 14 && selectedOperator != null) {
             val uniqueDigits = sanitizedScannedCode.toSet()
@@ -170,17 +259,7 @@ fun CameraContent(operators: List<Operator>) {
             
             if (autoValidation) {
                 val ussdCode = selectedOperator!!.template.replace("{CODE}", sanitizedScannedCode)
-                dialedCodesHistory = dialedCodesHistory + sanitizedScannedCode
-                
-                val intent = SimManager.createCallIntent(context, ussdCode, selectedOperator!!.name)
-                try {
-                    context.startActivity(intent)
-                    scannedCode = ""
-                } catch (e: Exception) {
-                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(ussdCode)))
-                    context.startActivity(dialIntent)
-                    scannedCode = ""
-                }
+                executeUssd(ussdCode, selectedOperator!!.name, sanitizedScannedCode)
             }
         } else {
             safetyWarning = null
@@ -191,50 +270,79 @@ fun CameraContent(operators: List<Operator>) {
     val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100) }
     
     val cameraController = remember { LifecycleCameraController(context) }
-
+    
     DisposableEffect(lifecycleOwner) {
-        cameraController.apply {
-            cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
-            setTapToFocusEnabled(true)
-            setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
-            setImageAnalysisAnalyzer(ContextCompat.getMainExecutor(context)) { imageProxy ->
-                val mediaImage = imageProxy.image
-                if (mediaImage != null) {
-                    val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
-                    textRecognizer.process(image)
-                        .addOnSuccessListener { visionText ->
-                            // Traverse through all text blocks and lines to find the code
-                            for (block in visionText.textBlocks) {
-                                for (line in block.lines) {
-                                    // Remove common separators (spaces, dots, hyphens, slashes) to find contiguous digits
-                                    val cleaned = line.text.filter { it.isDigit() }
-                                    
-                                    // Precise regex matching exactly 14 digits (not part of longer serial numbers)
-                                    val regex = Regex("(?<!\\d)\\d{14}(?!\\d)")
-                                    val match = regex.find(cleaned)
-                                    if (match != null) {
-                                        val code = match.value
-                                        if (scannedCode != code) {
-                                            scannedCode = code
-                                            toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP)
-                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                            return@addOnSuccessListener
+        val hasPermission = ContextCompat.checkSelfPermission(
+            context,
+            android.Manifest.permission.CAMERA
+        ) == PackageManager.PERMISSION_GRANTED
+
+        if (hasPermission) {
+            cameraController.apply {
+                cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
+                setTapToFocusEnabled(true)
+                setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
+                setImageAnalysisAnalyzer(ContextCompat.getMainExecutor(context)) { imageProxy ->
+                    if (isCooldownActive) {
+                        imageProxy.close()
+                        return@setImageAnalysisAnalyzer
+                    }
+                    
+                    val mediaImage = imageProxy.image
+                    if (mediaImage != null) {
+                        val image = InputImage.fromMediaImage(mediaImage, imageProxy.imageInfo.rotationDegrees)
+                        textRecognizer.process(image)
+                            .addOnSuccessListener { visionText ->
+                                // 1. Auto-detect operator from the frame text to minimize clicks!
+                                val fullText = visionText.text.lowercase()
+                                val detectedOp = currentOperators.find { op ->
+                                    val opName = op.name.lowercase()
+                                    fullText.contains(opName) ||
+                                    (opName == "yas" && (fullText.contains("telma") || fullText.contains("mora") || fullText.contains("ye'low") || fullText.contains("yellow"))) ||
+                                    (opName == "orange" && fullText.contains("benet")) ||
+                                    (opName == "airtel" && fullText.contains("malaza"))
+                                }
+                                if (detectedOp != null && detectedOp != selectedOperator) {
+                                    selectedOperator = detectedOp
+                                    autoDetectedOperator = detectedOp
+                                    showAutoDetectedMessageTimer = 3
+                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                }
+                                
+                                // 2. Traverse through all text blocks and lines to find the code
+                                for (block in visionText.textBlocks) {
+                                    for (line in block.lines) {
+                                        // Precise regex matching exactly 14 digits with optional spacing, dots, or dashes
+                                        val regexPattern = Regex("(?<!\\d)(?:\\d[\\s.-]*){14}(?!\\d)")
+                                        val match = regexPattern.find(line.text)
+                                        if (match != null) {
+                                            val code = match.value.filter { it.isDigit() }
+                                            if (code.length == 14) {
+                                                if (scannedCode != code) {
+                                                    scannedCode = code
+                                                    toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP)
+                                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                                    return@addOnSuccessListener
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                        }
-                        .addOnCompleteListener {
-                            imageProxy.close()
-                        }
-                } else {
-                    imageProxy.close()
+                            .addOnCompleteListener {
+                                imageProxy.close()
+                            }
+                    } else {
+                        imageProxy.close()
+                    }
                 }
+                bindToLifecycle(lifecycleOwner)
             }
-            bindToLifecycle(lifecycleOwner)
         }
         onDispose {
-            cameraController.unbind()
+            if (hasPermission) {
+                cameraController.unbind()
+            }
         }
     }
 
@@ -457,13 +565,16 @@ fun CameraContent(operators: List<Operator>) {
         }
 
         // Camera Preview & Viewfinder Box
+        val previewBorderColor = if (showScanSuccessState) Color(0xFF4CAF50) else brandColor.copy(alpha = 0.4f)
+        val viewfinderBorderColor = if (showScanSuccessState) Color(0xFF4CAF50) else brandColor
+
         Box(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color.Black)
-                .border(2.dp, brandColor.copy(alpha = 0.4f), RoundedCornerShape(24.dp))
+                .border(2.dp, previewBorderColor, RoundedCornerShape(24.dp))
         ) {
             AndroidView(
                 factory = { ctx ->
@@ -480,6 +591,30 @@ fun CameraContent(operators: List<Operator>) {
                     .fillMaxSize()
                     .background(Color.Black.copy(alpha = 0.3f))
             )
+            
+            // Auto-detected operator notification overlay
+            if (autoDetectedOperator != null && !showScanSuccessState) {
+                Surface(
+                    color = brandColor,
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = 16.dp)
+                        .padding(horizontal = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = LanguageManager.getString("operator_auto_detected", "operator" to autoDetectedOperator!!.name),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = accentColor
+                        )
+                    }
+                }
+            }
 
             // Dynamic Scanning Viewfinder Frame
             BoxWithConstraints(
@@ -487,25 +622,27 @@ fun CameraContent(operators: List<Operator>) {
                     .align(Alignment.Center)
                     .size(280.dp, 120.dp)
                     .background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                    .border(2.dp, brandColor, RoundedCornerShape(16.dp))
+                    .border(2.dp, viewfinderBorderColor, RoundedCornerShape(16.dp))
             ) {
                 val heightPx = maxHeight
                 
-                // Beautiful sweeping neon laser scanner
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp)
-                        .offset(y = heightPx * laserYFraction)
-                        .background(brandColor)
-                        .shadow(
-                            elevation = 8.dp,
-                            shape = RoundedCornerShape(1.dp),
-                            ambientColor = brandColor,
-                            spotColor = brandColor,
-                            clip = false
-                        )
-                )
+                // Beautiful sweeping neon laser scanner - hide when scanning is on pause/cooldown or successful
+                if (!isCooldownActive && !showScanSuccessState) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .offset(y = heightPx * laserYFraction)
+                            .background(brandColor)
+                            .shadow(
+                                elevation = 8.dp,
+                                shape = RoundedCornerShape(1.dp),
+                                ambientColor = brandColor,
+                                spotColor = brandColor,
+                                clip = false
+                            )
+                    )
+                }
                 
                 // Tech Viewfinder corner accents for scanner feel
                 Text(
@@ -519,6 +656,78 @@ fun CameraContent(operators: List<Operator>) {
                         .background(Color.Black.copy(alpha = 0.6f), RoundedCornerShape(4.dp))
                         .padding(horizontal = 6.dp, vertical = 2.dp)
                 )
+            }
+
+            // Success Feedback Overlay
+            androidx.compose.animation.AnimatedVisibility(
+                visible = showScanSuccessState,
+                enter = fadeIn() + scaleIn(initialScale = 0.8f),
+                exit = fadeOut() + scaleOut(targetScale = 1.2f),
+                modifier = Modifier.fillMaxSize()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(Color.Black.copy(alpha = 0.75f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        // Pulsing Success Checkmark
+                        val pulseTransition = rememberInfiniteTransition(label = "successPulse")
+                        val pulseScale by pulseTransition.animateFloat(
+                            initialValue = 0.9f,
+                            targetValue = 1.15f,
+                            animationSpec = infiniteRepeatable(
+                                animation = tween(500, easing = FastOutSlowInEasing),
+                                repeatMode = RepeatMode.Reverse
+                            ),
+                            label = "pulseScale"
+                        )
+                        
+                        Box(
+                            modifier = Modifier
+                                .size(96.dp)
+                                .graphicsLayer {
+                                    scaleX = pulseScale
+                                    scaleY = pulseScale
+                                }
+                                .background(Color(0xFF4CAF50).copy(alpha = 0.15f), RoundedCornerShape(48.dp))
+                                .border(3.dp, Color(0xFF4CAF50), RoundedCornerShape(48.dp)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = "Success",
+                                tint = Color(0xFF4CAF50),
+                                modifier = Modifier.size(64.dp)
+                            )
+                        }
+                        
+                        Spacer(modifier = Modifier.height(20.dp))
+                        
+                        Text(
+                            text = LanguageManager.getString("scan_success_msg"),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = Color.White,
+                            textAlign = TextAlign.Center
+                        )
+                        
+                        Spacer(modifier = Modifier.height(6.dp))
+                        
+                        Text(
+                            text = LanguageManager.getString("scan_success_sub"),
+                            style = MaterialTheme.typography.bodyMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF81C784),
+                            textAlign = TextAlign.Center
+                        )
+                    }
+                }
             }
         }
         
@@ -539,6 +748,20 @@ fun CameraContent(operators: List<Operator>) {
             
             if (scannedCode.isNotEmpty()) {
                 Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    IconButton(
+                        onClick = { 
+                            clipboardManager.setText(androidx.compose.ui.text.AnnotatedString(scannedCode))
+                            android.widget.Toast.makeText(context, LanguageManager.getString("copy") + "!", android.widget.Toast.LENGTH_SHORT).show()
+                        },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.ContentCopy,
+                            contentDescription = LanguageManager.getString("copy"),
+                            tint = brandColor,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
                     IconButton(
                         onClick = { isEditing = !isEditing },
                         modifier = Modifier.size(32.dp)
@@ -631,8 +854,11 @@ fun CameraContent(operators: List<Operator>) {
                     .fillMaxWidth()
                     .padding(bottom = 16.dp),
                 shape = RoundedCornerShape(16.dp),
-                color = brandColor.copy(alpha = 0.08f),
-                border = BorderStroke(1.dp, brandColor.copy(alpha = 0.25f))
+                color = if (showScanSuccessState) Color(0xFFE8F5E9) else brandColor.copy(alpha = 0.08f),
+                border = BorderStroke(
+                    width = if (showScanSuccessState) 2.dp else 1.dp,
+                    color = if (showScanSuccessState) Color(0xFF4CAF50) else brandColor.copy(alpha = 0.25f)
+                )
             ) {
                 Box(
                     modifier = Modifier
@@ -670,25 +896,15 @@ fun CameraContent(operators: List<Operator>) {
                 selectedOperator?.let { operator ->
                     val sanitizedScannedCode = scannedCode.replace(" ", "")
                     val ussdCode = operator.template.replace("{CODE}", sanitizedScannedCode)
-                    
-                    dialedCodesHistory = dialedCodesHistory + sanitizedScannedCode
-                    val intent = SimManager.createCallIntent(context, ussdCode, operator.name)
-                    try {
-                        context.startActivity(intent)
-                        scannedCode = ""
-                    } catch (e: Exception) {
-                        val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(ussdCode)))
-                        context.startActivity(dialIntent)
-                        scannedCode = ""
-                    }
+                    executeUssd(ussdCode, operator.name, sanitizedScannedCode)
                 }
             },
-            enabled = selectedOperator != null && scannedCode.length == 14,
+            enabled = selectedOperator != null && scannedCode.length == 14 && !isCooldownActive,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .shadow(
-                    elevation = if (selectedOperator != null && scannedCode.length == 14) 8.dp else 0.dp,
+                    elevation = if (selectedOperator != null && scannedCode.length == 14 && !isCooldownActive) 8.dp else 0.dp,
                     shape = RoundedCornerShape(16.dp),
                     ambientColor = brandColor,
                     spotColor = brandColor
@@ -697,8 +913,8 @@ fun CameraContent(operators: List<Operator>) {
             colors = ButtonDefaults.buttonColors(
                 containerColor = brandColor,
                 contentColor = accentColor,
-                disabledContainerColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
-                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                disabledContainerColor = if (isCooldownActive) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f),
+                disabledContentColor = if (isCooldownActive) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
             )
         ) {
             Row(
@@ -706,7 +922,13 @@ fun CameraContent(operators: List<Operator>) {
                 horizontalArrangement = Arrangement.Center
             ) {
                 Text(
-                    text = if (selectedOperator != null) LanguageManager.getString("recharge_btn_text", "operator" to selectedOperator!!.name.uppercase()) else LanguageManager.getString("recharge_btn_default"),
+                    text = if (isCooldownActive) {
+                        LanguageManager.getString("cooldown_active", "seconds" to cooldownTimeLeft)
+                    } else if (selectedOperator != null) {
+                        LanguageManager.getString("recharge_btn_text", "operator" to selectedOperator!!.name.uppercase())
+                    } else {
+                        LanguageManager.getString("recharge_btn_default")
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )

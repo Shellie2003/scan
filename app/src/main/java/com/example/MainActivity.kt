@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -40,6 +41,7 @@ import com.example.data.AppDatabase
 import com.example.ui.TolotraScreen
 import com.example.ui.OperatorsScreen
 import com.example.ui.ScanScreen
+import com.example.ui.AboutScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.util.LanguageManager
 
@@ -69,7 +71,8 @@ fun MainScreen() {
     val items = listOf(
         NavigationItem("Scan", "nav_scan", Icons.Default.QrCodeScanner),
         NavigationItem("Tolotra", "nav_offers", Icons.Default.List),
-        NavigationItem("Operateur", "nav_operators", Icons.Default.Person)
+        NavigationItem("Operateur", "nav_operators", Icons.Default.Person),
+        NavigationItem("About", "nav_about", Icons.Default.Info)
     )
 
     Scaffold(
@@ -137,6 +140,7 @@ fun MainScreen() {
             composable("Scan") { ScanScreen() }
             composable("Tolotra") { TolotraScreen() }
             composable("Operateur") { OperatorsScreen() }
+            composable("About") { AboutScreen() }
         }
     }
 }

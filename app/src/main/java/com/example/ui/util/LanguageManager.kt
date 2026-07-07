@@ -86,15 +86,26 @@ object LanguageManager {
             "reading_frame" to "CADRE DE LECTURE",
             "detected_recharge_code" to "KAODY RECHARGE HITA",
             "manual_entry_placeholder" to "Soraty eto ny kaody",
-            "recharge_btn_text" to "HAMPIFIDITRA {operator}",
-            "recharge_btn_default" to "HAMPIFIDITRA",
+            "recharge_btn_text" to "HAMPIDITRA {operator}",
+            "recharge_btn_default" to "HAMPIDITRA",
             "plan_internet" to "Internet",
             "plan_appel" to "Antso",
             "plan_sms" to "SMS",
             "step_1_choose_operator" to "Dingana 1 : Safidio ny mpanome tolotra",
             "step_2_frame_digits" to "Dingana 2 : Ampifanaraho ny isa 14",
             "auto_validation_short_desc" to "Mampiditra ny kaody USSD avy hatrany rehefa hita",
-            "type_code_manually" to "Tapez le code manuellement"
+            "type_code_manually" to "Tapez le code manuellement",
+            "cooldown_active" to "Fampiatoana kely: {seconds}s... Andraso azafady",
+            "operator_auto_detected" to "Mpanome tolotra hita: {operator}",
+            "scan_success_msg" to "Kaody hita soa aman-tsara!",
+            "scan_success_sub" to "Hita ny isa 14",
+            "nav_about" to "A propos",
+            "about_title" to "Mombamomba",
+            "about_desc" to "Ity application ity dia namboarina mba hanamoràna ny fampidirana fahana amin'ireo tambazotra misy eto Madagasikara.\nMaimaimpoana ny fampiasana azy, ary tsy haka vola na Ariary amin'ireo mpampiasa ity application ity mihitsy izahay.\nTsy misy tolotra ka mangataka ny Kaody Miafinanao ato, mba hiarovana ny filaminan'ny daloholobe, ary tsy misy tolotra ambadika na (API) mampifandray ny developpeur sy ny mpampiasa ato ka 100 % mahaleo tena ny fampiasàna azy",
+            "about_dev" to "Developer : AinaDigit",
+            "about_compat" to "Android compatible : Android 5.0 (Lollipop) na ambony",
+            "about_contact" to "Contact d'AinaDigit : 0347720585",
+            "about_email" to "Email : shellinopierre@gmail.com"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -151,7 +162,18 @@ object LanguageManager {
             "step_1_choose_operator" to "Étape 1 : Choisissez l'opérateur",
             "step_2_frame_digits" to "Étape 2 : Cadrez les 14 chiffres",
             "auto_validation_short_desc" to "Exécute le code USSD dès qu'il est détecté",
-            "type_code_manually" to "Tapez le code manuellement"
+            "type_code_manually" to "Tapez le code manuellement",
+            "cooldown_active" to "Pause de sécurité : {seconds}s... Veuillez patienter",
+            "operator_auto_detected" to "Opérateur détecté : {operator}",
+            "scan_success_msg" to "Code détecté avec succès !",
+            "scan_success_sub" to "14 chiffres reconnus",
+            "nav_about" to "À propos",
+            "about_title" to "À propos",
+            "about_desc" to "Cette application a été conçue pour faciliter la recharge de crédit sur les réseaux de Madagascar.\nElle est gratuite et nous ne prélèverons jamais d'argent aux utilisateurs.\nAucun service ne vous demandera votre code secret afin de garantir la sécurité, et aucun service d'arrière-plan ou API ne relie le développeur et l'utilisateur, ce qui rend son utilisation 100% autonome.",
+            "about_dev" to "Développeur : AinaDigit",
+            "about_compat" to "Android compatible : Android 5.0 (Lollipop) ou version supérieure",
+            "about_contact" to "Contact d'AinaDigit : 0347720585",
+            "about_email" to "E-mail : shellinopierre@gmail.com"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -208,7 +230,18 @@ object LanguageManager {
             "step_1_choose_operator" to "Step 1: Choose the operator",
             "step_2_frame_digits" to "Step 2: Frame the 14 digits",
             "auto_validation_short_desc" to "Runs the USSD code once it is detected",
-            "type_code_manually" to "Type code manually"
+            "type_code_manually" to "Type code manually",
+            "cooldown_active" to "Security pause: {seconds}s... Please wait",
+            "operator_auto_detected" to "Operator detected: {operator}",
+            "scan_success_msg" to "Code detected successfully!",
+            "scan_success_sub" to "14 digits recognized",
+            "nav_about" to "About",
+            "about_title" to "About",
+            "about_desc" to "This application was designed to make it easy to top up credit across networks in Madagascar.\nIt is free, and we will never charge any money from the users.\nNo feature will ever request your secret code to ensure safety, and there are no background services or APIs connecting the developer and the user, making its use 100% independent.",
+            "about_dev" to "Developer: AinaDigit",
+            "about_compat" to "Android compatible: Android 5.0 (Lollipop) or higher",
+            "about_contact" to "AinaDigit Contact: 0347720585",
+            "about_email" to "E-mail: shellinopierre@gmail.com"
         )
     )
 

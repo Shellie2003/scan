@@ -40,6 +40,39 @@ fun TolotraScreen() {
     val callPermissionState = rememberPermissionState(Manifest.permission.CALL_PHONE)
     val phoneStatePermissionState = rememberPermissionState(Manifest.permission.READ_PHONE_STATE)
     val currentLang by LanguageManager.currentLang
+
+    fun formatUssdForDialing(code: String, operator: String): String {
+        val clean = code.trim()
+        if (clean.isEmpty()) return clean
+        
+        if (clean == "123" || clean == "#123#") {
+            return "#123#"
+        }
+        
+        if (operator.equals("Orange", ignoreCase = true)) {
+            var result = clean
+            while (result.startsWith("*") || result.startsWith("#")) {
+                result = result.substring(1)
+            }
+            while (result.endsWith("#")) {
+                result = result.substring(0, result.length - 1)
+            }
+            return result
+        }
+        
+        if ((clean.startsWith("*") || clean.startsWith("#")) && clean.endsWith("#")) {
+            return clean
+        }
+        
+        var formatted = clean
+        if (!formatted.startsWith("*") && !formatted.startsWith("#")) {
+            formatted = "*$formatted"
+        }
+        if (!formatted.endsWith("#")) {
+            formatted = "$formatted#"
+        }
+        return formatted
+    }
     
     LaunchedEffect(Unit) {
         if (!phoneStatePermissionState.status.isGranted) {
@@ -57,60 +90,115 @@ fun TolotraScreen() {
 
     // Real-world plan codes for Madagascar operators
     val yasOffers = listOf(
-        // Internet (formerly Ye'low)
-        Offer("Net Mora 500", "500 Ar TTC", "130 Mo d'internet", "24 h", "#322*65#", "Yas", "Internet"),
-        Offer("Net One 1000", "1 000 Ar TTC", "1 Go d'internet", "24 h", "#322*64#", "Yas", "Internet"),
-        Offer("Net Mora 2000", "2 000 Ar TTC", "450 Mo d'internet", "48 h", "#322*68#", "Yas", "Internet"),
-        Offer("Net Mora 2500", "2 500 Ar TTC", "2.4 Go d'internet", "24 h", "#322*69#", "Yas", "Internet"),
-        Offer("Net Mora 5000", "5 000 Ar TTC", "3 Go d'internet", "7 j", "#322*70#", "Yas", "Internet"),
+        // Internet
+        Offer("Ye’low 500", "500 Ar", "130 Mo pour surfer sur le réseau N°1 à Madagascar", "24H", "#322*65#", "Yas", "Internet"),
+        Offer("Ye’low One", "1 000 Ar", "1 Go pour surfer sur le réseau N°1 à Madagascar", "24H", "#322*64#", "Yas", "Internet"),
+        Offer("Ye’low 2000", "2 000 Ar", "450 Mo pour surfer sur le réseau N°1 à Madagascar", "48H", "#322*68#", "Yas", "Internet"),
+        Offer("Ye’low 2500", "2 500 Ar", "2,4 Go pour surfer sur le réseau N°1 à Madagascar", "24H", "#322*69#", "Yas", "Internet"),
+        Offer("Net Week 3000", "3 000 Ar", "700 Mo pour surfer sur le réseau N°1 à Madagascar", "7 jours", "#322*70#", "Yas", "Internet"),
+        Offer("Net Week 5000", "5 000 Ar", "1,2 Go pour surfer sur le réseau N°1 à Madagascar", "7 jours", "#322*71#", "Yas", "Internet"),
+        Offer("Net Week 10000", "10 000 Ar", "3 Go pour surfer sur le réseau N°1 à Madagascar", "7 jours", "#322*73#", "Yas", "Internet"),
+        Offer("Net Month 15000", "15 000 Ar", "2,5 Go pour surfer sur le réseau N°1 à Madagascar", "30 jours", "#322*80#", "Yas", "Internet"),
+        Offer("Net Month 25000", "25 000 Ar", "4,5 Go pour surfer sur le réseau N°1 à Madagascar", "30 jours", "#322*8#", "Yas", "Internet"),
+        Offer("Net Month 75000", "75 000 Ar", "15 Go pour surfer sur le réseau N°1 à Madagascar", "30 jours", "#322*13#", "Yas", "Internet"),
+        Offer("Net Month 125000", "125 000 Ar", "29 Go pour surfer sur le réseau N°1 à Madagascar", "30 jours", "#322*17#", "Yas", "Internet"),
+        Offer("Net Month 175000", "175 000 Ar", "58 Go pour surfer sur le réseau N°1 à Madagascar", "30 jours", "#322*19#", "Yas", "Internet"),
+        Offer("Net Month 200000", "200 000 Ar", "100 Go pour surfer sur le réseau N°1 à Madagascar", "30 jours", "#322*15#", "Yas", "Internet"),
         
-        // Appel (Mora Mora)
-        Offer("Mora 500", "500 Ar TTC", "Appels nationaux Mora", "24 h", "#322*20#", "Yas", "Appel"),
-        Offer("Mora 1000", "1 000 Ar TTC", "Appels nationaux + 40 Mo + 40 SMS", "1 j", "#322*21#", "Yas", "Appel"),
-        Offer("Mora +2000", "2 000 Ar TTC", "Appels nationaux + 100 Mo + 50 SMS", "2 j", "#322*32#", "Yas", "Appel"),
-        Offer("Mora +5000", "5 000 Ar TTC", "Appels nationaux + 200 Mo + 100 SMS", "7 j", "#322*35#", "Yas", "Appel"),
-        Offer("International 5000", "5 000 Ar TTC", "15 min d'appels internationaux", "24 h", "#322*52#", "Yas", "Appel"),
-        
+        // Appel (la famille M'ora et les offres First)
+        Offer("M'Ora 500", "500 Ar", "500 Ar de crédit d'appels inclus, 25 Mo, 25 SMS. Avec renouvellement automatique", "1 jour", "#322*20#", "Yas", "Appel"),
+        Offer("M'Ora One", "1 000 Ar", "1000 Ar de crédit d'appels inclus, 40 Mo, 40 SMS. Avec renouvellement automatique", "1 jour", "#322*21#", "Yas", "Appel"),
+        Offer("M'Ora +2000", "2 000 Ar", "2000 Ar de crédit d'appels inclus, 100 Mo d'Internet, 50 SMS. Avec renouvellement automatique", "2 jours", "#322*32#", "Yas", "Appel"),
+        Offer("M'Ora +5000", "5 000 Ar", "5000 Ar de crédit d'appels inclus, 200 Mo d'Internet, 100 SMS. Avec renouvellement automatique", "7 jours", "#322*35#", "Yas", "Appel"),
+        Offer("International", "5 000 Ar", "15 minutes vers l'international*", "24H", "#322*52#", "Yas", "Appel"),
+        Offer("First Premium", "10 000 Ar", "10 000 Ar de crédits d'appels inclus, 350 Mo, 100 SMS vers mon réseau. Avec renouvellement automatique", "30 jours", "#322*91#", "Yas", "Appel"),
+        Offer("First Premium +", "15 000 Ar", "15 000 Ar de crédit d'appels inclus, 5 minutes vers l'international*, 500 Mo d'Internet, 150 SMS vers mon réseau. Avec renouvellement automatique", "30 jours", "#322*92#", "Yas", "Appel"),
+        Offer("First Prestige", "30 000 Ar", "30 000 Ar de crédit d'appels inclus, 10 minutes vers l'international*, 15 Go d'Internet, 400 SMS vers mon réseau. Avec renouvellement automatique", "30 jours", "#322*93#", "Yas", "Appel"),
+        Offer("First Royal", "50 000 Ar", "50 000 Ar de crédit d'appels inclus, 15 minutes vers l'international*, 2 Go d'Internet, 700 SMS vers mon réseau. Avec renouvellement automatique", "30 jours", "#322*95#", "Yas", "Appel"),
+
         // SMS
-        Offer("Yellow SMS 200", "200 Ar TTC", "125 SMS", "24 h", "#322*62#", "Yas", "SMS"),
-        Offer("Yellow SMS 500", "500 Ar TTC", "400 SMS", "3 j", "#322*63#", "Yas", "SMS")
+        Offer("Ye’low 100", "100 Ar", "20 Mo et/ou 20 SMS vers mon réseau", "1 jour", "#322*67#", "Yas", "SMS"),
+        Offer("Ye’low 200", "200 Ar", "40 Mo et/ou 40 SMS vers mon réseau", "24H", "#322*63#", "Yas", "SMS"),
+        Offer("Ye’low SMS", "200 Ar", "100 SMS vers mon réseau, 25 SMS vers tous les réseaux. Limité à 1 souscription/jour", "24H", "#322*62#", "Yas", "SMS"),
+        Offer("Ye’low 1000", "1 000 Ar", "100 SMS et/ou 50 Mo jour + 50 Mo nuit", "30 jours", "#322*66#", "Yas", "SMS")
     )
     
     val orangeOffers = listOf(
-        // Internet (BeNet)
-        Offer("BeNet 500", "500 Ar TTC", "150 Mo d'internet BeNet", "24 h", "#202*1*1#", "Orange", "Internet"),
-        Offer("BeNet 1000", "1 000 Ar TTC", "400 Mo d'internet BeNet", "24 h", "#202*1*2#", "Orange", "Internet"),
-        Offer("BeNet 2000", "2 000 Ar TTC", "1 Go d'internet BeNet", "2 j", "#202*1*3#", "Orange", "Internet"),
-        Offer("BeNet 5000", "5 000 Ar TTC", "3 Go d'internet BeNet", "7 j", "#202*1*4#", "Orange", "Internet"),
-        Offer("BeNet Max", "10 000 Ar TTC", "7 Go d'internet BeNet", "30 j", "#202*1*5#", "Orange", "Internet"),
+        // Internet (Akama & Be Connect)
+        Offer("Akama Go", "100 Ar", "20 Mo. Disponible aussi sur Max it ou composez le 222*1", "24 heures", "222*1", "Orange", "Internet"),
+        Offer("Akama Go+", "250 Ar", "50 Mo. Disponible aussi sur Max it ou composez le 222*11", "24 heures", "222*11", "Orange", "Internet"),
+        Offer("Akama Up", "500 Ar", "130 Mo. Disponible aussi sur Max it ou composez le 222*33", "24 heures", "222*33", "Orange", "Internet"),
+        Offer("Akama Plus", "1 000 Ar", "500 Mo d'Internet + 500 Mo Nuit (22h à 6h). Disponible aussi sur Max it ou composez le 222*7", "24 heures", "222*7", "Orange", "Internet"),
+        Offer("Akama Al 1Go", "1 000 Ar", "1 Go + 1 nuit (22h à 6h). Disponible aussi sur Max it ou composez le 222*01", "1 jour", "222*01", "Orange", "Internet"),
+        Offer("Akama Full", "2 000 Ar", "1 Go + 1 Go Nuit (22h à 6h). Disponible aussi sur Max it ou composez le 222*77", "24 heures", "222*77", "Orange", "Internet"),
+        Offer("Akama Al 2Go", "2 500 Ar", "2 Go + 3 nuits (22h à 6h). Disponible aussi sur Max it ou composez le 222*03", "3 jours", "222*03", "Orange", "Internet"),
+        Offer("Akama Fun", "6 000 Ar", "1.4 Go. Disponible aussi sur Max it ou composez le 222*9", "5 jours", "222*9", "Orange", "Internet"),
+        Offer("Be Connect 450Mo", "2 000 Ar", "450 Mo d'Internet + 150 Mo Spotify + 125 Mo Bonus Orange Money. Disponible aussi sur Max it ou composez le #123#", "7 jours", "123", "Orange", "Internet"),
+        Offer("Be Connect 800Mo", "3 500 Ar", "800 Mo d'Internet + 150 Mo Spotify + 200 Mo Bonus Orange Money. Disponible aussi sur Max it ou composez le #123#", "7 jours", "123", "Orange", "Internet"),
+        Offer("Be Connect 1,2Go", "5 000 Ar", "1.2 Go d'Internet + 150 Mo Spotify + 300 Mo Bonus Orange Money. Disponible aussi sur Max it ou composez le #123#", "7 jours", "123", "Orange", "Internet"),
         
-        // Appel (BeTek)
-        Offer("BeTek 500", "500 Ar TTC", "15 min d'appels nationaux", "24 h", "#202*2*1#", "Orange", "Appel"),
-        Offer("BeTek 1000", "1 000 Ar TTC", "35 min d'appels nationaux", "24 h", "#202*2*2#", "Orange", "Appel"),
-        Offer("BeTek 2000", "2 000 Ar TTC", "80 min d'appels nationaux", "48 h", "#202*2*3#", "Orange", "Appel"),
-        Offer("BeTek 5000", "5 000 Ar TTC", "250 min d'appels nationaux", "7 j", "#202*2*4#", "Orange", "Appel"),
+        // Appel (Be)
+        Offer("Be 500", "500 Ar", "SMS vers Orange : 25, Internet : 25 Mo, Bonus Orange Money : 100 Ar", "24 heures", "224*1*1", "Orange", "Appel"),
+        Offer("Be 1 000", "1 000 Ar", "SMS vers Orange : 40, Internet : 40 Mo, Bonus Orange Money : 200 Ar", "24 heures", "224*1*2", "Orange", "Appel"),
+        Offer("Be 2 000", "2 000 Ar", "SMS vers Orange : 50, Internet : 100 Mo, Bonus Orange Money : 400 Ar", "3 jours", "224*7*1", "Orange", "Appel"),
+        Offer("Be 5 000", "5 000 Ar", "SMS vers Orange : 100, Internet : 200 Mo, Bonus Orange Money : 1 000 Ar", "7 jours", "224*7*2", "Orange", "Appel"),
+        Offer("Be 10 000", "10 000 Ar", "SMS vers Orange : 100, Internet : 300 Mo, Appel International : 5 min, Bonus Orange Money : 2 000 Ar", "30 jours", "224*30*1", "Orange", "Appel"),
+        Offer("Be 20 000", "20 000 Ar", "SMS vers Orange : 200, Internet : 500 Mo, Appel International : 10 min, Bonus Orange Money : 4 000 Ar", "30 jours", "224*30*2", "Orange", "Appel"),
+        Offer("Be 30 000", "30 000 Ar", "SMS vers Orange : 400, Internet : 1 Go, Appel International : 10 min, Bonus Orange Money : 6 000 Ar", "30 jours", "224*30*3", "Orange", "Appel"),
+        Offer("Be 50 000", "50 000 Ar", "SMS vers Orange : 600, Internet : 2 Go, Appel International : 15 min, Bonus Orange Money : 10 000 Ar", "30 jours", "224*30*4", "Orange", "Appel"),
+        Offer("Be 100 000", "100 000 Ar", "SMS vers Orange : 800, Internet : 4 Go, Appel International : 30 min, Bonus Orange Money : 2 000 Ar", "30 jours", "224*30*5", "Orange", "Appel"),
+        Offer("Be 150 000", "150 000 Ar", "SMS vers Orange : 900, Internet : 6 Go, Appel International : 30 min, Bonus Orange Money : 30 000 Ar", "30 jours", "224*30*6", "Orange", "Appel"),
         
-        // SMS (SMS Free)
-        Offer("SMS Free 200", "200 Ar TTC", "100 SMS tout opérateur", "24 h", "#202*3*1#", "Orange", "SMS"),
-        Offer("SMS Free 500", "500 Ar TTC", "300 SMS tout opérateur", "3 j", "#202*3*2#", "Orange", "SMS")
+        // SMS (Be SMS & Free)
+        Offer("Be SMS 1", "250 Ar", "75 SMS vers Orange, 25 SMS vers autres opérateurs. Les SMS vers Orange sont partageables à des numéros Orange. Disponible aussi sur Max it ou composez le 224*1*0", "24 heures", "224*1*0", "Orange", "SMS"),
+        Offer("Be SMS 3", "450 Ar", "150 SMS vers Orange, 50 SMS vers autres opérateurs. Les SMS vers Orange sont partageables à des numéros Orange. Disponible aussi sur Max it ou composez le 224*3*0", "3 jours", "224*3*0", "Orange", "SMS"),
+        Offer("Be SMS 7", "450 Ar", "450 SMS vers Orange. Les SMS vers Orange sont partageables à des numéros Orange. Disponible aussi sur Max it ou composez le 224*7*0", "7 jours", "224*7*0", "Orange", "SMS"),
+        Offer("Be SMS 30", "1 000 Ar", "100 SMS vers tout opérateur. Les SMS vers Orange sont partageables à des numéros Orange. Disponible aussi sur Max it ou composez le 224*30*0", "30 jours", "224*30*0", "Orange", "SMS"),
+        Offer("SMS Free 200", "200 Ar TTC", "100 SMS tout opérateur. Disponible aussi sur Max it ou composez le 202*3*1", "24 h", "202*3*1", "Orange", "SMS"),
+        Offer("SMS Free 500", "500 Ar TTC", "300 SMS tout opérateur. Disponible aussi sur Max it ou composez le 202*3*2", "3 j", "202*3*2", "Orange", "SMS")
     )
     
     val airtelOffers = listOf(
-        // Internet (Airtel Net)
-        Offer("Net 500", "500 Ar TTC", "100 Mo d'internet Airtel", "24 h", "*100*1*1#", "Airtel", "Internet"),
-        Offer("Net 1000", "1 000 Ar TTC", "300 Mo d'internet Airtel", "24 h", "*100*1*2#", "Airtel", "Internet"),
-        Offer("Net 2000", "2 000 Ar TTC", "800 Mo d'internet Airtel", "2 j", "*100*1*3#", "Airtel", "Internet"),
-        Offer("Net 5000", "5 000 Ar TTC", "2.5 Go d'internet Airtel", "7 j", "*100*1*4#", "Airtel", "Internet"),
+        // Internet (Airtel Net Mlay)
+        Offer("Net Mlay Boost-500", "500 Ar", "500 Mo d'Internet", "1 heure", "*114*500*1#", "Airtel", "Internet"),
+        Offer("Net Mlay-100", "100 Ar", "20 Mo d'Internet", "24 heures", "*114*0100#", "Airtel", "Internet"),
+        Offer("Net Mlay-200", "200 Ar", "50 Mo d'Internet", "24 heures", "*114*0200#", "Airtel", "Internet"),
+        Offer("Net Mlay-500", "500 Ar", "130 Mo d'Internet", "2 jours", "*114*500*2#", "Airtel", "Internet"),
+        Offer("Net Mlay-1000", "1 000 Ar", "500 Mo Jour + 500 Mo Nuit d'Internet", "2 jours", "*114*01000#", "Airtel", "Internet"),
+        Offer("Net Mlay-2000", "2 000 Ar", "1 Go Jour + 1 Go Nuit d'Internet", "2 jours", "*114*02000#", "Airtel", "Internet"),
+        Offer("Net Mlay-3000", "3 000 Ar", "1,4 Go d'Internet", "7 jours", "*114*03000#", "Airtel", "Internet"),
+        Offer("Net Mlay-5000", "5 000 Ar", "2,4 Go d'Internet", "7 jours", "*114*05000#", "Airtel", "Internet"),
+        Offer("Net Mlay-6000", "6 000 Ar", "2,9 Go d'Internet", "7 jours", "*114*06000#", "Airtel", "Internet"),
+        Offer("Net Mlay-10000", "10 000 Ar", "4,8 Go d'Internet", "7 jours", "*114*010000#", "Airtel", "Internet"),
+        Offer("Net Mlay-12500", "12 500 Ar", "6 Go d'Internet", "7 jours", "*114*012500#", "Airtel", "Internet"),
+        Offer("Net Mlay-15000", "15 000 Ar", "6 Go d'Internet", "30 jours", "*114*015000#", "Airtel", "Internet"),
+        Offer("Net Mlay-25000", "25 000 Ar", "10 Go d'Internet", "30 jours", "*114*025000#", "Airtel", "Internet"),
+        Offer("Net Mlay-30000", "30 000 Ar", "13 Go d'Internet", "30 jours", "*114*030000#", "Airtel", "Internet"),
+        Offer("Net Mlay-49000", "49 000 Ar", "23,5 Go d'Internet", "30 jours", "*114*049000#", "Airtel", "Internet"),
+        Offer("Net Mlay-80000", "80 000 Ar", "39 Go d'Internet", "30 jours", "*114*080000#", "Airtel", "Internet"),
+        Offer("Net Mlay-125000", "125 000 Ar", "66 Go d'Internet", "30 jours", "*114*0125000#", "Airtel", "Internet"),
+        Offer("Net Mlay-199000", "199 000 Ar", "210 Go d'Internet", "30 jours", "*114*0199000#", "Airtel", "Internet"),
         
-        // Appel (Airtel Malaza)
-        Offer("Malaza 500", "500 Ar TTC", "10 min d'appels nationaux", "24 h", "*100*2*1#", "Airtel", "Appel"),
-        Offer("Malaza 1000", "1 000 Ar TTC", "25 min d'appels nationaux", "24 h", "*100*2*2#", "Airtel", "Appel"),
-        Offer("Malaza 2000", "2 000 Ar TTC", "60 min d'appels nationaux", "48 h", "*100*2*3#", "Airtel", "Appel"),
-        Offer("Malaza 5000", "5 000 Ar TTC", "180 min d'appels nationaux", "7 j", "*100*2*4#", "Airtel", "Appel"),
+        // Appel (Airtel M'Lay Jiaby & M'Lay)
+        Offer("M'Lay Jiaby 500", "500 Ar", "5 min d'appels tout opérateur + 10 SMS tout opérateur + 25 Mo d'Internet", "24 heures", "*100*00500#", "Airtel", "Appel"),
+        Offer("M'Lay Jiaby 1 000", "1 000 Ar", "10 min d'appels tout opérateur + 20 SMS tout opérateur + 50 Mo d'Internet", "24 heures", "*100*001000#", "Airtel", "Appel"),
+        Offer("M'Lay Jiaby 2 000", "2 000 Ar", "20 min d'appels tout opérateur + 50 SMS tout opérateur + 100 Mo d'Internet", "2 jours", "*100*002000#", "Airtel", "Appel"),
+        Offer("M'Lay Jiaby 10 000", "10 000 Ar", "100 min d'appels tout opérateur + 200 SMS tout opérateur + 500 Mo d'Internet", "30 jours", "*100*0010000#", "Airtel", "Appel"),
+        Offer("M'Lay 500", "500 Ar", "500 Ar de crédit d'appels tout opérateur + 25 SMS Airtel + 25 Mo d'Internet", "24 heures", "*100*500#", "Airtel", "Appel"),
+        Offer("M'Lay 1 000", "1 000 Ar", "1 000 Ar de crédit d'appels tout opérateur + 75 SMS Airtel + 75 Mo d'Internet", "24 heures", "*100*1000#", "Airtel", "Appel"),
+        Offer("M'Lay 3 500", "3 500 Ar", "3 500 Ar de crédit d'appels tout opérateur + 100 SMS Airtel + 100 Mo d'Internet", "7 jours", "*100*3500#", "Airtel", "Appel"),
+        Offer("M'Lay 5 000", "5 000 Ar", "5 000 Ar de crédit d'appels tout opérateur + 300 SMS Airtel + 300 Mo d'Internet", "7 jours", "*100*5000#", "Airtel", "Appel"),
+        Offer("M'Lay 10 000", "10 000 Ar", "10 000 Ar de crédit d'appels tout opérateur + 300 SMS Airtel + 350 Mo d'Internet + 5 min à l'international", "30 jours", "*100*10000#", "Airtel", "Appel"),
+        Offer("M'Lay 15 000", "15 000 Ar", "15 000 Ar de crédit d'appels tout opérateur + 500 SMS Airtel + 500 Mo d'Internet + 5 min à l'international", "30 jours", "*100*15000#", "Airtel", "Appel"),
+        Offer("M'Lay 20 000", "20 000 Ar", "20 000 Ar de crédit d'appels tout opérateur + 750 SMS Airtel + 750 Mo d'Internet + 10 min à l'international", "30 jours", "*100*20000#", "Airtel", "Appel"),
+        Offer("M'Lay 30 000", "30 000 Ar", "30 000 Ar de crédit d'appels tout opérateur + 1 000 SMS Airtel + 1 024 Mo d'Internet + 10 min à l'international", "30 jours", "*100*30000#", "Airtel", "Appel"),
+        Offer("M'Lay 50 000", "50 000 Ar", "50 000 Ar de crédit d'appels tout opérateur + 2 000 SMS Airtel + 2 048 Mo d'Internet + 15 min à l'international", "30 jours", "*100*50000#", "Airtel", "Appel"),
         
         // SMS
-        Offer("Airtel SMS 200", "200 Ar TTC", "80 SMS nationaux", "24 h", "*100*3*1#", "Airtel", "SMS"),
-        Offer("Airtel SMS 500", "500 Ar TTC", "250 SMS nationaux", "3 j", "*100*3*2#", "Airtel", "SMS")
+        Offer("SMS M'Lay 100", "100 Ar", "20 SMS vers Airtel", "24 heures", "*100*111#", "Airtel", "SMS"),
+        Offer("SMS M'Lay 200", "200 Ar", "200 SMS vers Airtel + 10 SMS vers tous les opérateurs", "24 heures", "*100*222#", "Airtel", "SMS"),
+        Offer("SMS M'Lay 500", "500 Ar", "1 400 SMS vers Airtel + 70 SMS vers tous les opérateurs", "7 jours", "*100*555#", "Airtel", "SMS"),
+        Offer("SMS M'Lay 1 000", "1 000 Ar", "100 SMS vers tous les opérateurs", "30 jours", "*100*1111#", "Airtel", "SMS")
     )
 
     val offersMap = mapOf("Yas" to yasOffers, "Orange" to orangeOffers, "Airtel" to airtelOffers)
@@ -228,16 +316,17 @@ fun TolotraScreen() {
                             if (autoValidation && !callPermissionState.status.isGranted) {
                                 callPermissionState.launchPermissionRequest()
                             } else {
+                                val formattedCode = formatUssdForDialing(offer.ussdCode, offer.operatorName)
                                 val useDirectCall = autoValidation && callPermissionState.status.isGranted
                                 val intent = if (useDirectCall) {
-                                    SimManager.createCallIntent(context, offer.ussdCode, selectedOperator)
+                                    SimManager.createCallIntent(context, formattedCode, selectedOperator)
                                 } else {
-                                    Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(offer.ussdCode)))
+                                    Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(formattedCode)))
                                 }
                                 try {
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
-                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(offer.ussdCode)))
+                                    val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(formattedCode)))
                                     context.startActivity(dialIntent)
                                 }
                             }
@@ -337,14 +426,14 @@ fun TolotraScreen() {
                                     } else {
                                         val useDirectCall = autoValidation && callPermissionState.status.isGranted
                                         val intent = if (useDirectCall) {
-                                            SimManager.createCallIntent(context, offer.ussdCode, selectedOperator)
+                                            SimManager.createCallIntent(context, formatUssdForDialing(offer.ussdCode, offer.operatorName), selectedOperator)
                                         } else {
-                                            Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(offer.ussdCode)))
+                                            Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(formatUssdForDialing(offer.ussdCode, offer.operatorName))))
                                         }
                                         try {
                                             context.startActivity(intent)
                                         } catch (e: Exception) {
-                                            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(offer.ussdCode)))
+                                            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(formatUssdForDialing(offer.ussdCode, offer.operatorName))))
                                             context.startActivity(dialIntent)
                                         }
                                     }
