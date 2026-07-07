@@ -1,18 +1,18 @@
-name: Build & Release APK
+name: Build and Release Android APK
 
 on:
   push:
     tags:
-      - 'v*' # Se déclenche lorsqu'un tag commençant par 'v' est poussé (ex: v1.0.0)
-  workflow_dispatch: # Permet également de lancer la compilation manuellement depuis GitHub
+      - 'v*' # Mandeha isaky ny misy tag toy ny v1.0, v1.2.0, sns.
+  workflow_dispatch: # Afaka alefa tànana ihany koa mivantana avy ao amin'ny GitHub UI
 
 jobs:
   build:
-    name: Build Signed Release APK
+    name: Build & Sign Release APK
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
@@ -22,36 +22,63 @@ jobs:
           java-version: '17'
           cache: 'gradle'
 
-      - name: Grant Execute Permission to Gradle
-        run: chmod +x gradlew
-
-      - name: Decode Keystore File
-        env:
-          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      # Ny rakitra gradlew dia mety mila "permission" ahafahana mampandeha azy
+      - name: Grant Execute Permission for Gradlew
         run: |
-          # Crée un dossier temporaire et y décode le keystore binaire
-          mkdir -p tmp
-          echo "$KEYSTORE_BASE64" | base64 --decode > tmp/release-key.jks
+          if [ -f "gradlew" ]; then
+            chmod +x gradlew
+          elif [ -f "../gradlew" ]; then
+            chmod +x ../gradlew
+          else
+            echo "Gradlew wrapper not found in root, setting fallback permissions."
+          fi
 
+      # Decrypt-ena ny Keystore avy amin'ny GitHub Secrets ho lasa rakitra .jks indray
+      - name: Decode Keystore File
+        run: |
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/my-release-key.jks
+
+      # Manamboatra ny APK mampiasa ny Gradle
       - name: Build Release APK
-        env:
-          # On injecte les secrets dans l'environnement de build pour Gradle
-          KEYSTORE_FILE_PATH: ../tmp/release-key.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: ./gradlew assembleRelease
+        env:
+          # Raha mampiasa .env na BuildConfig ny fampiharana dia azonao apetraka eto ny tsiambaratelo
+          # GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          # MAPS_API_KEY: ${{ secrets.MAPS_API_KEY }}
+          pass: dummy # Fisorohana fotsiny
 
-      - name: Clean Temporary Keystore
-        if: always()
-        run: rm -rf tmp # Par mesure de sécurité absolue, supprime la clé extraite
+      # Manao sonia ny APK (Signing the APK)
+      - name: Sign Release APK
+        uses: r0adkll/sign-android-release@v1
+        id: sign_app
+        with:
+          releaseDirectory: app/build/outputs/apk/release
+          signingKeyBase64: ${{ secrets.KEYSTORE_BASE64 }}
+          alias: ${{ secrets.KEY_ALIAS }}
+          keyStorePassword: ${{ secrets.KEYSTORE_PASSWORD }}
+          keyPassword: ${{ secrets.KEY_PASSWORD }}
+        env:
+          BUILD_TOOLS_VERSION: "34.0.0"
 
-      - name: Create GitHub Release and Upload APK
+      # Mampakatra ny rakitra APK ao amin'ny workflow mba ho azo alaina (Artifact)
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: ${{ steps.sign_app.outputs.signedReleaseFile }}
+
+      # Mamorona GitHub Release vaovao ary mametraka ny APK any ho any
+      - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: app/build/outputs/apk/release/app-release.apk
+          files: ${{ steps.sign_app.outputs.signedReleaseFile }}
           name: Release ${{ github.ref_name }}
+          body: |
+            ### Scan Fahana Release ${{ github.ref_name }}
+            - Natao sonia soa aman-tsara (Signed APK)
+            - Namboarin'i AinaDigit
+            - Afaka apetraka amin'ny finday Android rehetra.
           draft: false
           prerelease: false
         env:
