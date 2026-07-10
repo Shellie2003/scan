@@ -28,7 +28,7 @@ object DatabaseProvider {
                         val dao = INSTANCE?.operatorDao()
                         dao?.insertOperator(Operator(name = "Yas", template = "#321*{CODE}#"))
                         dao?.insertOperator(Operator(name = "Orange", template = "202{CODE}"))
-                        dao?.insertOperator(Operator(name = "Airtel", template = "*123*{CODE}#"))
+                        dao?.insertOperator(Operator(name = "Airtel", template = "*888*{CODE}#"))
                     }
                 }
 
