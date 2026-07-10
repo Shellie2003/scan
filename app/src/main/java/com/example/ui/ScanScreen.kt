@@ -173,12 +173,13 @@ fun CameraContent(operators: List<Operator>) {
     var autoDetectedOperator by remember { mutableStateOf<Operator?>(null) }
     var showAutoDetectedMessageTimer by remember { mutableStateOf(0) }
     
-    // Visual success state when a valid 14-digit code is detected
+    // Visual success state when a valid code is detected
     var showScanSuccessState by remember { mutableStateOf(false) }
     
-    LaunchedEffect(scannedCode) {
+    LaunchedEffect(scannedCode, selectedOperator) {
         val sanitized = scannedCode.replace(" ", "")
-        if (sanitized.length == 14) {
+        val expectedLength = if (selectedOperator?.name?.equals("Airtel", ignoreCase = true) == true) 15 else 14
+        if (sanitized.length == expectedLength) {
             val uniqueDigits = sanitized.toSet()
             if (uniqueDigits.size > 3 && !dialedCodesHistory.contains(sanitized)) {
                 showScanSuccessState = true
@@ -243,7 +244,8 @@ fun CameraContent(operators: List<Operator>) {
         if (isCooldownActive) return@LaunchedEffect
         
         val sanitizedScannedCode = scannedCode.replace(" ", "")
-        if (sanitizedScannedCode.length == 14 && selectedOperator != null) {
+        val expectedLength = if (selectedOperator?.name?.equals("Airtel", ignoreCase = true) == true) 15 else 14
+        if (sanitizedScannedCode.length == expectedLength && selectedOperator != null) {
             val uniqueDigits = sanitizedScannedCode.toSet()
             if (uniqueDigits.size <= 3) {
                 safetyWarning = LanguageManager.getString("suspicious_code")
@@ -310,14 +312,15 @@ fun CameraContent(operators: List<Operator>) {
                                 }
                                 
                                 // 2. Traverse through all text blocks and lines to find the code
+                                val expectedLength = if (selectedOperator?.name?.equals("Airtel", ignoreCase = true) == true) 15 else 14
                                 for (block in visionText.textBlocks) {
                                     for (line in block.lines) {
-                                        // Precise regex matching exactly 14 digits with optional spacing, dots, or dashes
-                                        val regexPattern = Regex("(?<!\\d)(?:\\d[\\s.-]*){14}(?!\\d)")
+                                        // Precise regex matching exactly expectedLength digits with optional spacing, dots, or dashes
+                                        val regexPattern = Regex("(?<!\\d)(?:\\d[\\s.-]*){$expectedLength}(?!\\d)")
                                         val match = regexPattern.find(line.text)
                                         if (match != null) {
                                             val code = match.value.filter { it.isDigit() }
-                                            if (code.length == 14) {
+                                            if (code.length == expectedLength) {
                                                 if (scannedCode != code) {
                                                     scannedCode = code
                                                     toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP)
@@ -866,13 +869,14 @@ fun CameraContent(operators: List<Operator>) {
                         .padding(vertical = 12.dp, horizontal = 16.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    val groupedCode = remember(scannedCode) {
-                        if (scannedCode.length == 14) {
+                    val groupedCode = remember(scannedCode, selectedOperator) {
+                        val expectedLength = if (selectedOperator?.name?.equals("Airtel", ignoreCase = true) == true) 15 else 14
+                        if (scannedCode.length == expectedLength) {
                             "${scannedCode.substring(0, 4)} ${scannedCode.substring(4, 8)} ${scannedCode.substring(8, 12)} ${scannedCode.substring(12)}"
                         } else if (scannedCode.isNotEmpty()) {
                             scannedCode
                         } else {
-                            "•••• •••• •••• ••"
+                            if (expectedLength == 15) "•••• •••• •••• •••" else "•••• •••• •••• ••"
                         }
                     }
                     
@@ -899,12 +903,12 @@ fun CameraContent(operators: List<Operator>) {
                     executeUssd(ussdCode, operator.name, sanitizedScannedCode)
                 }
             },
-            enabled = selectedOperator != null && scannedCode.length == 14 && !isCooldownActive,
+            enabled = selectedOperator != null && scannedCode.replace(" ", "").length == (if (selectedOperator?.name?.equals("Airtel", ignoreCase = true) == true) 15 else 14) && !isCooldownActive,
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
                 .shadow(
-                    elevation = if (selectedOperator != null && scannedCode.length == 14 && !isCooldownActive) 8.dp else 0.dp,
+                    elevation = if (selectedOperator != null && scannedCode.replace(" ", "").length == (if (selectedOperator?.name?.equals("Airtel", ignoreCase = true) == true) 15 else 14) && !isCooldownActive) 8.dp else 0.dp,
                     shape = RoundedCornerShape(16.dp),
                     ambientColor = brandColor,
                     spotColor = brandColor

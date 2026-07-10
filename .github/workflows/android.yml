@@ -38,6 +38,18 @@ jobs:
           fi
           echo "$KEYSTORE_BASE64" | base64 --decode > app/release.jks
 
+      - name: Verify Keystore Alias (Diagnostic)
+        env:
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        run: |
+          echo "=== Keystore Content Diagnostic ==="
+          if [ -f app/release.jks ]; then
+            keytool -list -v -keystore app/release.jks -storepass "$STORE_PASSWORD" | grep -i "Alias" || echo "Could not parse keystore"
+          else
+            echo "Keystore file not found!"
+          fi
+          echo "==================================="
+
       - name: Grant Execute Permission to Gradlew
         run: chmod +x gradlew
 

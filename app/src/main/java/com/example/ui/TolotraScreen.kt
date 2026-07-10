@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -40,6 +41,7 @@ fun TolotraScreen() {
     val callPermissionState = rememberPermissionState(Manifest.permission.CALL_PHONE)
     val phoneStatePermissionState = rememberPermissionState(Manifest.permission.READ_PHONE_STATE)
     val currentLang by LanguageManager.currentLang
+    var editingOffer by remember { mutableStateOf<Offer?>(null) }
 
     fun formatUssdForDialing(code: String, operator: String): String {
         val clean = code.trim()
@@ -303,6 +305,10 @@ fun TolotraScreen() {
             contentPadding = PaddingValues(top = 16.dp, bottom = 80.dp)
         ) {
             items(offersMap[selectedOperator]?.filter { it.category == selectedCategory } ?: emptyList()) { offer ->
+                val currentUssdCode = remember(offer, editingOffer) {
+                    prefs.getString("custom_ussd_${offer.operatorName}_${offer.category}_${offer.title}", offer.ussdCode) ?: offer.ussdCode
+                }
+
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -316,7 +322,7 @@ fun TolotraScreen() {
                             if (autoValidation && !callPermissionState.status.isGranted) {
                                 callPermissionState.launchPermissionRequest()
                             } else {
-                                val formattedCode = formatUssdForDialing(offer.ussdCode, offer.operatorName)
+                                val formattedCode = formatUssdForDialing(currentUssdCode, offer.operatorName)
                                 val useDirectCall = autoValidation && callPermissionState.status.isGranted
                                 val intent = if (useDirectCall) {
                                     SimManager.createCallIntent(context, formattedCode, selectedOperator)
@@ -419,48 +425,187 @@ fun TolotraScreen() {
                                 )
                             }
                             
-                            Button(
-                                onClick = {
-                                    if (autoValidation && !callPermissionState.status.isGranted) {
-                                        callPermissionState.launchPermissionRequest()
-                                    } else {
-                                        val useDirectCall = autoValidation && callPermissionState.status.isGranted
-                                        val intent = if (useDirectCall) {
-                                            SimManager.createCallIntent(context, formatUssdForDialing(offer.ussdCode, offer.operatorName), selectedOperator)
-                                        } else {
-                                            Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(formatUssdForDialing(offer.ussdCode, offer.operatorName))))
-                                        }
-                                        try {
-                                            context.startActivity(intent)
-                                        } catch (e: Exception) {
-                                            val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(formatUssdForDialing(offer.ussdCode, offer.operatorName))))
-                                            context.startActivity(dialIntent)
-                                        }
-                                    }
-                                },
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = operatorTheme.mainColor,
-                                    contentColor = operatorTheme.accentColor
-                                ),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                                modifier = Modifier.height(32.dp)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Default.Call,
-                                    contentDescription = "Call",
-                                    modifier = Modifier.size(14.dp)
-                                )
-                                Spacer(modifier = Modifier.width(4.dp))
-                                Text(
-                                    text = offer.ussdCode,
-                                    style = MaterialTheme.typography.labelSmall,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                IconButton(
+                                    onClick = { editingOffer = offer },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Edit,
+                                        contentDescription = "Edit Code",
+                                        tint = operatorTheme.mainColor,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Button(
+                                    onClick = {
+                                        if (autoValidation && !callPermissionState.status.isGranted) {
+                                            callPermissionState.launchPermissionRequest()
+                                        } else {
+                                            val useDirectCall = autoValidation && callPermissionState.status.isGranted
+                                            val intent = if (useDirectCall) {
+                                                SimManager.createCallIntent(context, formatUssdForDialing(currentUssdCode, offer.operatorName), selectedOperator)
+                                            } else {
+                                                Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(formatUssdForDialing(currentUssdCode, offer.operatorName))))
+                                            }
+                                            try {
+                                                context.startActivity(intent)
+                                            } catch (e: Exception) {
+                                                val dialIntent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(formatUssdForDialing(currentUssdCode, offer.operatorName))))
+                                                context.startActivity(dialIntent)
+                                            }
+                                        }
+                                    },
+                                    colors = ButtonDefaults.buttonColors(
+                                        containerColor = operatorTheme.mainColor,
+                                        contentColor = operatorTheme.accentColor
+                                    ),
+                                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Call,
+                                        contentDescription = "Call",
+                                        modifier = Modifier.size(14.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = currentUssdCode,
+                                        style = MaterialTheme.typography.labelSmall,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
                             }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (editingOffer != null) {
+        val offer = editingOffer!!
+        val key = "custom_ussd_${offer.operatorName}_${offer.category}_${offer.title}"
+        val currentCustom = prefs.getString(key, offer.ussdCode) ?: offer.ussdCode
+        var textVal by remember(offer) { mutableStateOf(currentCustom) }
+        
+        AlertDialog(
+            onDismissRequest = { editingOffer = null },
+            title = {
+                Text(
+                    text = when (currentLang) {
+                        "mg" -> "Hanova kaody tolotra"
+                        "fr" -> "Modifier le code de l'offre"
+                        else -> "Edit Offer Code"
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = offer.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = operatorTheme.mainColor
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = when (currentLang) {
+                            "mg" -> "Soraty ny kaody USSD vaovao ho an'ity tolotra ity."
+                            "fr" -> "Saisissez le nouveau code USSD pour cette offre."
+                            else -> "Enter the new USSD code for this offer."
+                        },
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = textVal,
+                        onValueChange = { textVal = it },
+                        label = {
+                            Text(
+                                when (currentLang) {
+                                    "mg" -> "Kaody USSD"
+                                    "fr" -> "Code USSD"
+                                    else -> "USSD Code"
+                                }
+                            )
+                        },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = when (currentLang) {
+                            "mg" -> "Kaody natoraly: ${offer.ussdCode}"
+                            "fr" -> "Code par défaut : ${offer.ussdCode}"
+                            else -> "Default code: ${offer.ussdCode}"
+                        },
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val trimmed = textVal.trim()
+                        if (trimmed.isEmpty() || trimmed == offer.ussdCode) {
+                            prefs.edit().remove(key).apply()
+                        } else {
+                            prefs.edit().putString(key, trimmed).apply()
+                        }
+                        editingOffer = null
+                    }
+                ) {
+                    Text(
+                        text = when (currentLang) {
+                            "mg" -> "Tehirizina"
+                            "fr" -> "Enregistrer"
+                            else -> "Save"
+                        },
+                        color = operatorTheme.mainColor
+                    )
+                }
+            },
+            dismissButton = {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    if (currentCustom != offer.ussdCode) {
+                        TextButton(
+                            onClick = {
+                                prefs.edit().remove(key).apply()
+                                editingOffer = null
+                            }
+                        ) {
+                            Text(
+                                text = when (currentLang) {
+                                    "mg" -> "Hamerina"
+                                    "fr" -> "Rétablir"
+                                    else -> "Reset"
+                                },
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+                    TextButton(onClick = { editingOffer = null }) {
+                        Text(
+                            text = when (currentLang) {
+                                "mg" -> "Hanafoana"
+                                "fr" -> "Annuler"
+                                else -> "Cancel"
+                            },
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            }
+        )
     }
 }
