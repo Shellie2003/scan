@@ -34,12 +34,21 @@ groupés — sans jamais avoir à changer d'application.
 - Routage intelligent : un appel, un transfert ou un SMS part de la carte du même
   opérateur que le numéro destinataire lorsqu'elle est présente.
 
-### Messages groupés
-- Sélection multiple de contacts, ajout de numéros à la main, modèles de message
-  réutilisables, personnalisation par `{NAME}` et `{NUMBER}`.
-- Envoi séquentiel avec progression et rapport d'échecs.
+### Messagerie complète
+Trois onglets réunis au même endroit — **Réception**, **Groupé**, **Contacts** :
+- **Boîte de réception** : conversations triées par date, compteur de non-lus,
+  fil de discussion avec bulles, réponse directe, suppression. La liste se met à
+  jour toute seule quand un message arrive (observateur sur la base SMS).
+- L'application peut être définie comme **application SMS par défaut** : elle
+  reçoit alors `SMS_DELIVER`, enregistre elle-même les messages entrants, notifie
+  l'utilisateur, et propose la réponse rapide par message pendant un appel.
+- **Envoi groupé** : sélection multiple de contacts, ajout de numéros à la main,
+  modèles réutilisables, personnalisation par `{NAME}` et `{NUMBER}`, envoi
+  séquentiel avec progression et rapport d'échecs.
 - Répartition automatique par opérateur : chaque destinataire est servi par la
   carte SIM de son propre réseau quand elle est disponible.
+- **Contacts** : la même liste que dans l'onglet Téléphone, pour démarrer une
+  conversation ou un appel sans changer d'application.
 
 ### Forfaits et partage
 - Les forfaits des trois opérateurs sont livrés avec l'application, puis stockés
@@ -66,7 +75,7 @@ Malagasy, français et anglais, changeables à tout moment depuis n'importe quel
 
 ## Permissions demandées
 Caméra (scan), téléphone et appels, état et numéro des SIM, contacts, journal
-d'appels, SMS, notifications (appel entrant).
+d'appels, envoi et lecture des SMS, notifications (appel entrant, message reçu).
 
 ## Construire
 

@@ -67,6 +67,7 @@ object SmsSender {
                 } else {
                     manager.sendMultipartTextMessage(recipient.number, null, parts, null, null)
                 }
+                SmsRepository.storeSent(context, recipient.number, text, subscriptionId)
                 sent += recipient
             } catch (e: Exception) {
                 failed += recipient to (e.message ?: e.javaClass.simpleName)
@@ -75,6 +76,33 @@ object SmsSender {
             if (index < recipients.lastIndex && pause > 0) delay(pause)
         }
         SmsSendReport(sent, failed)
+    }
+
+    /**
+     * Sends one message, used by the conversation screen and the quick answer to
+     * an incoming call. The copy kept in the SMS database is what makes the
+     * message appear in the conversation.
+     */
+    fun sendSingle(
+        context: Context,
+        number: String,
+        body: String,
+        subscriptionId: Int
+    ): Boolean {
+        if (!hasPermission(context) || number.isBlank() || body.isBlank()) return false
+        val manager = smsManager(context, subscriptionId) ?: return false
+        return try {
+            val parts = manager.divideMessage(body)
+            if (parts.size <= 1) {
+                manager.sendTextMessage(number, null, body, null, null)
+            } else {
+                manager.sendMultipartTextMessage(number, null, parts, null, null)
+            }
+            SmsRepository.storeSent(context, number, body, subscriptionId)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     fun personalize(body: String, recipient: SmsRecipient): String = body

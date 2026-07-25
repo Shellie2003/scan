@@ -82,10 +82,9 @@ import kotlinx.coroutines.launch
  */
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun MessagesScreen(
+fun BulkMessagesTab(
     app: AppViewModel,
-    phone: PhoneViewModel,
-    prefilledNumber: String = ""
+    phone: PhoneViewModel
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -96,7 +95,6 @@ fun MessagesScreen(
     )
     LaunchedEffect(Unit) {
         if (!permissions.allPermissionsGranted) permissions.launchMultiplePermissionRequest()
-        phone.refresh()
     }
 
     val contacts by phone.contacts.collectAsState()
@@ -115,13 +113,6 @@ fun MessagesScreen(
     var showTemplateDialog by remember { mutableStateOf(false) }
     var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
     var report by remember { mutableStateOf<SmsSendReport?>(null) }
-
-    LaunchedEffect(prefilledNumber) {
-        if (prefilledNumber.isNotBlank() && selected.none { it.number == prefilledNumber }) {
-            val name = contacts.firstOrNull { NumberUtils.sameNumber(it.number, prefilledNumber) }?.name
-            selected = selected + SmsRecipient(name.orEmpty(), prefilledNumber)
-        }
-    }
 
     val routing = remember(sims, forcedSubscription) { app.routeFor(null, forcedSubscription) }
     val filtered = remember(query, contacts) { ContactsRepository.search(contacts, query) }
@@ -181,29 +172,6 @@ fun MessagesScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = LanguageManager.getString("messages_title"),
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-                Text(
-                    text = LanguageManager.getString("messages_desc"),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            LanguageManager.LanguageSelector()
-        }
-
         if (!SmsSender.hasPermission(context)) {
             EmptyState(
                 icon = Icons.Default.Message,

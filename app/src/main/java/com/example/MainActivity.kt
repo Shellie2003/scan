@@ -43,6 +43,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.telephony.NumberUtils
 import com.example.telephony.PhoneCallService
+import com.example.telephony.SmsDeliverReceiver
 import com.example.ui.ScanScreen
 import com.example.ui.TolotraScreen
 import com.example.ui.components.WithSimRouting
@@ -53,6 +54,7 @@ import com.example.ui.share.ShareScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.MessagesViewModel
 import com.example.viewmodel.PhoneViewModel
 
 class MainActivity : ComponentActivity() {
@@ -60,19 +62,26 @@ class MainActivity : ComponentActivity() {
     /** Number received through a `tel:` intent, so the app can act as the phone app. */
     private var incomingNumber by mutableStateOf("")
 
+    /** Number received through an `sms:` intent, so the app can act as the SMS app. */
+    private var incomingMessageNumber by mutableStateOf("")
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         LanguageManager.init(this)
         PhoneCallService.createChannel(this)
+        SmsDeliverReceiver.createChannel(this)
         incomingNumber = numberFromIntent(intent)
+        incomingMessageNumber = messageNumberFromIntent(intent)
 
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
                 MainScreen(
                     incomingNumber = incomingNumber,
-                    onNumberConsumed = { incomingNumber = "" }
+                    incomingMessageNumber = incomingMessageNumber,
+                    onNumberConsumed = { incomingNumber = "" },
+                    onMessageNumberConsumed = { incomingMessageNumber = "" }
                 )
             }
         }
@@ -82,11 +91,18 @@ class MainActivity : ComponentActivity() {
         super.onNewIntent(intent)
         setIntent(intent)
         incomingNumber = numberFromIntent(intent)
+        incomingMessageNumber = messageNumberFromIntent(intent)
     }
 
     private fun numberFromIntent(intent: Intent?): String {
         val data = intent?.data ?: return ""
         if (data.scheme != "tel") return ""
+        return NumberUtils.sanitize(data.schemeSpecificPart.orEmpty())
+    }
+
+    private fun messageNumberFromIntent(intent: Intent?): String {
+        val data = intent?.data ?: return ""
+        if (data.scheme !in listOf("sms", "smsto", "mms", "mmsto")) return ""
         return NumberUtils.sanitize(data.schemeSpecificPart.orEmpty())
     }
 }
@@ -108,12 +124,15 @@ private val navigationItems = listOf(
 @Composable
 fun MainScreen(
     incomingNumber: String = "",
-    onNumberConsumed: () -> Unit = {}
+    incomingMessageNumber: String = "",
+    onNumberConsumed: () -> Unit = {},
+    onMessageNumberConsumed: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val currentLang by LanguageManager.currentLang
     val app: AppViewModel = viewModel()
     val phone: PhoneViewModel = viewModel()
+    val messages: MessagesViewModel = viewModel()
 
     var messageRecipient by remember { mutableStateOf("") }
 
@@ -201,7 +220,9 @@ fun MainScreen(
                     MessagesScreen(
                         app = app,
                         phone = phone,
-                        prefilledNumber = messageRecipient
+                        messages = messages,
+                        prefilledNumber = messageRecipient,
+                        onCall = { number -> launcher.call(number) }
                     )
                 }
                 composable("Scan") { ScanScreen(app = app, launcher = launcher) }
@@ -224,6 +245,14 @@ fun MainScreen(
         if (incomingNumber.isNotBlank()) {
             navController.navigate("Phone") { launchSingleTop = true }
             onNumberConsumed()
+        }
+    }
+
+    LaunchedEffect(incomingMessageNumber) {
+        if (incomingMessageNumber.isNotBlank()) {
+            messageRecipient = incomingMessageNumber
+            navController.navigate("Messages") { launchSingleTop = true }
+            onMessageNumberConsumed()
         }
     }
 }

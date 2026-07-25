@@ -269,7 +269,18 @@ object LanguageManager {
             "scan_success_sub_n" to "Hita ny isa {count}",
             "ussd_response" to "Valin'ny mpanome tolotra",
             "ussd_failed" to "Tsy nahomby ny USSD. Hanandrana amin'ny clavier?",
-            "confirm_dial_title" to "Hanamarina ny kaody"
+            "confirm_dial_title" to "Hanamarina ny kaody",
+            "tab_inbox" to "Boaty",
+            "tab_bulk" to "Betsaka",
+            "no_conversations" to "Mbola tsy misy resaka",
+            "permission_sms_read" to "Mila alalana amin'ny SMS",
+            "permission_sms_read_desc" to "Mila ity alalana ity mba hanehoana ny hafatra voaray sy ny resaka.",
+            "default_sms_title" to "Ataovy application hafatra fototra",
+            "default_sms_desc" to "Ilaina izany mba handraisana sy hitehirizana ny hafatra rehetra ao anatin'ity application ity.",
+            "default_sms_cta" to "Ataovy fototra",
+            "default_sms_active" to "Ity no application hafatra fototra",
+            "write_message" to "Soraty ny hafatra",
+            "delete_conversation" to "Hofafana ny resaka"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -501,7 +512,18 @@ object LanguageManager {
             "scan_success_sub_n" to "{count} chiffres reconnus",
             "ussd_response" to "Réponse de l'opérateur",
             "ussd_failed" to "Échec de l'USSD. Essayer avec le clavier ?",
-            "confirm_dial_title" to "Confirmer le code"
+            "confirm_dial_title" to "Confirmer le code",
+            "tab_inbox" to "Réception",
+            "tab_bulk" to "Groupé",
+            "no_conversations" to "Aucune conversation",
+            "permission_sms_read" to "Accès aux SMS requis",
+            "permission_sms_read_desc" to "Cette autorisation permet d'afficher vos messages reçus et vos conversations.",
+            "default_sms_title" to "Definir comme application SMS par défaut",
+            "default_sms_desc" to "Necessaire pour recevoir et conserver tous vos messages dans cette application.",
+            "default_sms_cta" to "Définir par défaut",
+            "default_sms_active" to "Application SMS par défaut",
+            "write_message" to "Écrire un message",
+            "delete_conversation" to "Supprimer la conversation"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -733,7 +755,18 @@ object LanguageManager {
             "scan_success_sub_n" to "{count} digits recognized",
             "ussd_response" to "Operator answer",
             "ussd_failed" to "USSD failed. Try with the dialer?",
-            "confirm_dial_title" to "Confirm the code"
+            "confirm_dial_title" to "Confirm the code",
+            "tab_inbox" to "Inbox",
+            "tab_bulk" to "Bulk",
+            "no_conversations" to "No conversation",
+            "permission_sms_read" to "SMS access required",
+            "permission_sms_read_desc" to "This permission shows your received messages and conversations.",
+            "default_sms_title" to "Set as the SMS app",
+            "default_sms_desc" to "Required to receive and keep every message inside this application.",
+            "default_sms_cta" to "Set as default",
+            "default_sms_active" to "Default SMS app",
+            "write_message" to "Write a message",
+            "delete_conversation" to "Delete the conversation"
         )
     )
 
