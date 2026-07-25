@@ -1,85 +1,127 @@
 package com.example
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material3.Icon
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.ui.Modifier
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.room.Room
-import com.example.data.AppDatabase
-import com.example.ui.TolotraScreen
-import com.example.ui.OperatorsScreen
+import com.example.telephony.NumberUtils
+import com.example.telephony.PhoneCallService
 import com.example.ui.ScanScreen
-import com.example.ui.AboutScreen
+import com.example.ui.TolotraScreen
+import com.example.ui.components.WithSimRouting
+import com.example.ui.messages.MessagesScreen
+import com.example.ui.phone.PhoneScreen
+import com.example.ui.settings.SettingsScreen
+import com.example.ui.share.ShareScreen
 import com.example.ui.theme.MyApplicationTheme
 import com.example.ui.util.LanguageManager
+import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.PhoneViewModel
 
 class MainActivity : ComponentActivity() {
 
+    /** Number received through a `tel:` intent, so the app can act as the phone app. */
+    private var incomingNumber by mutableStateOf("")
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        
+
         LanguageManager.init(this)
+        PhoneCallService.createChannel(this)
+        incomingNumber = numberFromIntent(intent)
+
         enableEdgeToEdge()
         setContent {
             MyApplicationTheme {
-                MainScreen()
+                MainScreen(
+                    incomingNumber = incomingNumber,
+                    onNumberConsumed = { incomingNumber = "" }
+                )
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        incomingNumber = numberFromIntent(intent)
+    }
+
+    private fun numberFromIntent(intent: Intent?): String {
+        val data = intent?.data ?: return ""
+        if (data.scheme != "tel") return ""
+        return NumberUtils.sanitize(data.schemeSpecificPart.orEmpty())
+    }
 }
 
-data class NavigationItem(val route: String, val labelKey: String, val icon: androidx.compose.ui.graphics.vector.ImageVector)
+private data class NavigationItem(
+    val route: String,
+    val labelKey: String,
+    val icon: androidx.compose.ui.graphics.vector.ImageVector
+)
+
+private val navigationItems = listOf(
+    NavigationItem("Phone", "nav_phone", Icons.Default.Phone),
+    NavigationItem("Messages", "nav_messages", Icons.Default.Message),
+    NavigationItem("Scan", "nav_scan", Icons.Default.QrCodeScanner),
+    NavigationItem("Tolotra", "nav_offers", Icons.Default.LocalOffer),
+    NavigationItem("Settings", "nav_settings", Icons.Default.Settings)
+)
 
 @Composable
-fun MainScreen() {
+fun MainScreen(
+    incomingNumber: String = "",
+    onNumberConsumed: () -> Unit = {}
+) {
     val navController = rememberNavController()
-    // Observe language state change reactively
     val currentLang by LanguageManager.currentLang
-    
-    val items = listOf(
-        NavigationItem("Scan", "nav_scan", Icons.Default.QrCodeScanner),
-        NavigationItem("Tolotra", "nav_offers", Icons.Default.List),
-        NavigationItem("Operateur", "nav_operators", Icons.Default.Person),
-        NavigationItem("About", "nav_about", Icons.Default.Info)
-    )
+    val app: AppViewModel = viewModel()
+    val phone: PhoneViewModel = viewModel()
+
+    var messageRecipient by remember { mutableStateOf("") }
 
     Scaffold(
         bottomBar = {
             NavigationBar(
                 modifier = Modifier
-                    .padding(horizontal = 16.dp)
+                    .padding(horizontal = 12.dp)
                     .padding(bottom = 12.dp)
                     .navigationBarsPadding()
                     .shadow(
@@ -95,24 +137,25 @@ fun MainScreen() {
             ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()
                 val currentDestination = navBackStackEntry?.destination
-                items.forEach { item ->
+                navigationItems.forEach { item ->
                     val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                    val localizedLabel = LanguageManager.getString(item.labelKey)
+                    val label = LanguageManager.getString(item.labelKey)
                     NavigationBarItem(
-                        icon = { 
+                        icon = {
                             Icon(
-                                imageVector = item.icon, 
-                                contentDescription = localizedLabel,
-                                modifier = Modifier.size(24.dp)
-                            ) 
+                                imageVector = item.icon,
+                                contentDescription = label,
+                                modifier = Modifier.size(22.dp)
+                            )
                         },
-                        label = { 
+                        label = {
                             Text(
-                                text = localizedLabel,
+                                text = label,
                                 fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                                fontSize = 11.sp,
-                                letterSpacing = 0.5.sp
-                            ) 
+                                fontSize = 10.sp,
+                                letterSpacing = 0.2.sp,
+                                maxLines = 1
+                            )
                         },
                         selected = isSelected,
                         colors = NavigationBarItemDefaults.colors(
@@ -136,11 +179,51 @@ fun MainScreen() {
             }
         }
     ) { innerPadding ->
-        NavHost(navController, startDestination = "Scan", Modifier.padding(innerPadding)) {
-            composable("Scan") { ScanScreen() }
-            composable("Tolotra") { TolotraScreen() }
-            composable("Operateur") { OperatorsScreen() }
-            composable("About") { AboutScreen() }
+        WithSimRouting(app) { launcher ->
+            NavHost(
+                navController = navController,
+                startDestination = "Phone",
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable("Phone") {
+                    PhoneScreen(
+                        app = app,
+                        phone = phone,
+                        launcher = launcher,
+                        prefilledNumber = incomingNumber,
+                        onMessage = { number ->
+                            messageRecipient = number
+                            navController.navigate("Messages") { launchSingleTop = true }
+                        }
+                    )
+                }
+                composable("Messages") {
+                    MessagesScreen(
+                        app = app,
+                        phone = phone,
+                        prefilledNumber = messageRecipient
+                    )
+                }
+                composable("Scan") { ScanScreen(app = app, launcher = launcher) }
+                composable("Tolotra") {
+                    TolotraScreen(
+                        app = app,
+                        launcher = launcher,
+                        onOpenShare = {
+                            navController.navigate("Share") { launchSingleTop = true }
+                        }
+                    )
+                }
+                composable("Share") { ShareScreen(app = app, phone = phone, launcher = launcher) }
+                composable("Settings") { SettingsScreen(app = app) }
+            }
+        }
+    }
+
+    LaunchedEffect(incomingNumber) {
+        if (incomingNumber.isNotBlank()) {
+            navController.navigate("Phone") { launchSingleTop = true }
+            onNumberConsumed()
         }
     }
 }

@@ -33,7 +33,7 @@ import com.example.ui.util.LanguageManager
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AboutScreen() {
+fun AboutScreen(onBack: (() -> Unit)? = null) {
     val context = LocalContext.current
     val clipboardManager = LocalClipboardManager.current
     val currentLang by LanguageManager.currentLang
@@ -47,6 +47,17 @@ fun AboutScreen() {
             .background(MaterialTheme.colorScheme.background)
             .verticalScroll(rememberScrollState())
     ) {
+        if (onBack != null) {
+            TextButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) {
+                Icon(
+                    imageVector = Icons.Default.ArrowBack,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(6.dp))
+                Text(LanguageManager.getString("back"))
+            }
+        }
         // Hero Header Section
         Box(
             modifier = Modifier

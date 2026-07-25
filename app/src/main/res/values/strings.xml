@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">SCAN</string>
+    <string name="incoming_call">Appel entrant</string>
+    <string name="ongoing_call">Appel en cours</string>
+    <string name="calls_channel_name">Appels</string>
+    <string name="calls_channel_desc">Notifications des appels entrants et en cours</string>
 </resources>
