@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- In the dark, the launch screen goes darker still instead of glowing. -->
+    <color name="brand_launch_background">#150064</color>
+</resources>

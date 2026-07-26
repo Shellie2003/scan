@@ -66,7 +66,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -82,6 +81,7 @@ import com.example.ui.components.EmptyState
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimLauncher
+import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.PhoneViewModel
@@ -379,8 +379,8 @@ private fun KeypadTab(
                 enabled = input.isNotBlank(),
                 modifier = Modifier.size(64.dp),
                 colors = IconButtonDefaults.filledIconButtonColors(
-                    containerColor = Color(0xFF2E7D32),
-                    contentColor = Color.White
+                    containerColor = MaterialTheme.scanColors.success,
+                    contentColor = MaterialTheme.scanColors.onSuccess
                 )
             ) {
                 Icon(
@@ -574,7 +574,7 @@ private fun CallRow(
             Icon(
                 imageVector = Icons.Default.Call,
                 contentDescription = LanguageManager.getString("call"),
-                tint = Color(0xFF2E7D32)
+                tint = MaterialTheme.scanColors.success
             )
         }
     }
@@ -671,7 +671,7 @@ private fun ContactRow(
             Icon(
                 imageVector = Icons.Default.Call,
                 contentDescription = LanguageManager.getString("call"),
-                tint = Color(0xFF2E7D32)
+                tint = MaterialTheme.scanColors.success
             )
         }
     }

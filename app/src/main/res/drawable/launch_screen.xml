@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    What the phone draws between the tap on the icon and the first frame of the
+    application: the indigo of SCAN and the mark, nothing that moves.
+    Android 12 and later use the system splash screen declared in values-v31.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:drawable="@color/brand_launch_background" />
+    <item
+        android:width="112dp"
+        android:height="112dp"
+        android:drawable="@drawable/ic_scan_mark"
+        android:gravity="center" />
+</layer-list>

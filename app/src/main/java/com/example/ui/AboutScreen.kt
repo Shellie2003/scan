@@ -18,10 +18,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.AnnotatedString
@@ -29,6 +26,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.ui.theme.ScanLogo
+import com.example.ui.theme.ScanTextStyles
+import com.example.ui.theme.ScanWordmark
+import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -39,7 +40,6 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
     val currentLang by LanguageManager.currentLang
 
     val brandColor = MaterialTheme.colorScheme.primary
-    val secondaryColor = MaterialTheme.colorScheme.secondary
 
     Column(
         modifier = Modifier
@@ -118,34 +118,16 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    // Visual Logo Placeholder
-                    Box(
-                        modifier = Modifier
-                            .size(64.dp)
-                            .shadow(4.dp, CircleShape)
-                            .background(
-                                Brush.linearGradient(
-                                    colors = listOf(brandColor, secondaryColor)
-                                ),
-                                CircleShape
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.QrCodeScanner,
-                            contentDescription = "App Icon",
-                            tint = Color.White,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
+                    // The mark of the application, drawn from the theme itself.
+                    ScanLogo(size = 64.dp)
 
                     Column {
+                        ScanWordmark(color = MaterialTheme.colorScheme.onSurface)
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "SCAN FAHANA",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            letterSpacing = 1.sp
+                            text = LanguageManager.getString("app_tagline"),
+                            style = ScanTextStyles.tagline,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
@@ -273,7 +255,7 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
                     Icon(
                         imageVector = Icons.Default.Security,
                         contentDescription = "Secure",
-                        tint = Color(0xFF4CAF50),
+                        tint = MaterialTheme.scanColors.success,
                         modifier = Modifier.size(14.dp)
                     )
                     Text(

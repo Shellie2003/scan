@@ -80,7 +80,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -96,6 +95,8 @@ import com.example.telephony.UssdFormatter
 import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimLauncher
 import com.example.ui.components.SimPickerDialog
+import com.example.ui.theme.scanColors
+import com.example.ui.theme.ScanTextStyles
 import com.example.ui.util.LanguageManager
 import com.example.ui.util.OperatorColorUtils
 import com.example.viewmodel.AppViewModel
@@ -544,8 +545,9 @@ fun CameraContent(
             }
         }
 
-        val previewBorderColor = if (showScanSuccessState) Color(0xFF4CAF50) else brandColor.copy(alpha = 0.4f)
-        val viewfinderBorderColor = if (showScanSuccessState) Color(0xFF4CAF50) else brandColor
+        val cameraSuccess = MaterialTheme.scanColors.cameraSuccess
+        val previewBorderColor = if (showScanSuccessState) cameraSuccess else brandColor.copy(alpha = 0.4f)
+        val viewfinderBorderColor = if (showScanSuccessState) cameraSuccess else brandColor
 
         Box(
             modifier = Modifier
@@ -662,14 +664,14 @@ fun CameraContent(
                                     scaleX = pulseScale
                                     scaleY = pulseScale
                                 }
-                                .background(Color(0xFF4CAF50).copy(alpha = 0.15f), RoundedCornerShape(48.dp))
-                                .border(3.dp, Color(0xFF4CAF50), RoundedCornerShape(48.dp)),
+                                .background(cameraSuccess.copy(alpha = 0.15f), RoundedCornerShape(48.dp))
+                                .border(3.dp, cameraSuccess, RoundedCornerShape(48.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = Color(0xFF4CAF50),
+                                tint = cameraSuccess,
                                 modifier = Modifier.size(64.dp)
                             )
                         }
@@ -690,7 +692,7 @@ fun CameraContent(
                             ),
                             style = MaterialTheme.typography.bodyMedium,
                             fontWeight = FontWeight.Bold,
-                            color = Color(0xFF81C784),
+                            color = MaterialTheme.scanColors.cameraSuccessSoft,
                             textAlign = TextAlign.Center
                         )
                     }
@@ -802,11 +804,7 @@ fun CameraContent(
                         scannedCode = value
                     }
                 },
-                textStyle = MaterialTheme.typography.bodyLarge.copy(
-                    fontFamily = FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    textAlign = TextAlign.Center
-                ),
+                textStyle = ScanTextStyles.code,
                 singleLine = true,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -823,10 +821,18 @@ fun CameraContent(
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
                 shape = RoundedCornerShape(16.dp),
-                color = if (showScanSuccessState) Color(0xFFE8F5E9) else brandColor.copy(alpha = 0.08f),
+                color = if (showScanSuccessState) {
+                    MaterialTheme.scanColors.successContainer.copy(alpha = 0.45f)
+                } else {
+                    brandColor.copy(alpha = 0.08f)
+                },
                 border = BorderStroke(
                     width = if (showScanSuccessState) 2.dp else 1.dp,
-                    color = if (showScanSuccessState) Color(0xFF4CAF50) else brandColor.copy(alpha = 0.25f)
+                    color = if (showScanSuccessState) {
+                        MaterialTheme.scanColors.success
+                    } else {
+                        brandColor.copy(alpha = 0.25f)
+                    }
                 )
             ) {
                 Box(
@@ -844,10 +850,7 @@ fun CameraContent(
                     }
                     Text(
                         text = groupedCode,
-                        style = MaterialTheme.typography.headlineMedium.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.ExtraBold
-                        ),
+                        style = ScanTextStyles.codeLarge,
                         color = if (scannedCode.isNotEmpty()) {
                             MaterialTheme.colorScheme.onSurface
                         } else {

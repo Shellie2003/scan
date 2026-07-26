@@ -58,6 +58,7 @@ import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimLauncher
 import com.example.ui.components.SimPickerDialog
+import com.example.ui.theme.ScanTextStyles
 import com.example.ui.util.LanguageManager
 import com.example.ui.util.OperatorColorUtils
 import com.example.viewmodel.AppViewModel
@@ -295,10 +296,7 @@ fun ShareScreen(
                     } else {
                         formattedCode
                     },
-                    style = MaterialTheme.typography.titleMedium.copy(
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.Bold
-                    ),
+                    style = ScanTextStyles.code,
                     color = if (template.isBlank()) {
                         MaterialTheme.colorScheme.error
                     } else {

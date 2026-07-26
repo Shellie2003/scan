@@ -55,6 +55,7 @@ import com.example.telephony.SmsThread
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimPickerDialog
+import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
@@ -128,7 +129,7 @@ fun ConversationScreen(
                 Icon(
                     imageVector = Icons.Default.Call,
                     contentDescription = LanguageManager.getString("call"),
-                    tint = androidx.compose.ui.graphics.Color(0xFF2E7D32)
+                    tint = MaterialTheme.scanColors.success
                 )
             }
             if (thread.threadId >= 0) {

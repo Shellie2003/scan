@@ -70,6 +70,27 @@ Les codes des forfaits se modifient directement sur chaque fiche.
 > auprès de votre opérateur : l'application affiche un avertissement et demande
 > une confirmation tant que vous ne les avez pas validés.
 
+## Identité visuelle
+SCAN sert trois opérateurs dans le même écran, alors SCAN ne prend la couleur
+d'aucun : la couleur de l'application est un **indigo** qui n'appartient à
+personne, et la couleur d'un opérateur n'apparaît que dans ce qui parle de cet
+opérateur. Le vert veut dire appeler ou réussi, le rouge raccrocher ou problème,
+l'ambre le crédit ; ces couleurs ne décorent jamais.
+
+- Marque : un viseur et la ligne qui le lit — le geste de l'application dessiné
+  en une forme. On la retrouve dans l'icône de lancement, l'écran de démarrage,
+  les notifications et l'écran À propos.
+- Thème clair et thème sombre complets, avec un choix **Système / Clair / Sombre**
+  dans Réglages → Apparence. Les couleurs dynamiques d'Android 12+ sont
+  désactivées par défaut et peuvent être activées au même endroit.
+- Codes de recharge, numéros et montants ont leurs propres styles typographiques :
+  un code est toujours en monospace espacé, pour que deux chiffres ne puissent
+  jamais être lus pour un seul.
+
+Les règles complètes — palette, échelle typographique, formes, usage de la
+marque — sont dans [`docs/IDENTITE.md`](docs/IDENTITE.md), et le code
+correspondant dans `app/src/main/java/com/example/ui/theme/`.
+
 ## Langues
 Malagasy, français et anglais, changeables à tout moment depuis n'importe quel écran.
 
@@ -100,6 +121,7 @@ La CI GitHub (`.github/workflows/android.yml`) produit l'APK signé de release s
 ```
 data/        entités Room (opérateurs, forfaits, SIM, modèles SMS), valeurs d'usine, réglages
 telephony/   SIM, routage, appels, USSD, contacts, journal d'appels, SMS, service d'appel
+ui/theme/    l'identité : palette, typographie, formes, marque, thème clair/sombre
 ui/          écrans Compose : phone/, messages/, share/, settings/, call/, scan, forfaits
 viewmodel/   état partagé entre les écrans
 ```

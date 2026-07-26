@@ -64,7 +64,8 @@ class SmsDeliverReceiver : BroadcastReceiver() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(android.R.drawable.stat_notify_chat)
+            .setSmallIcon(com.example.R.drawable.ic_notification)
+            .setColor(androidx.core.content.ContextCompat.getColor(context, com.example.R.color.brand_indigo))
             .setContentTitle(NumberUtils.formatForDisplay(address))
             .setContentText(body)
             .setStyle(NotificationCompat.BigTextStyle().bigText(body))

@@ -31,14 +31,14 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.MyApplication">
+        android:theme="@style/Theme.Scan">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
             android:launchMode="singleTask"
-            android:theme="@style/Theme.MyApplication"
+            android:theme="@style/Theme.Scan.Launch"
             android:windowSoftInputMode="adjustResize">
 
             <intent-filter>
@@ -85,7 +85,7 @@
             android:launchMode="singleTop"
             android:showOnLockScreen="true"
             android:taskAffinity="com.example.call"
-            android:theme="@style/Theme.MyApplication" />
+            android:theme="@style/Theme.Scan.Call" />
 
         <!-- Incoming text messages. SMS_DELIVER only reaches the default SMS app,
              which is then responsible for storing the message. -->

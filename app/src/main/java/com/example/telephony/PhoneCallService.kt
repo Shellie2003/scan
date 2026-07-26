@@ -73,7 +73,11 @@ class PhoneCallService : InCallService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
+            // The system glyph on purpose: in the status bar, a call must read
+            // as a call. The SCAN colour below is what says which app it is.
             .setSmallIcon(android.R.drawable.stat_sys_phone_call)
+            .setColor(androidx.core.content.ContextCompat.getColor(this, com.example.R.color.brand_indigo))
+            .setColorized(true)
             .setContentTitle(
                 if (ringing) {
                     getString(com.example.R.string.incoming_call)

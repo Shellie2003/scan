@@ -1,10 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    The few SCAN colours the Android framework needs outside Compose: the launch
+    screen and the notifications. The palette itself lives in
+    ui/theme/Color.kt — these values must stay in step with it.
+-->
 <resources>
-    <color name="purple_200">#FFBB86FC</color>
-    <color name="purple_500">#FF6200EE</color>
-    <color name="purple_700">#FF3700B3</color>
-    <color name="teal_200">#FF03DAC5</color>
-    <color name="teal_700">#FF018786</color>
+    <color name="brand_indigo">#4A3AD0</color>
+    <color name="brand_indigo_dark">#26109C</color>
+    <color name="brand_indigo_deep">#150064</color>
+    <color name="brand_amber">#FFB877</color>
+
+    <!-- Background of the launch screen, light mode (values-night overrides it). -->
+    <color name="brand_launch_background">#26109C</color>
+
+    <color name="surface_light">#FBF8FF</color>
+    <color name="surface_dark">#131318</color>
+
     <color name="black">#FF000000</color>
     <color name="white">#FFFFFFFF</color>
 </resources>

@@ -1,6 +1,8 @@
 package com.example.ui.settings
 
 import android.Manifest
+import android.os.Build
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -37,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -52,6 +55,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.example.data.AppSettings
 import com.example.data.model.MessageTemplate
@@ -62,6 +66,8 @@ import com.example.telephony.SimCard
 import com.example.telephony.SimManager
 import com.example.ui.AboutScreen
 import com.example.ui.components.SectionHeader
+import com.example.ui.theme.ThemeController
+import com.example.ui.theme.ThemeMode
 import com.example.ui.util.LanguageManager
 import com.example.ui.util.OperatorColorUtils
 import com.example.viewmodel.AppViewModel
@@ -293,6 +299,9 @@ fun SettingsScreen(app: AppViewModel) {
             modifier = Modifier.padding(vertical = 8.dp)
         )
 
+        // ------------------------------------------------------------ appearance
+        AppearanceSection()
+
         // ----------------------------------------------------------------- plans
         SectionHeader(LanguageManager.getString("section_offers"))
         TextButton(onClick = { confirmRestoreOffers = true }) {
@@ -505,6 +514,78 @@ private fun historyKindLabel(kind: String): String = when (kind) {
     com.example.data.model.ScanHistory.KIND_TRANSFER -> LanguageManager.getString("history_transfer")
     com.example.data.model.ScanHistory.KIND_SMS -> LanguageManager.getString("history_sms")
     else -> LanguageManager.getString("history_recharge")
+}
+
+/**
+ * Light or dark, and whether SCAN keeps its own colours.
+ *
+ * The choice is applied at once through `ThemeController`, which every screen —
+ * the call screen included — reads.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AppearanceSection() {
+    val context = LocalContext.current
+    val mode by ThemeController.mode
+    val dynamic by ThemeController.dynamicColors
+
+    SectionHeader(LanguageManager.getString("section_appearance"))
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        val options = listOf(
+            ThemeMode.SYSTEM to LanguageManager.getString("theme_system"),
+            ThemeMode.LIGHT to LanguageManager.getString("theme_light"),
+            ThemeMode.DARK to LanguageManager.getString("theme_dark")
+        )
+        options.forEach { (value, label) ->
+            val selected = mode == value
+            Surface(
+                onClick = { ThemeController.setMode(context, value) },
+                modifier = Modifier.weight(1f),
+                shape = MaterialTheme.shapes.small,
+                color = if (selected) {
+                    MaterialTheme.colorScheme.primaryContainer
+                } else {
+                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                },
+                border = if (selected) {
+                    BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                } else {
+                    null
+                }
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+                    textAlign = TextAlign.Center,
+                    color = if (selected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 12.dp)
+                )
+            }
+        }
+    }
+
+    // The wallpaper palette only exists from Android 12 on.
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        SettingSwitch(
+            title = LanguageManager.getString("dynamic_colors"),
+            description = LanguageManager.getString("dynamic_colors_desc"),
+            checked = dynamic,
+            onCheckedChange = { ThemeController.setDynamicColors(context, it) }
+        )
+    }
 }
 
 @Composable

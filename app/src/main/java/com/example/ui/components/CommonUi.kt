@@ -39,7 +39,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -47,6 +46,7 @@ import com.example.data.model.Operator
 import com.example.telephony.RoutingStatus
 import com.example.telephony.SimCard
 import com.example.telephony.SimRouting
+import com.example.ui.theme.ScanTextStyles
 import com.example.ui.util.LanguageManager
 
 /**
@@ -284,10 +284,7 @@ fun ConfirmCodeDialog(
                 ) {
                     Text(
                         text = code,
-                        style = MaterialTheme.typography.titleMedium.copy(
-                            fontFamily = FontFamily.Monospace,
-                            fontWeight = FontWeight.Bold
-                        ),
+                        style = ScanTextStyles.code,
                         textAlign = TextAlign.Center,
                         modifier = Modifier
                             .fillMaxWidth()

@@ -53,7 +53,9 @@ import com.example.telephony.CallSnapshot
 import com.example.telephony.NumberUtils
 import com.example.telephony.OngoingCallStore
 import com.example.ui.components.InitialsAvatar
-import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.ScanTheme
+import com.example.ui.theme.ThemeController
+import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
 import kotlinx.coroutines.delay
 
@@ -67,8 +69,10 @@ class InCallActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showOverLockScreen()
+        LanguageManager.init(this)
+        ThemeController.init(this)
         setContent {
-            MyApplicationTheme {
+            ScanTheme {
                 InCallScreen(onFinished = { finish() })
             }
         }
@@ -216,20 +220,21 @@ fun InCallScreen(onFinished: () -> Unit) {
                 if (call.isRinging) {
                     BigCallButton(
                         icon = Icons.Default.CallEnd,
-                        color = Color(0xFFC62828),
+                        color = MaterialTheme.scanColors.hangUp,
                         description = LanguageManager.getString("decline"),
                         onClick = { OngoingCallStore.reject(call.id) }
                     )
                     BigCallButton(
                         icon = Icons.Default.Call,
-                        color = Color(0xFF2E7D32),
+                        color = MaterialTheme.scanColors.success,
+                        contentColor = MaterialTheme.scanColors.onSuccess,
                         description = LanguageManager.getString("answer"),
                         onClick = { OngoingCallStore.answer(call.id) }
                     )
                 } else {
                     BigCallButton(
                         icon = Icons.Default.CallEnd,
-                        color = Color(0xFFC62828),
+                        color = MaterialTheme.scanColors.hangUp,
                         description = LanguageManager.getString("hang_up"),
                         onClick = { OngoingCallStore.hangUp(call.id) }
                     )
@@ -302,6 +307,7 @@ private fun BigCallButton(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     color: Color,
     description: String,
+    contentColor: Color = Color.White,
     onClick: () -> Unit
 ) {
     FilledIconButton(
@@ -309,7 +315,7 @@ private fun BigCallButton(
         modifier = Modifier.size(72.dp),
         colors = IconButtonDefaults.filledIconButtonColors(
             containerColor = color,
-            contentColor = Color.White
+            contentColor = contentColor
         )
     ) {
         Icon(

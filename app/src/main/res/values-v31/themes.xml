@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    Android 12 and later draw the launch screen themselves, from these
+    attributes, and ignore the windowBackground of values/themes.xml.
+-->
+<resources>
+
+    <style name="Theme.Scan.Launch" parent="Theme.Scan">
+        <item name="android:windowSplashScreenBackground">@color/brand_launch_background</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/ic_scan_mark</item>
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+</resources>

@@ -51,7 +51,8 @@ import com.example.ui.messages.MessagesScreen
 import com.example.ui.phone.PhoneScreen
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.share.ShareScreen
-import com.example.ui.theme.MyApplicationTheme
+import com.example.ui.theme.ScanTheme
+import com.example.ui.theme.ThemeController
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
@@ -69,6 +70,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         LanguageManager.init(this)
+        ThemeController.init(this)
         PhoneCallService.createChannel(this)
         SmsDeliverReceiver.createChannel(this)
         incomingNumber = numberFromIntent(intent)
@@ -76,7 +78,7 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
         setContent {
-            MyApplicationTheme {
+            ScanTheme {
                 MainScreen(
                     incomingNumber = incomingNumber,
                     incomingMessageNumber = incomingMessageNumber,
@@ -151,7 +153,7 @@ fun MainScreen(
                         spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
                     )
                     .clip(RoundedCornerShape(24.dp)),
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.95f),
+                containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.97f),
                 tonalElevation = 8.dp
             ) {
                 val navBackStackEntry by navController.currentBackStackEntryAsState()

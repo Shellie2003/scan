@@ -105,6 +105,27 @@ object AppSettings {
         prefs(context).edit().putLong("bulk_sms_delay", value).apply()
     }
 
+    // ------------------------------------------------------------------ look
+
+    /** `system`, `light` or `dark` — see `ThemeMode`. */
+    fun themeMode(context: Context): String =
+        prefs(context).getString("theme_mode", "system") ?: "system"
+
+    fun setThemeMode(context: Context, value: String) {
+        prefs(context).edit().putString("theme_mode", value).apply()
+    }
+
+    /**
+     * Off by default: SCAN keeps its own colours unless the user asks for the
+     * palette of their wallpaper (Android 12+).
+     */
+    fun dynamicColors(context: Context): Boolean =
+        prefs(context).getBoolean("dynamic_colors", false)
+
+    fun setDynamicColors(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("dynamic_colors", value).apply()
+    }
+
     // ------------------------------------------------------------------- misc
 
     fun dialerPromptDismissed(context: Context): Boolean =
