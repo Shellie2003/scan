@@ -21,6 +21,9 @@ interface ScanHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertHistory(history: ScanHistory)
 
+    @Query("DELETE FROM scan_history WHERE id = :id")
+    suspend fun deleteById(id: Int)
+
     @Query("DELETE FROM scan_history")
     suspend fun clear()
 }

@@ -226,6 +226,11 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    /** Removes one line of the history — the user decides what is kept. */
+    fun deleteHistory(entry: ScanHistory) {
+        viewModelScope.launch { historyDao.deleteById(entry.id) }
+    }
+
     fun clearHistory() {
         viewModelScope.launch { historyDao.clear() }
     }

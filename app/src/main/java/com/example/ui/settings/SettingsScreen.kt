@@ -405,8 +405,20 @@ fun SettingsScreen(app: AppViewModel) {
                             android.text.format.DateUtils.MINUTE_IN_MILLIS
                         ).toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.align(Alignment.CenterVertically)
                     )
+                    IconButton(
+                        onClick = { app.deleteHistory(entry) },
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = LanguageManager.getString("delete"),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
                 }
             }
             TextButton(onClick = { app.clearHistory() }) {
@@ -740,6 +752,11 @@ private fun OperatorEditorDialog(
                 Field(transfer, LanguageManager.getString("transfer_code")) { transfer = it }
                 Field(share, LanguageManager.getString("share_code")) { share = it }
                 Field(withdraw, LanguageManager.getString("withdraw_code")) { withdraw = it }
+                Text(
+                    text = LanguageManager.getString("placeholders_hint"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Field(service, LanguageManager.getString("service_number")) { service = it }
                 Field(prefixes, LanguageManager.getString("prefixes")) { prefixes = it }
                 Field(keywords, LanguageManager.getString("keywords")) { keywords = it }

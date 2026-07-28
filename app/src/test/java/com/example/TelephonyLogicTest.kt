@@ -101,6 +101,30 @@ class TelephonyLogicTest {
     }
 
     @Test
+    fun `a placeholder written twice is filled twice`() {
+        // Orange repeats the number of the cashpoint inside its withdrawal code.
+        val filled = UssdFormatter.fill(
+            template = "#144*1*{NUMBER}*{NUMBER}*{AMOUNT}#",
+            number = "0341234567",
+            amount = "20000"
+        )
+        assertEquals("#144*1*0341234567*0341234567*20000#", filled)
+    }
+
+    @Test
+    fun `a withdrawal code never carries a secret code`() {
+        // {PIN} left empty is not a bug: the operator asks for it in its own
+        // prompt, and the application must never build it into a string.
+        val filled = UssdFormatter.fill(
+            template = "#111*4*{NUMBER}*{AMOUNT}#",
+            number = "0341234567",
+            amount = "5000"
+        )
+        assertFalse(filled.contains("{PIN}"))
+        assertEquals("#111*4*0341234567*5000#", filled)
+    }
+
+    @Test
     fun `transfer templates fill every placeholder`() {
         val filled = UssdFormatter.fill(
             template = "#321*{NUMBER}*{AMOUNT}*{PIN}#",

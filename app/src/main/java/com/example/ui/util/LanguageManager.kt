@@ -332,7 +332,9 @@ object LanguageManager {
             "message_sound" to "Feon'ny hafatra",
             "sound_default" to "Feo mahazatra",
             "ringtone_permission" to "Mila alalana hanova ny feon'ny finday. Omeo alalana eo amin'ny pejy manaraka.",
-            "contact_photo" to "Sary"
+            "contact_photo" to "Sary",
+            "swipe_to_answer" to "Sintono ankavanana raha hamaly, ankavia raha handà",
+            "placeholders_hint" to "Ampiasao {NUMBER} sy {AMOUNT}. Azo soratana in-droa ny {NUMBER} raha miverina ao amin'ny kaody (Orange)."
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",

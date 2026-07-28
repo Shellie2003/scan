@@ -5,10 +5,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.LocalOffer
@@ -31,9 +34,11 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -334,6 +339,45 @@ private fun ScanBottomBar(
         navigationItems.forEach { item ->
             val selected = isSelected(item.route)
             val label = LanguageManager.getString(item.labelKey)
+
+            // The scan is what the application is named after and what is
+            // reached for in a shop, in a hurry: it is a button among tabs.
+            if (item.route == Routes.SCAN) {
+                NavigationBarItem(
+                    icon = {
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .shadow(
+                                    elevation = 8.dp,
+                                    shape = CircleShape,
+                                    ambientColor = MaterialTheme.colorScheme.primary,
+                                    spotColor = MaterialTheme.colorScheme.primary
+                                )
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = item.icon,
+                                contentDescription = label,
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    },
+                    label = null,
+                    alwaysShowLabel = false,
+                    selected = selected,
+                    colors = NavigationBarItemDefaults.colors(
+                        // The circle already says where it is: no pill behind it.
+                        indicatorColor = Color.Transparent
+                    ),
+                    onClick = { onSelect(item.route) }
+                )
+                return@forEach
+            }
+
             NavigationBarItem(
                 icon = {
                     Icon(
