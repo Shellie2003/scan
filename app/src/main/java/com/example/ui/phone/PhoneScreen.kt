@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,14 +39,20 @@ import androidx.compose.material.icons.filled.CallMissed
 import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Message
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
@@ -127,6 +134,9 @@ fun PhoneScreen(
     val permissions = rememberMultiplePermissionsState(
         buildList {
             add(Manifest.permission.READ_CONTACTS)
+            // Asked together with the read: one dialog for the contacts, and
+            // creating or editing one never stops on a refusal later.
+            add(Manifest.permission.WRITE_CONTACTS)
             add(Manifest.permission.READ_CALL_LOG)
             add(Manifest.permission.READ_PHONE_STATE)
             add(Manifest.permission.CALL_PHONE)
@@ -142,6 +152,12 @@ fun PhoneScreen(
     var tab by remember { mutableStateOf(PhoneTab.RECENTS) }
     var input by remember { mutableStateOf("") }
     var showKeypad by remember { mutableStateOf(false) }
+
+    // Editing a contact: null means nothing open, a Contact means it is being
+    // changed, and the "new contact" case is carried by [creatingContact].
+    var editingContact by remember { mutableStateOf<Contact?>(null) }
+    var creatingContact by remember { mutableStateOf(false) }
+    var deletingContact by remember { mutableStateOf<Contact?>(null) }
 
     // A `tel:` intent, or the phone button of another app, opens the keypad
     // ready to dial — even on the same number twice in a row.
@@ -218,7 +234,22 @@ fun PhoneScreen(
                         hasPermission = ContactsRepository.hasPermission(context),
                         onRequestPermission = { permissions.launchMultiplePermissionRequest() },
                         onCall = { launcher.call(it) },
-                        onMessage = onMessage
+                        onMessage = onMessage,
+                        onCreate = {
+                            if (ContactsRepository.hasWritePermission(context)) {
+                                creatingContact = true
+                            } else {
+                                permissions.launchMultiplePermissionRequest()
+                            }
+                        },
+                        onEdit = { contact ->
+                            if (ContactsRepository.hasWritePermission(context)) {
+                                editingContact = contact
+                            } else {
+                                permissions.launchMultiplePermissionRequest()
+                            }
+                        },
+                        onDelete = { contact -> deletingContact = contact }
                     )
 
                     PhoneTab.FAVORITES -> FavoritesTab(
@@ -242,6 +273,33 @@ fun PhoneScreen(
                 contentDescription = LanguageManager.getString("open_keypad")
             )
         }
+    }
+
+    val editorContact = editingContact
+    if (creatingContact || editorContact != null) {
+        ContactEditorSheet(
+            contact = editorContact,
+            onDismiss = {
+                creatingContact = false
+                editingContact = null
+            },
+            onSaved = {
+                creatingContact = false
+                editingContact = null
+                phone.refresh()
+            }
+        )
+    }
+
+    deletingContact?.let { contact ->
+        DeleteContactDialog(
+            contact = contact,
+            onDismiss = { deletingContact = null },
+            onDeleted = {
+                deletingContact = null
+                phone.refresh()
+            }
+        )
     }
 
     if (showKeypad) {
@@ -703,7 +761,10 @@ private fun ContactsTab(
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
     onCall: (String) -> Unit,
-    onMessage: (String) -> Unit
+    onMessage: (String) -> Unit,
+    onCreate: () -> Unit,
+    onEdit: (Contact) -> Unit,
+    onDelete: (Contact) -> Unit
 ) {
     if (!hasPermission) {
         EmptyState(
@@ -731,20 +792,57 @@ private fun ContactsTab(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
-        if (filtered.isEmpty()) {
-            EmptyState(
-                icon = Icons.Default.Person,
-                title = LanguageManager.getString("no_contacts")
-            )
-        } else {
-            LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
-                items(filtered, key = { it.id.toString() + it.number }) { contact ->
-                    ContactRow(
-                        contact = contact,
-                        onCall = { onCall(contact.number) },
-                        onMessage = { onMessage(contact.number) }
+        LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
+            // At the top of the list, where a contact is looked for and not found.
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(onClick = onCreate)
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.PersonAdd,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(
+                        text = LanguageManager.getString("new_contact"),
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
                     )
                 }
+            }
+
+            if (filtered.isEmpty()) {
+                item {
+                    EmptyState(
+                        icon = Icons.Default.Person,
+                        title = LanguageManager.getString("no_contacts")
+                    )
+                }
+            }
+
+            items(filtered, key = { it.id.toString() + it.number }) { contact ->
+                ContactRow(
+                    contact = contact,
+                    onCall = { onCall(contact.number) },
+                    onMessage = { onMessage(contact.number) },
+                    onEdit = { onEdit(contact) },
+                    onDelete = { onDelete(contact) }
+                )
             }
         }
     }
@@ -770,44 +868,110 @@ private fun rememberNumberCopier(number: String): () -> Unit {
 private fun ContactRow(
     contact: Contact,
     onCall: () -> Unit,
-    onMessage: () -> Unit
+    onMessage: () -> Unit,
+    onEdit: (() -> Unit)? = null,
+    onDelete: (() -> Unit)? = null
 ) {
     val copy = rememberNumberCopier(contact.number)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .combinedClickable(onClick = onCall, onLongClick = copy)
-            .padding(horizontal = 16.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        InitialsAvatar(text = contact.initials)
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = contact.name,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = NumberUtils.formatForDisplay(contact.number),
-                style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+    // A long press opens what can be done with a contact. Where the row is only
+    // a suggestion — under the keypad — it stays a shortcut to copy the number.
+    val hasMenu = onEdit != null || onDelete != null
+    var menuOpen by remember { mutableStateOf(false) }
+
+    Box {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = onCall,
+                    onLongClick = { if (hasMenu) menuOpen = true else copy() }
+                )
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            InitialsAvatar(text = contact.initials)
+            Spacer(Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = contact.name.ifBlank {
+                        NumberUtils.formatForDisplay(contact.number)
+                    },
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                Text(
+                    text = NumberUtils.formatForDisplay(contact.number),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            IconButton(onClick = onMessage) {
+                Icon(
+                    imageVector = Icons.Default.Message,
+                    contentDescription = LanguageManager.getString("send_message"),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+            IconButton(onClick = onCall) {
+                Icon(
+                    imageVector = Icons.Default.Call,
+                    contentDescription = LanguageManager.getString("call"),
+                    tint = MaterialTheme.scanColors.success
+                )
+            }
+            if (hasMenu) {
+                IconButton(onClick = { menuOpen = true }) {
+                    Icon(
+                        imageVector = Icons.Default.MoreVert,
+                        contentDescription = LanguageManager.getString("details"),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
         }
-        IconButton(onClick = onMessage) {
-            Icon(
-                imageVector = Icons.Default.Message,
-                contentDescription = LanguageManager.getString("send_message"),
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(20.dp)
+
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(LanguageManager.getString("copy")) },
+                leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    copy()
+                }
             )
-        }
-        IconButton(onClick = onCall) {
-            Icon(
-                imageVector = Icons.Default.Call,
-                contentDescription = LanguageManager.getString("call"),
-                tint = MaterialTheme.scanColors.success
-            )
+            onEdit?.let { edit ->
+                DropdownMenuItem(
+                    text = { Text(LanguageManager.getString("edit_contact")) },
+                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        edit()
+                    }
+                )
+            }
+            onDelete?.let { delete ->
+                DropdownMenuItem(
+                    text = {
+                        Text(
+                            text = LanguageManager.getString("delete_contact"),
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    onClick = {
+                        menuOpen = false
+                        delete()
+                    }
+                )
+            }
         }
     }
 }

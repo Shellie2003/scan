@@ -312,7 +312,16 @@ object LanguageManager {
             "select_recipient" to "Iza no handefasana?",
             "notifications_off_title" to "Mitsahatra ny fampandrenesana",
             "notifications_off_desc" to "Raha tsy alefa izy ity dia tsy hiseho ny hafatra voaray sy ny antso miditra.",
-            "enable" to "Alefaso"
+            "enable" to "Alefaso",
+            "new_contact" to "Kontaka vaovao",
+            "edit_contact" to "Hanova ny kontaka",
+            "delete_contact" to "Hamafa ny kontaka",
+            "delete_contact_confirm" to "Hofafana amin'ity finday ity i {name}. Tsy azo averina.",
+            "contact_name" to "Anarana",
+            "contact_number" to "Laharana",
+            "contact_saved" to "Voatahiry ny kontaka",
+            "contact_deleted" to "Voafafa ny kontaka",
+            "contact_save_failed" to "Tsy voatahiry ny kontaka"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -586,7 +595,16 @@ object LanguageManager {
             "select_recipient" to "À qui écrivez-vous ?",
             "notifications_off_title" to "Notifications désactivées",
             "notifications_off_desc" to "Sans elles, les messages reçus et les appels entrants ne s'affichent pas.",
-            "enable" to "Activer"
+            "enable" to "Activer",
+            "new_contact" to "Nouveau contact",
+            "edit_contact" to "Modifier le contact",
+            "delete_contact" to "Supprimer le contact",
+            "delete_contact_confirm" to "{name} sera supprimé de ce téléphone. Action définitive.",
+            "contact_name" to "Nom",
+            "contact_number" to "Numéro",
+            "contact_saved" to "Contact enregistré",
+            "contact_deleted" to "Contact supprimé",
+            "contact_save_failed" to "Le contact n'a pas pu être enregistré"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -860,7 +878,16 @@ object LanguageManager {
             "select_recipient" to "Who are you writing to?",
             "notifications_off_title" to "Notifications are off",
             "notifications_off_desc" to "Without them, received messages and incoming calls are not shown.",
-            "enable" to "Turn on"
+            "enable" to "Turn on",
+            "new_contact" to "New contact",
+            "edit_contact" to "Edit the contact",
+            "delete_contact" to "Delete the contact",
+            "delete_contact_confirm" to "{name} will be removed from this phone. This cannot be undone.",
+            "contact_name" to "Name",
+            "contact_number" to "Number",
+            "contact_saved" to "Contact saved",
+            "contact_deleted" to "Contact deleted",
+            "contact_save_failed" to "The contact could not be saved"
         )
     )
 
