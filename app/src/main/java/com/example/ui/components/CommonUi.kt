@@ -37,7 +37,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -411,4 +413,42 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.primary,
         modifier = modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp)
     )
+}
+
+/**
+ * The face of a contact: their picture when the phone holds one, their initials
+ * otherwise. The two never differ in size, so a list stays aligned while the
+ * pictures are still being read.
+ */
+@Composable
+fun ContactAvatar(
+    contact: com.example.telephony.Contact,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 44.dp,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val photoUri = contact.photoUri
+    val picture by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+        initialValue = null,
+        key1 = photoUri
+    ) {
+        value = photoUri
+            ?.let { com.example.telephony.ContactsRepository.thumbnail(context, it) }
+            ?.asImageBitmap()
+    }
+
+    val image = picture
+    if (image == null) {
+        InitialsAvatar(text = contact.initials, modifier = modifier, size = size, color = color)
+    } else {
+        androidx.compose.foundation.Image(
+            bitmap = image,
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
+        )
+    }
 }

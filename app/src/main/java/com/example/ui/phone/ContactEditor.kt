@@ -1,6 +1,14 @@
 package com.example.ui.phone
 
+import android.graphics.BitmapFactory
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -12,7 +20,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
@@ -35,6 +45,10 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -44,6 +58,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import com.example.telephony.Contact
 import com.example.telephony.ContactsRepository
 import com.example.telephony.NumberUtils
+import com.example.ui.components.ContactAvatar
 import com.example.ui.util.LanguageManager
 import kotlinx.coroutines.launch
 
@@ -69,6 +84,30 @@ fun ContactEditorSheet(
     var number by remember(contact) { mutableStateOf(contact?.number.orEmpty()) }
     var saving by remember { mutableStateOf(false) }
 
+    // The picture picked in this session, still in memory: it is written with
+    // the rest when the contact is saved, never before.
+    var picture by remember(contact) { mutableStateOf<ByteArray?>(null) }
+    var preview by remember(contact) { mutableStateOf<ImageBitmap?>(null) }
+
+    val pickPicture = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri == null) return@rememberLauncherForActivityResult
+        scope.launch {
+            val bytes = ContactsRepository.readPicture(context, uri)
+            if (bytes == null) {
+                Toast.makeText(
+                    context,
+                    LanguageManager.getString("contact_save_failed"),
+                    Toast.LENGTH_SHORT
+                ).show()
+                return@launch
+            }
+            picture = bytes
+            preview = BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }
+    }
+
     fun toast(key: String) {
         Toast.makeText(context, LanguageManager.getString(key), Toast.LENGTH_SHORT).show()
     }
@@ -79,9 +118,13 @@ fun ContactEditorSheet(
         saving = true
         scope.launch {
             val done = if (contact == null) {
-                ContactsRepository.create(context, name.trim(), cleanNumber)
+                ContactsRepository.create(context, name.trim(), cleanNumber, picture)
             } else {
-                ContactsRepository.update(context, contact, name.trim(), cleanNumber)
+                val updated = ContactsRepository.update(context, contact, name.trim(), cleanNumber)
+                val pictureDone = picture?.let {
+                    ContactsRepository.setPicture(context, contact, it)
+                } ?: true
+                updated && pictureDone
             }
             saving = false
             if (done) {
@@ -110,6 +153,63 @@ fun ContactEditorSheet(
                 color = MaterialTheme.colorScheme.primary
             )
             Spacer(Modifier.height(16.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    val shown = preview
+                    Box(
+                        modifier = Modifier
+                            .size(88.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.12f))
+                            .clickable {
+                                pickPicture.launch(
+                                    PickVisualMediaRequest(
+                                        ActivityResultContracts.PickVisualMedia.ImageOnly
+                                    )
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        when {
+                            shown != null -> Image(
+                                bitmap = shown,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier.size(88.dp)
+                            )
+
+                            contact != null -> ContactAvatar(contact = contact, size = 88.dp)
+
+                            else -> Icon(
+                                imageVector = Icons.Default.AddAPhoto,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    TextButton(
+                        onClick = {
+                            pickPicture.launch(
+                                PickVisualMediaRequest(
+                                    ActivityResultContracts.PickVisualMedia.ImageOnly
+                                )
+                            )
+                        }
+                    ) {
+                        Text(
+                            text = LanguageManager.getString("contact_photo"),
+                            style = MaterialTheme.typography.labelMedium
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
 
             OutlinedTextField(
                 value = name,

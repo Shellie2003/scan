@@ -94,6 +94,7 @@ import com.example.telephony.ContactsRepository
 import com.example.telephony.DefaultDialerManager
 import com.example.telephony.NumberUtils
 import com.example.ui.components.EmptyState
+import com.example.ui.components.ContactAvatar
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.NotificationPermissionBanner
 import com.example.ui.components.SimLauncher
@@ -889,7 +890,7 @@ private fun ContactRow(
                 .padding(horizontal = 16.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            InitialsAvatar(text = contact.initials)
+            ContactAvatar(contact = contact)
             Spacer(Modifier.width(12.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
@@ -1005,7 +1006,7 @@ private fun FavoritesTab(contacts: List<Contact>, onCall: (String) -> Unit) {
                         .padding(12.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    InitialsAvatar(text = contact.initials, size = 52.dp)
+                    ContactAvatar(contact = contact, size = 52.dp)
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = contact.name,

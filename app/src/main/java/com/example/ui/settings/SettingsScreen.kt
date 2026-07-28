@@ -140,6 +140,10 @@ fun SettingsScreen(app: AppViewModel) {
         Spacer(Modifier.height(8.dp))
         LanguageManager.LanguageSelector()
 
+        // --------------------------------------------------------------- sounds
+        SectionHeader(LanguageManager.getString("section_sounds"))
+        SoundSettingsSection()
+
         // ------------------------------------------------------------ operators
         SectionHeader(LanguageManager.getString("section_operators"))
         operators.forEach { operator ->
@@ -697,6 +701,7 @@ private fun OperatorEditorDialog(
     var balance by remember { mutableStateOf(operator.balanceTemplate) }
     var transfer by remember { mutableStateOf(operator.transferTemplate) }
     var share by remember { mutableStateOf(operator.shareTemplate) }
+    var withdraw by remember { mutableStateOf(operator.withdrawTemplate) }
     var service by remember { mutableStateOf(operator.serviceNumber) }
     var prefixes by remember { mutableStateOf(operator.prefixes) }
     var keywords by remember { mutableStateOf(operator.keywords) }
@@ -734,6 +739,7 @@ private fun OperatorEditorDialog(
                 Field(balance, LanguageManager.getString("balance_code")) { balance = it }
                 Field(transfer, LanguageManager.getString("transfer_code")) { transfer = it }
                 Field(share, LanguageManager.getString("share_code")) { share = it }
+                Field(withdraw, LanguageManager.getString("withdraw_code")) { withdraw = it }
                 Field(service, LanguageManager.getString("service_number")) { service = it }
                 Field(prefixes, LanguageManager.getString("prefixes")) { prefixes = it }
                 Field(keywords, LanguageManager.getString("keywords")) { keywords = it }
@@ -776,6 +782,7 @@ private fun OperatorEditorDialog(
                             balanceTemplate = balance.trim(),
                             transferTemplate = transfer.trim(),
                             shareTemplate = share.trim(),
+                            withdrawTemplate = withdraw.trim(),
                             serviceNumber = service.trim(),
                             prefixes = prefixes.trim(),
                             keywords = keywords.trim(),

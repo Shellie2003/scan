@@ -5,6 +5,9 @@ import android.annotation.SuppressLint
 import android.content.ContentProviderOperation
 import android.content.Context
 import android.content.pm.PackageManager
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.provider.ContactsContract
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.Dispatchers
@@ -122,8 +125,12 @@ object ContactsRepository {
      * calls a device contact: it belongs to the phone, not to a synchronised
      * account the user may not have.
      */
-    suspend fun create(context: Context, name: String, number: String): Boolean =
-        withContext(Dispatchers.IO) {
+    suspend fun create(
+        context: Context,
+        name: String,
+        number: String,
+        picture: ByteArray? = null
+    ): Boolean = withContext(Dispatchers.IO) {
             if (!hasWritePermission(context) || number.isBlank()) return@withContext false
             val operations = arrayListOf(
                 ContentProviderOperation.newInsert(ContactsContract.RawContacts.CONTENT_URI)
@@ -133,6 +140,7 @@ object ContactsRepository {
                 nameInsert(name),
                 numberInsert(number)
             )
+            if (picture != null) operations += pictureInsert(picture)
             try {
                 context.contentResolver
                     .applyBatch(ContactsContract.AUTHORITY, operations)
@@ -262,6 +270,104 @@ object ContactsRepository {
                 ContactsContract.CommonDataKinds.Phone.TYPE,
                 ContactsContract.CommonDataKinds.Phone.TYPE_MOBILE
             )
+            .build()
+
+    // ------------------------------------------------------------------- photo
+
+    /** Small cache: a list scrolls past the same faces again and again. */
+    private val thumbnails = android.util.LruCache<String, Bitmap>(80)
+
+    /**
+     * The picture of a contact, ready to be drawn.
+     *
+     * Contact thumbnails are tiny, but decoding one at every scroll frame is
+     * not, so they are kept once read.
+     */
+    suspend fun thumbnail(context: Context, photoUri: String): Bitmap? =
+        withContext(Dispatchers.IO) {
+            thumbnails.get(photoUri)?.let { return@withContext it }
+            try {
+                context.contentResolver.openInputStream(Uri.parse(photoUri))?.use { stream ->
+                    BitmapFactory.decodeStream(stream)
+                }?.also { thumbnails.put(photoUri, it) }
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+    /**
+     * Reads a picked image down to what a contact picture needs.
+     *
+     * A photo straight from the camera weighs several megabytes; the contacts
+     * provider wants something small, and the screen never shows more than a
+     * circle of a few hundred pixels.
+     */
+    suspend fun readPicture(context: Context, uri: Uri, maxSize: Int = 512): ByteArray? =
+        withContext(Dispatchers.IO) {
+            try {
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                context.contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, bounds)
+                }
+                val largest = maxOf(bounds.outWidth, bounds.outHeight)
+                var sample = 1
+                while (largest / sample > maxSize) sample *= 2
+
+                val options = BitmapFactory.Options().apply { inSampleSize = sample }
+                val bitmap = context.contentResolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, options)
+                } ?: return@withContext null
+
+                val bytes = java.io.ByteArrayOutputStream()
+                bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bytes)
+                bitmap.recycle()
+                bytes.toByteArray()
+            } catch (e: Exception) {
+                null
+            }
+        }
+
+    /** Replaces the picture of a contact, or removes it when [picture] is null. */
+    suspend fun setPicture(context: Context, contact: Contact, picture: ByteArray?): Boolean =
+        withContext(Dispatchers.IO) {
+            if (!hasWritePermission(context)) return@withContext false
+            val rawContactId = rawContactIdOf(context, contact.id) ?: return@withContext false
+            val operations = arrayListOf(
+                ContentProviderOperation.newDelete(ContactsContract.Data.CONTENT_URI)
+                    .withSelection(
+                        ContactsContract.Data.RAW_CONTACT_ID + " = ? AND " +
+                            ContactsContract.Data.MIMETYPE + " = ?",
+                        arrayOf(
+                            rawContactId.toString(),
+                            ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE
+                        )
+                    )
+                    .build()
+            )
+            if (picture != null) operations += pictureInsert(picture, rawContactId)
+            try {
+                context.contentResolver.applyBatch(ContactsContract.AUTHORITY, operations)
+                contact.photoUri?.let { thumbnails.remove(it) }
+                true
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+    private fun pictureInsert(picture: ByteArray, rawContactId: Long? = null) =
+        ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
+            .apply {
+                if (rawContactId == null) {
+                    withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
+                } else {
+                    withValue(ContactsContract.Data.RAW_CONTACT_ID, rawContactId)
+                }
+            }
+            .withValue(
+                ContactsContract.Data.MIMETYPE,
+                ContactsContract.CommonDataKinds.Photo.CONTENT_ITEM_TYPE
+            )
+            .withValue(ContactsContract.CommonDataKinds.Photo.PHOTO, picture)
             .build()
 
     // ---------------------------------------------------------------- searching

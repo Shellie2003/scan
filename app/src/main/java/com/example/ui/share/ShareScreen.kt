@@ -64,6 +64,16 @@ import com.example.ui.util.OperatorColorUtils
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.PhoneViewModel
 
+/**
+ * What the screen is about to do. A withdrawal joined the two sharing modes
+ * because it is the same gesture — a number, an amount, a code to confirm.
+ */
+private enum class ShareMode(val labelKey: String, val numberLabelKey: String) {
+    CREDIT("transfer_credit", "recipient_number"),
+    PLAN("share_plan", "recipient_number"),
+    WITHDRAW("withdraw_cash", "cashpoint_number")
+}
+
 private data class QueuedShare(
     val number: String,
     val amount: String,
@@ -91,7 +101,7 @@ fun ShareScreen(
     val sims by app.sims.collectAsState()
     val contacts by phone.contacts.collectAsState()
 
-    var isCreditMode by remember { mutableStateOf(true) }
+    var mode by remember { mutableStateOf(ShareMode.CREDIT) }
     var number by remember { mutableStateOf("") }
     var amount by remember { mutableStateOf("") }
     var pin by remember { mutableStateOf("") }
@@ -116,10 +126,10 @@ fun ShareScreen(
     }
     val theme = OperatorColorUtils.themeOf(sendingOperator)
 
-    val template = if (isCreditMode) {
-        sendingOperator?.transferTemplate.orEmpty()
-    } else {
-        sendingOperator?.shareTemplate.orEmpty()
+    val template = when (mode) {
+        ShareMode.CREDIT -> sendingOperator?.transferTemplate.orEmpty()
+        ShareMode.PLAN -> sendingOperator?.shareTemplate.orEmpty()
+        ShareMode.WITHDRAW -> sendingOperator?.withdrawTemplate.orEmpty()
     }
     val code = remember(template, number, amount, pin) {
         UssdFormatter.fill(
@@ -139,7 +149,7 @@ fun ShareScreen(
             code = dialCode,
             operator = operator,
             kind = ScanHistory.KIND_TRANSFER,
-            label = LanguageManager.getString("share_title") + " " + value + " → " +
+            label = LanguageManager.getString(mode.labelKey) + " " + value + " → " +
                 NumberUtils.formatForDisplay(target),
             rawCode = value,
             requireConfirm = true,
@@ -181,33 +191,62 @@ fun ShareScreen(
         Spacer(Modifier.height(12.dp))
 
         TabRow(
-            selectedTabIndex = if (isCreditMode) 0 else 1,
+            selectedTabIndex = mode.ordinal,
             containerColor = theme.mainColor,
             contentColor = theme.accentColor
         ) {
-            Tab(
-                selected = isCreditMode,
-                onClick = { isCreditMode = true },
-                text = { Text(LanguageManager.getString("transfer_credit"), fontWeight = FontWeight.Bold) },
-                selectedContentColor = theme.accentColor,
-                unselectedContentColor = theme.unselectedColor
-            )
-            Tab(
-                selected = !isCreditMode,
-                onClick = { isCreditMode = false },
-                text = { Text(LanguageManager.getString("share_plan"), fontWeight = FontWeight.Bold) },
-                selectedContentColor = theme.accentColor,
-                unselectedContentColor = theme.unselectedColor
-            )
+            ShareMode.entries.forEach { entry ->
+                Tab(
+                    selected = mode == entry,
+                    onClick = { mode = entry },
+                    text = {
+                        Text(
+                            text = LanguageManager.getString(entry.labelKey),
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    },
+                    selectedContentColor = theme.accentColor,
+                    unselectedContentColor = theme.unselectedColor
+                )
+            }
         }
 
         Spacer(Modifier.height(16.dp))
+
+        // A withdrawal moves real money at a counter: say plainly what the app
+        // does with the secret code, which is nothing at all.
+        if (mode == ShareMode.WITHDRAW) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(14.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = theme.mainColor.copy(alpha = 0.10f)
+                )
+            ) {
+                Column(modifier = Modifier.padding(12.dp)) {
+                    Text(
+                        text = LanguageManager.getString("withdraw_desc"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = LanguageManager.getString("withdraw_pin_notice"),
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.Bold,
+                        color = theme.mainColor
+                    )
+                }
+            }
+            Spacer(Modifier.height(12.dp))
+        }
 
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = number,
                 onValueChange = { number = it },
-                label = { Text(LanguageManager.getString("recipient_number")) },
+                label = { Text(LanguageManager.getString(mode.numberLabelKey)) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
                 modifier = Modifier.weight(1f)
@@ -249,7 +288,9 @@ fun ShareScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
-        if (template.contains("{PIN}")) {
+        // A withdrawal never carries a secret code: it is typed in the operator
+        // prompt, where it belongs, and never in a string this screen builds.
+        if (template.contains("{PIN}") && mode != ShareMode.WITHDRAW) {
             Spacer(Modifier.height(12.dp))
             OutlinedTextField(
                 value = pin,

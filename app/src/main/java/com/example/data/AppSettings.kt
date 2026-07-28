@@ -126,6 +126,19 @@ object AppSettings {
         prefs(context).edit().putBoolean("dynamic_colors", value).apply()
     }
 
+    // ------------------------------------------------------------------ sounds
+
+    /**
+     * Sound played for a received message, as a content URI. Empty means the
+     * notification sound of the phone.
+     */
+    fun messageSound(context: Context): String =
+        prefs(context).getString("message_sound", "").orEmpty()
+
+    fun setMessageSound(context: Context, uri: String) {
+        prefs(context).edit().putString("message_sound", uri).apply()
+    }
+
     // ------------------------------------------------------------------- misc
 
     /**

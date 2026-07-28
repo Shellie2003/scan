@@ -21,7 +21,7 @@ object DatabaseProvider {
                     AppDatabase::class.java,
                     "scan-db"
                 )
-                    .addMigrations(MIGRATION_1_2)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                     // No destructive fallback on upgrade: losing the codes, the
                     // plans and the templates a user configured is worse than
                     // any bug. Every new version must bring its migration.

@@ -64,19 +64,48 @@ object MessageNotifier {
         0xFF9C4146.toInt()
     )
 
+    /**
+     * The channel carrying the sound the user picked.
+     *
+     * Android freezes the sound of a channel once it exists, so a new sound
+     * means a new channel — and the previous ones are removed, or the settings
+     * of the phone would fill up with dead entries.
+     */
+    fun channelId(context: Context): String {
+        val sound = AppSettings.messageSound(context)
+        if (sound.isBlank()) return CHANNEL_ID
+        return CHANNEL_ID + "_" + Integer.toHexString(sound.hashCode())
+    }
+
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        if (manager.getNotificationChannel(CHANNEL_ID) != null) return
+        val id = channelId(context)
+
+        manager.notificationChannels
+            .filter { it.id.startsWith(CHANNEL_ID) && it.id != id }
+            .forEach { manager.deleteNotificationChannel(it.id) }
+
+        if (manager.getNotificationChannel(id) != null) return
         manager.createNotificationChannel(
             NotificationChannel(
-                CHANNEL_ID,
+                id,
                 context.getString(R.string.sms_channel_name),
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = context.getString(R.string.sms_channel_desc)
                 enableVibration(true)
                 setShowBadge(true)
+                val sound = AppSettings.messageSound(context)
+                if (sound.isNotBlank()) {
+                    setSound(
+                        Uri.parse(sound),
+                        android.media.AudioAttributes.Builder()
+                            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                            .setUsage(android.media.AudioAttributes.USAGE_NOTIFICATION)
+                            .build()
+                    )
+                }
             }
         )
     }
@@ -169,7 +198,7 @@ object MessageNotifier {
             )
         }
 
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(context, channelId(context))
             .setSmallIcon(R.drawable.ic_notification)
             .setColor(ContextCompat.getColor(context, R.color.brand_indigo))
             .setStyle(style)

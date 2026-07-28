@@ -70,6 +70,7 @@ import com.example.telephony.NumberUtils
 import com.example.telephony.SmsRepository
 import com.example.telephony.SmsThread
 import com.example.ui.components.EmptyState
+import com.example.ui.components.ContactAvatar
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.NotificationPermissionBanner
 import com.example.ui.util.LanguageManager
@@ -595,7 +596,7 @@ private fun ContactLine(contact: Contact, onClick: () -> Unit) {
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        InitialsAvatar(text = contact.initials)
+        ContactAvatar(contact = contact)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(

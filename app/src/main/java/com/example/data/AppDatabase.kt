@@ -18,7 +18,7 @@ import com.example.data.model.SimProfile
         SimProfile::class,
         MessageTemplate::class
     ],
-    version = 2,
+    version = 3,
     // The schema is exported to `app/schemas`: a version bump without a written
     // migration is then caught at build time, instead of wiping the operators,
     // plans and templates the user configured.
@@ -30,6 +30,18 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun offerDao(): OfferDao
     abstract fun simProfileDao(): SimProfileDao
     abstract fun messageTemplateDao(): MessageTemplateDao
+}
+
+/**
+ * v3 adds the cash withdrawal code of each operator.
+ *
+ * Written by hand, like the one before it: a version without its migration
+ * would cost every user the operators, plans and templates they configured.
+ */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE operators ADD COLUMN withdrawTemplate TEXT NOT NULL DEFAULT ''")
+    }
 }
 
 /**

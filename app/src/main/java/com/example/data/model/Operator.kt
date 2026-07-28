@@ -30,6 +30,15 @@ data class Operator(
     val transferTemplate: String = "",
     /** Plan (forfait) sharing template, e.g. `#322*{NUMBER}*{AMOUNT}#`. */
     val shareTemplate: String = "",
+    /**
+     * Cash withdrawal at a cashpoint, e.g. `#111*4*{NUMBER}*{AMOUNT}#`.
+     *
+     * Empty until the user fills it in: the syntax differs from one operator to
+     * the next and moves real money, so nothing is guessed here. The template
+     * never carries `{PIN}` — the secret code belongs to the operator prompt,
+     * never to a string this application builds.
+     */
+    val withdrawTemplate: String = "",
     /** Customer service number, dialled from the operator sheet. */
     val serviceNumber: String = "",
     /** Comma separated national prefixes, e.g. `034,038`. Used to guess the operator of a number. */

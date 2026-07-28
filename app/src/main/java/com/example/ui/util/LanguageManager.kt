@@ -321,7 +321,18 @@ object LanguageManager {
             "contact_number" to "Laharana",
             "contact_saved" to "Voatahiry ny kontaka",
             "contact_deleted" to "Voafafa ny kontaka",
-            "contact_save_failed" to "Tsy voatahiry ny kontaka"
+            "contact_save_failed" to "Tsy voatahiry ny kontaka",
+            "withdraw_cash" to "Fisintonana",
+            "withdraw_code" to "Kaody fisintonana vola",
+            "cashpoint_number" to "Laharan'ny cashpoint",
+            "withdraw_desc" to "Ampidiro ny laharan'ny cashpoint sy ny vola alaina. Ny kaody miafina dia angatahin'ny mpanome tolotra, tsy soratana ato mihitsy.",
+            "withdraw_pin_notice" to "Tsy mitahiry na mandefa ny kaody miafinao mihitsy ity fampiharana ity.",
+            "section_sounds" to "Feo",
+            "call_ringtone" to "Feon'ny antso",
+            "message_sound" to "Feon'ny hafatra",
+            "sound_default" to "Feo mahazatra",
+            "ringtone_permission" to "Mila alalana hanova ny feon'ny finday. Omeo alalana eo amin'ny pejy manaraka.",
+            "contact_photo" to "Sary"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -604,7 +615,18 @@ object LanguageManager {
             "contact_number" to "Numéro",
             "contact_saved" to "Contact enregistré",
             "contact_deleted" to "Contact supprimé",
-            "contact_save_failed" to "Le contact n'a pas pu être enregistré"
+            "contact_save_failed" to "Le contact n'a pas pu être enregistré",
+            "withdraw_cash" to "Retrait",
+            "withdraw_code" to "Code de retrait d'argent",
+            "cashpoint_number" to "Numéro du cashpoint",
+            "withdraw_desc" to "Saisissez le numéro du cashpoint et le montant. Le code secret est demandé par l'opérateur, il n'est jamais écrit ici.",
+            "withdraw_pin_notice" to "Cette application n'enregistre ni n'envoie jamais votre code secret.",
+            "section_sounds" to "Sons",
+            "call_ringtone" to "Sonnerie des appels",
+            "message_sound" to "Son des messages",
+            "sound_default" to "Son par défaut",
+            "ringtone_permission" to "Modifier la sonnerie du téléphone demande une autorisation système. Accordez-la sur l'écran suivant.",
+            "contact_photo" to "Photo"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -887,7 +909,18 @@ object LanguageManager {
             "contact_number" to "Number",
             "contact_saved" to "Contact saved",
             "contact_deleted" to "Contact deleted",
-            "contact_save_failed" to "The contact could not be saved"
+            "contact_save_failed" to "The contact could not be saved",
+            "withdraw_cash" to "Withdrawal",
+            "withdraw_code" to "Cash withdrawal code",
+            "cashpoint_number" to "Cashpoint number",
+            "withdraw_desc" to "Enter the number of the cashpoint and the amount. The secret code is asked by the operator, and is never written here.",
+            "withdraw_pin_notice" to "This application never stores nor sends your secret code.",
+            "section_sounds" to "Sounds",
+            "call_ringtone" to "Call ringtone",
+            "message_sound" to "Message sound",
+            "sound_default" to "Default sound",
+            "ringtone_permission" to "Changing the ringtone of the phone needs a system permission. Grant it on the next screen.",
+            "contact_photo" to "Photo"
         )
     )
 
