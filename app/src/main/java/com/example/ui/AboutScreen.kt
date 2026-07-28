@@ -73,20 +73,13 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
                 .padding(horizontal = 24.dp, vertical = 24.dp)
         ) {
             Column {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = LanguageManager.getString("about_title"),
-                        style = MaterialTheme.typography.headlineMedium,
-                        fontWeight = FontWeight.ExtraBold,
-                        color = MaterialTheme.colorScheme.onBackground
-                    )
-                    // Simple Language Selector in About too for consistency
-                    LanguageManager.LanguageSelector()
-                }
+                Text(
+                    text = LanguageManager.getString("about_title"),
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Text(
                     text = "AinaDigit • Scan & Recharge",
                     style = MaterialTheme.typography.bodyMedium,

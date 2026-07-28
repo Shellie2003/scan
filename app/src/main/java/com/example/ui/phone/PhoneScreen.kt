@@ -1,15 +1,14 @@
 package com.example.ui.phone
 
 import android.Manifest
-import android.app.Activity
 import android.content.Intent
 import android.provider.CallLog
 import android.text.format.DateUtils
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,6 +35,8 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallMissed
 import androidx.compose.material.icons.filled.CallReceived
+import androidx.compose.material.icons.filled.ContentCopy
+import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.History
@@ -46,16 +48,19 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -66,7 +71,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -79,8 +86,8 @@ import com.example.telephony.DefaultDialerManager
 import com.example.telephony.NumberUtils
 import com.example.ui.components.EmptyState
 import com.example.ui.components.InitialsAvatar
-import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimLauncher
+import com.example.ui.components.SimSelector
 import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
@@ -89,25 +96,27 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
 
 private enum class PhoneTab(val labelKey: String) {
-    KEYPAD("tab_keypad"),
     RECENTS("tab_recents"),
     CONTACTS("tab_contacts"),
     FAVORITES("tab_favorites")
 }
 
 /**
- * The phone part of the app: keypad, call log, contacts and favourites.
+ * The phone part of the app: the call history first, then contacts and
+ * favourites, with the keypad one tap away on the floating button.
  *
- * Every call goes through [SimLauncher], so the SIM card used is chosen the same
- * way here as for a recharge or a plan purchase.
+ * Opening on the history is what a phone app is used for most of the time —
+ * calling back someone who just called. Every call goes through [SimLauncher],
+ * so the SIM card used is chosen the same way here as for a recharge.
  */
-@OptIn(ExperimentalPermissionsApi::class)
+@OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun PhoneScreen(
     app: AppViewModel,
     phone: PhoneViewModel,
     launcher: SimLauncher,
-    prefilledNumber: String = "",
+    dialNumber: String = "",
+    dialTicket: Int = 0,
     onMessage: (String) -> Unit
 ) {
     val context = LocalContext.current
@@ -121,13 +130,16 @@ fun PhoneScreen(
         )
     )
 
-    var tab by remember { mutableStateOf(PhoneTab.KEYPAD) }
-    var input by remember { mutableStateOf(prefilledNumber) }
+    var tab by remember { mutableStateOf(PhoneTab.RECENTS) }
+    var input by remember { mutableStateOf("") }
+    var showKeypad by remember { mutableStateOf(false) }
 
-    LaunchedEffect(prefilledNumber) {
-        if (prefilledNumber.isNotBlank()) {
-            input = prefilledNumber
-            tab = PhoneTab.KEYPAD
+    // A `tel:` intent, or the phone button of another app, opens the keypad
+    // ready to dial — even on the same number twice in a row.
+    LaunchedEffect(dialTicket) {
+        if (dialTicket > 0) {
+            input = dialNumber
+            showKeypad = true
         }
     }
 
@@ -143,73 +155,102 @@ fun PhoneScreen(
     val contacts by phone.contacts.collectAsState()
     val callLog by phone.callLog.collectAsState()
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
-    ) {
-        DefaultDialerBanner()
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(MaterialTheme.colorScheme.background)
+        ) {
+            DefaultDialerBanner()
 
-        TabRow(selectedTabIndex = tab.ordinal) {
-            PhoneTab.entries.forEach { entry ->
-                Tab(
-                    selected = tab == entry,
-                    onClick = { tab = entry },
-                    text = {
-                        Text(
-                            text = LanguageManager.getString(entry.labelKey),
-                            fontWeight = if (tab == entry) FontWeight.Bold else FontWeight.Normal,
-                            fontSize = 12.sp
-                        )
-                    },
-                    icon = {
-                        Icon(
-                            imageVector = when (entry) {
-                                PhoneTab.KEYPAD -> Icons.Default.Dialpad
-                                PhoneTab.RECENTS -> Icons.Default.History
-                                PhoneTab.CONTACTS -> Icons.Default.Contacts
-                                PhoneTab.FAVORITES -> Icons.Default.Star
-                            },
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                )
+            TabRow(selectedTabIndex = tab.ordinal) {
+                PhoneTab.entries.forEach { entry ->
+                    Tab(
+                        selected = tab == entry,
+                        onClick = { tab = entry },
+                        text = {
+                            Text(
+                                text = LanguageManager.getString(entry.labelKey),
+                                fontWeight = if (tab == entry) FontWeight.Bold else FontWeight.Normal,
+                                fontSize = 12.sp
+                            )
+                        },
+                        icon = {
+                            Icon(
+                                imageVector = when (entry) {
+                                    PhoneTab.RECENTS -> Icons.Default.History
+                                    PhoneTab.CONTACTS -> Icons.Default.Contacts
+                                    PhoneTab.FAVORITES -> Icons.Default.Star
+                                },
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+                    )
+                }
+            }
+
+            Box(modifier = Modifier.weight(1f)) {
+                when (tab) {
+                    PhoneTab.RECENTS -> RecentsTab(
+                        entries = callLog,
+                        hasPermission = CallLogRepository.hasPermission(context),
+                        onRequestPermission = { permissions.launchMultiplePermissionRequest() },
+                        onCall = { launcher.call(it) },
+                        onMessage = onMessage
+                    )
+
+                    PhoneTab.CONTACTS -> ContactsTab(
+                        contacts = contacts,
+                        hasPermission = ContactsRepository.hasPermission(context),
+                        onRequestPermission = { permissions.launchMultiplePermissionRequest() },
+                        onCall = { launcher.call(it) },
+                        onMessage = onMessage
+                    )
+
+                    PhoneTab.FAVORITES -> FavoritesTab(
+                        contacts = contacts.filter { it.isFavorite },
+                        onCall = { launcher.call(it) }
+                    )
+                }
             }
         }
 
-        Box(modifier = Modifier.weight(1f)) {
-            when (tab) {
-                PhoneTab.KEYPAD -> KeypadTab(
-                    app = app,
-                    input = input,
-                    contacts = contacts,
-                    onInputChange = { input = it },
-                    onCall = { launcher.call(it) },
-                    onMessage = onMessage
-                )
+        FloatingActionButton(
+            onClick = { showKeypad = true },
+            containerColor = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(16.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Dialpad,
+                contentDescription = LanguageManager.getString("open_keypad")
+            )
+        }
+    }
 
-                PhoneTab.RECENTS -> RecentsTab(
-                    entries = callLog,
-                    hasPermission = CallLogRepository.hasPermission(context),
-                    onRequestPermission = { permissions.launchMultiplePermissionRequest() },
-                    onCall = { launcher.call(it) },
-                    onMessage = onMessage
-                )
-
-                PhoneTab.CONTACTS -> ContactsTab(
-                    contacts = contacts,
-                    hasPermission = ContactsRepository.hasPermission(context),
-                    onRequestPermission = { permissions.launchMultiplePermissionRequest() },
-                    onCall = { launcher.call(it) },
-                    onMessage = onMessage
-                )
-
-                PhoneTab.FAVORITES -> FavoritesTab(
-                    contacts = contacts.filter { it.isFavorite },
-                    onCall = { launcher.call(it) }
-                )
-            }
+    if (showKeypad) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ModalBottomSheet(
+            onDismissRequest = { showKeypad = false },
+            sheetState = sheetState
+        ) {
+            KeypadSheet(
+                app = app,
+                input = input,
+                contacts = contacts,
+                onInputChange = { input = it },
+                onCall = {
+                    showKeypad = false
+                    launcher.call(it)
+                },
+                onMessage = {
+                    showKeypad = false
+                    onMessage(it)
+                }
+            )
         }
     }
 }
@@ -270,9 +311,16 @@ private fun DefaultDialerBanner() {
     }
 }
 
+/**
+ * The keypad, opened from the floating button.
+ *
+ * A number can be pasted into it — the one a friend sent by message, or copied
+ * from anywhere else — and the number being dialled can be copied back out with
+ * a long press.
+ */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun KeypadTab(
+private fun KeypadSheet(
     app: AppViewModel,
     input: String,
     contacts: List<Contact>,
@@ -280,17 +328,26 @@ private fun KeypadTab(
     onCall: (String) -> Unit,
     onMessage: (String) -> Unit
 ) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val sims by app.sims.collectAsState()
     val routing = remember(input, sims) { app.routeForNumber(input) }
     val suggestions = remember(input, contacts) {
         if (input.length < 2) emptyList() else ContactsRepository.search(contacts, input).take(12)
     }
-    var showSimPicker by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize()) {
+    fun toast(key: String) {
+        Toast.makeText(context, LanguageManager.getString(key), Toast.LENGTH_SHORT).show()
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+    ) {
         if (suggestions.isNotEmpty()) {
-            LazyColumn(modifier = Modifier.weight(1f)) {
-                items(suggestions) { contact ->
+            LazyColumn(modifier = Modifier.heightIn(max = 220.dp)) {
+                items(suggestions, key = { it.id.toString() + it.number }) { contact ->
                     ContactRow(
                         contact = contact,
                         onCall = { onCall(contact.number) },
@@ -298,8 +355,7 @@ private fun KeypadTab(
                     )
                 }
             }
-        } else {
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.height(8.dp))
         }
 
         Text(
@@ -309,6 +365,14 @@ private fun KeypadTab(
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
+                .combinedClickable(
+                    enabled = input.isNotEmpty(),
+                    onClick = {},
+                    onLongClick = {
+                        clipboard.setText(AnnotatedString(input))
+                        toast("number_copied")
+                    }
+                )
                 .padding(horizontal = 24.dp, vertical = 8.dp)
         )
 
@@ -325,15 +389,58 @@ private fun KeypadTab(
             )
         }
 
-        Spacer(Modifier.height(8.dp))
-
-        SimIndicator(
-            routing = routing,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(bottom = 8.dp),
-            onClick = { showSimPicker = true }
-        )
+        // Copy and paste, so a number can travel between apps without retyping.
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            TextButton(
+                onClick = {
+                    val pasted = NumberUtils.sanitize(clipboard.getText()?.text.orEmpty())
+                    if (pasted.isBlank()) toast("nothing_to_paste") else onInputChange(pasted)
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ContentPaste,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(Modifier.width(6.dp))
+                Text(LanguageManager.getString("paste"), style = MaterialTheme.typography.labelMedium)
+            }
+            if (input.isNotEmpty()) {
+                TextButton(
+                    onClick = {
+                        clipboard.setText(AnnotatedString(input))
+                        toast("number_copied")
+                    }
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.ContentCopy,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = LanguageManager.getString("copy"),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+                TextButton(onClick = { onMessage(input) }) {
+                    Icon(
+                        imageVector = Icons.Default.Message,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = LanguageManager.getString("send_message"),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
 
         val keys = listOf(
             "1" to "", "2" to "ABC", "3" to "DEF",
@@ -357,9 +464,7 @@ private fun KeypadTab(
                             digit = digit,
                             letters = letters,
                             onClick = { onInputChange(input + digit) },
-                            onLongClick = {
-                                if (digit == "0") onInputChange(input + "+")
-                            }
+                            onLongClick = { if (digit == "0") onInputChange(input + "+") }
                         )
                     }
                 }
@@ -373,7 +478,12 @@ private fun KeypadTab(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Spacer(Modifier.width(56.dp))
+            SimSelector(
+                routing = routing,
+                sims = sims,
+                onPick = { sim -> app.setPreferredSim(routing.operator, sim) },
+                modifier = Modifier.size(56.dp)
+            )
             FilledIconButton(
                 onClick = { if (input.isNotBlank()) onCall(input) },
                 enabled = input.isNotBlank(),
@@ -409,19 +519,6 @@ private fun KeypadTab(
                 }
             }
         }
-    }
-
-    if (showSimPicker) {
-        com.example.ui.components.SimPickerDialog(
-            sims = sims,
-            operator = routing.operator,
-            selected = routing.sim,
-            onDismiss = { showSimPicker = false },
-            onPick = { sim, _ ->
-                showSimPicker = false
-                app.setPreferredSim(routing.operator, sim)
-            }
-        )
     }
 }
 
@@ -497,6 +594,7 @@ private fun RecentsTab(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun CallRow(
     entry: CallEntry,
@@ -509,20 +607,21 @@ private fun CallRow(
             LanguageManager.getString("unknown_number")
         }
     }
+    val copy = rememberNumberCopier(entry.number)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onCall)
+            .combinedClickable(onClick = onCall, onLongClick = copy)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         InitialsAvatar(
-            text = if (entry.name.isNotBlank()) {
-                entry.name.take(1).uppercase()
+            text = if (entry.name.isNotBlank()) entry.name.take(1).uppercase() else "#",
+            color = if (entry.isMissed) {
+                MaterialTheme.colorScheme.error
             } else {
-                "#"
-            },
-            color = if (entry.isMissed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+                MaterialTheme.colorScheme.primary
+            }
         )
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
@@ -530,7 +629,11 @@ private fun CallRow(
                 text = if (count > 1) "$title ($count)" else title,
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = FontWeight.Bold,
-                color = if (entry.isMissed) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface
+                color = if (entry.isMissed) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
@@ -620,7 +723,7 @@ private fun ContactsTab(
             )
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
-                items(filtered) { contact ->
+                items(filtered, key = { it.id.toString() + it.number }) { contact ->
                     ContactRow(
                         contact = contact,
                         onCall = { onCall(contact.number) },
@@ -632,16 +735,33 @@ private fun ContactsTab(
     }
 }
 
+/** Copies a number to the clipboard, so it can be pasted anywhere else. */
+@Composable
+private fun rememberNumberCopier(number: String): () -> Unit {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+    return {
+        clipboard.setText(AnnotatedString(NumberUtils.toNational(number)))
+        Toast.makeText(
+            context,
+            LanguageManager.getString("number_copied"),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ContactRow(
     contact: Contact,
     onCall: () -> Unit,
     onMessage: () -> Unit
 ) {
+    val copy = rememberNumberCopier(contact.number)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onCall)
+            .combinedClickable(onClick = onCall, onLongClick = copy)
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

@@ -120,21 +120,25 @@ fun SettingsScreen(app: AppViewModel) {
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp)
     ) {
-        Row(
+        Text(
+            text = LanguageManager.getString("settings_title"),
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.ExtraBold,
+            color = MaterialTheme.colorScheme.primary,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = LanguageManager.getString("settings_title"),
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            LanguageManager.LanguageSelector()
-        }
+                .padding(vertical = 12.dp)
+        )
+
+        // ------------------------------------------------------------- language
+        SectionHeader(LanguageManager.getString("language"))
+        Text(
+            text = LanguageManager.getString("language_desc"),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.height(8.dp))
+        LanguageManager.LanguageSelector()
 
         // ------------------------------------------------------------ operators
         SectionHeader(LanguageManager.getString("section_operators"))

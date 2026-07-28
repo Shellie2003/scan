@@ -201,6 +201,32 @@ object SmsRepository {
     }
 
     /**
+     * Marks every message received from a number as read, used when the user
+     * answers or dismisses the notification of that conversation.
+     */
+    suspend fun markAddressRead(context: Context, address: String) = withContext(Dispatchers.IO) {
+        val ids = loadMessagesForAddress(context, address)
+            .filter { it.isIncoming && !it.read }
+            .map { it.id }
+        if (ids.isEmpty()) return@withContext
+        try {
+            val values = ContentValues().apply {
+                put(Telephony.Sms.READ, 1)
+                put(Telephony.Sms.SEEN, 1)
+            }
+            context.contentResolver.update(
+                Telephony.Sms.CONTENT_URI,
+                values,
+                Telephony.Sms._ID + " IN (" + ids.joinToString(",") + ")",
+                null
+            )
+        } catch (e: Exception) {
+            // Not the default SMS app: the provider stays untouched.
+        }
+        Unit
+    }
+
+    /**
      * Stores an incoming message. Android only delivers `SMS_DELIVER` to the
      * default SMS app, and expects that app to persist the message itself.
      */
@@ -248,6 +274,21 @@ object SmsRepository {
             false
         }
     }
+
+    /** Deletes the messages the user picked in a conversation. */
+    suspend fun deleteMessages(context: Context, ids: Collection<Long>): Int =
+        withContext(Dispatchers.IO) {
+            if (ids.isEmpty()) return@withContext 0
+            try {
+                context.contentResolver.delete(
+                    Telephony.Sms.CONTENT_URI,
+                    Telephony.Sms._ID + " IN (" + ids.joinToString(",") + ")",
+                    null
+                )
+            } catch (e: Exception) {
+                0
+            }
+        }
 
     suspend fun deleteThread(context: Context, threadId: Long): Boolean = withContext(Dispatchers.IO) {
         try {

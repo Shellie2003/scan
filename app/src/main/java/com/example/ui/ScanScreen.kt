@@ -375,22 +375,15 @@ fun CameraContent(
             .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
-        Row(
+        Text(
+            text = LanguageManager.getString("step_1_choose_operator"),
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onBackground,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = LanguageManager.getString("step_1_choose_operator"),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.weight(1f)
-            )
-            LanguageManager.LanguageSelector()
-        }
+                .padding(bottom = 8.dp)
+        )
 
         LazyRow(
             horizontalArrangement = Arrangement.spacedBy(8.dp),

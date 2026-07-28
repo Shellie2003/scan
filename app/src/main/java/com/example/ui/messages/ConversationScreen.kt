@@ -1,15 +1,23 @@
 package com.example.ui.messages
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -19,9 +27,12 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -29,7 +40,6 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -44,7 +54,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.AppSettings
@@ -53,8 +65,7 @@ import com.example.telephony.SmsMessageItem
 import com.example.telephony.SmsSender
 import com.example.telephony.SmsThread
 import com.example.ui.components.InitialsAvatar
-import com.example.ui.components.SimIndicator
-import com.example.ui.components.SimPickerDialog
+import com.example.ui.components.SimSelector
 import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
@@ -63,10 +74,11 @@ import com.example.viewmodel.MessagesViewModel
 /**
  * One conversation: the messages exchanged with a number, and the field to answer.
  *
- * The SIM used for the answer follows the same rule as the rest of the app — the
- * card of the operator of the destination number when the phone holds one — and
- * stays visible and changeable above the input field.
+ * A long press turns the list into a selection — several messages can then be
+ * copied or deleted at once. The SIM used for the answer follows the rule of the
+ * rest of the app and is changed from the card icon next to the field.
  */
+@OptIn(ExperimentalFoundationApi::class, ExperimentalLayoutApi::class)
 @Composable
 fun ConversationScreen(
     app: AppViewModel,
@@ -76,69 +88,107 @@ fun ConversationScreen(
     onCall: (String) -> Unit
 ) {
     val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
     val items by messages.messages.collectAsState()
     val sims by app.sims.collectAsState()
     val listState = rememberLazyListState()
 
     var draft by remember(thread.threadId) { mutableStateOf("") }
     var forcedSubscription by remember { mutableStateOf(AppSettings.NO_SUBSCRIPTION) }
-    var showSimPicker by remember { mutableStateOf(false) }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var confirmDeleteThread by remember { mutableStateOf(false) }
+    var selected by remember(thread.threadId) { mutableStateOf<Set<Long>>(emptySet()) }
+    var confirmDeleteSelection by remember { mutableStateOf(false) }
 
+    val selecting = selected.isNotEmpty()
     val routing = remember(thread.address, sims, forcedSubscription) {
         app.routeForNumber(thread.address, forcedSubscription)
+    }
+
+    fun toggle(id: Long) {
+        selected = if (id in selected) selected - id else selected + id
     }
 
     LaunchedEffect(items.size) {
         if (items.isNotEmpty()) listState.animateScrollToItem(items.lastIndex)
     }
 
+    // The keyboard shortens the list: the last message has to stay in sight.
+    val imeVisible = WindowInsets.isImeVisible
+    LaunchedEffect(imeVisible) {
+        if (imeVisible && items.isNotEmpty()) listState.animateScrollToItem(items.lastIndex)
+    }
+
+    // Back leaves the selection first, and the conversation only after.
+    BackHandler(enabled = true) {
+        if (selecting) selected = emptySet() else onBack()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .imePadding()
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp, vertical = 8.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(
-                    imageVector = Icons.Default.ArrowBack,
-                    contentDescription = LanguageManager.getString("back")
-                )
-            }
-            InitialsAvatar(text = thread.initials, size = 38.dp)
-            Spacer(Modifier.width(10.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = thread.title,
-                    style = MaterialTheme.typography.titleSmall,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1
-                )
-                Text(
-                    text = NumberUtils.formatForDisplay(thread.address),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            IconButton(onClick = { onCall(thread.address) }) {
-                Icon(
-                    imageVector = Icons.Default.Call,
-                    contentDescription = LanguageManager.getString("call"),
-                    tint = MaterialTheme.scanColors.success
-                )
-            }
-            if (thread.threadId >= 0) {
-                IconButton(onClick = { confirmDelete = true }) {
+        if (selecting) {
+            SelectionBar(
+                count = selected.size,
+                onClose = { selected = emptySet() },
+                onSelectAll = { selected = items.map { it.id }.toSet() },
+                onCopy = {
+                    val text = items.filter { it.id in selected }.joinToString("\n") { it.body }
+                    clipboard.setText(AnnotatedString(text))
+                    selected = emptySet()
+                    android.widget.Toast.makeText(
+                        context,
+                        LanguageManager.getString("message_copied"),
+                        android.widget.Toast.LENGTH_SHORT
+                    ).show()
+                },
+                onDelete = { confirmDeleteSelection = true }
+            )
+        } else {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
-                        contentDescription = LanguageManager.getString("delete"),
-                        tint = MaterialTheme.colorScheme.error
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = LanguageManager.getString("back")
                     )
+                }
+                InitialsAvatar(text = thread.initials, size = 38.dp)
+                Spacer(Modifier.width(10.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = thread.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
+                    Text(
+                        text = NumberUtils.formatForDisplay(thread.address),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                IconButton(onClick = { onCall(thread.address) }) {
+                    Icon(
+                        imageVector = Icons.Default.Call,
+                        contentDescription = LanguageManager.getString("call"),
+                        tint = MaterialTheme.scanColors.success
+                    )
+                }
+                if (thread.threadId >= 0) {
+                    IconButton(onClick = { confirmDeleteThread = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Delete,
+                            contentDescription = LanguageManager.getString("delete_conversation"),
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }
@@ -152,23 +202,32 @@ fun ConversationScreen(
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             items(items, key = { it.id }) { message ->
-                MessageBubble(message)
+                MessageBubble(
+                    message = message,
+                    selected = message.id in selected,
+                    onClick = { if (selecting) toggle(message.id) },
+                    onLongClick = { toggle(message.id) }
+                )
             }
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp)
-                .padding(bottom = 12.dp)
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 3.dp
         ) {
-            SimIndicator(
-                routing = routing,
-                modifier = Modifier.fillMaxWidth(),
-                onClick = { showSimPicker = true }
-            )
-            Spacer(Modifier.height(8.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                SimSelector(
+                    routing = routing,
+                    sims = sims,
+                    onPick = { sim -> forcedSubscription = sim.subscriptionId },
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
                 OutlinedTextField(
                     value = draft,
                     onValueChange = { draft = it },
@@ -202,23 +261,9 @@ fun ConversationScreen(
         }
     }
 
-    if (showSimPicker) {
-        SimPickerDialog(
-            sims = sims,
-            operator = routing.operator,
-            selected = routing.sim,
-            onDismiss = { showSimPicker = false },
-            onPick = { sim, save ->
-                showSimPicker = false
-                forcedSubscription = sim.subscriptionId
-                if (save) AppSettings.setDefaultSmsSubscription(context, sim.subscriptionId)
-            }
-        )
-    }
-
-    if (confirmDelete) {
+    if (confirmDeleteThread) {
         AlertDialog(
-            onDismissRequest = { confirmDelete = false },
+            onDismissRequest = { confirmDeleteThread = false },
             title = {
                 Text(LanguageManager.getString("delete_conversation"), fontWeight = FontWeight.Bold)
             },
@@ -226,7 +271,7 @@ fun ConversationScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        confirmDelete = false
+                        confirmDeleteThread = false
                         messages.deleteThread(thread)
                     },
                     colors = ButtonDefaults.buttonColors(
@@ -235,7 +280,39 @@ fun ConversationScreen(
                 ) { Text(LanguageManager.getString("delete")) }
             },
             dismissButton = {
-                TextButton(onClick = { confirmDelete = false }) {
+                TextButton(onClick = { confirmDeleteThread = false }) {
+                    Text(LanguageManager.getString("cancel"))
+                }
+            }
+        )
+    }
+
+    if (confirmDeleteSelection) {
+        AlertDialog(
+            onDismissRequest = { confirmDeleteSelection = false },
+            title = { Text(LanguageManager.getString("delete"), fontWeight = FontWeight.Bold) },
+            text = {
+                Text(
+                    LanguageManager.getString(
+                        "delete_selected_messages",
+                        "count" to selected.size
+                    )
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        confirmDeleteSelection = false
+                        messages.deleteMessages(selected)
+                        selected = emptySet()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) { Text(LanguageManager.getString("delete")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmDeleteSelection = false }) {
                     Text(LanguageManager.getString("cancel"))
                 }
             }
@@ -243,26 +320,106 @@ fun ConversationScreen(
     }
 }
 
+/** Header shown while messages are selected. */
 @Composable
-private fun MessageBubble(message: SmsMessageItem) {
+private fun SelectionBar(
+    count: Int,
+    onClose: () -> Unit,
+    onSelectAll: () -> Unit,
+    onCopy: () -> Unit,
+    onDelete: () -> Unit
+) {
+    Surface(color = MaterialTheme.colorScheme.primaryContainer, tonalElevation = 3.dp) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onClose) {
+                Icon(
+                    imageVector = Icons.Default.Close,
+                    contentDescription = LanguageManager.getString("close"),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            Text(
+                text = LanguageManager.getString("selected_count", "count" to count),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.weight(1f)
+            )
+            IconButton(onClick = onSelectAll) {
+                Icon(
+                    imageVector = Icons.Default.DoneAll,
+                    contentDescription = LanguageManager.getString("select_all"),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            IconButton(onClick = onCopy) {
+                Icon(
+                    imageVector = Icons.Default.ContentCopy,
+                    contentDescription = LanguageManager.getString("copy"),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = Icons.Default.Delete,
+                    contentDescription = LanguageManager.getString("delete"),
+                    tint = MaterialTheme.colorScheme.error
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun MessageBubble(
+    message: SmsMessageItem,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
     val incoming = message.isIncoming
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (selected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                } else {
+                    androidx.compose.ui.graphics.Color.Transparent
+                }
+            )
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(vertical = 2.dp),
         contentAlignment = if (incoming) Alignment.CenterStart else Alignment.CenterEnd
     ) {
+        val shape = RoundedCornerShape(
+            topStart = 16.dp,
+            topEnd = 16.dp,
+            bottomStart = if (incoming) 4.dp else 16.dp,
+            bottomEnd = if (incoming) 16.dp else 4.dp
+        )
         Surface(
-            shape = RoundedCornerShape(
-                topStart = 16.dp,
-                topEnd = 16.dp,
-                bottomStart = if (incoming) 4.dp else 16.dp,
-                bottomEnd = if (incoming) 16.dp else 4.dp
-            ),
+            shape = shape,
             color = if (incoming) {
                 MaterialTheme.colorScheme.surfaceVariant
             } else {
                 MaterialTheme.colorScheme.primaryContainer
             },
-            modifier = Modifier.widthIn(max = 300.dp)
+            modifier = Modifier
+                .widthIn(max = 300.dp)
+                .then(
+                    if (selected) {
+                        Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape)
+                    } else {
+                        Modifier
+                    }
+                )
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 Text(

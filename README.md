@@ -7,8 +7,12 @@ groupés — sans jamais avoir à changer d'application.
 ## Fonctionnalités
 
 ### Téléphone complet
-- Clavier de numérotation avec recherche T9 dans les contacts.
-- Journal d'appels (entrants, sortants, manqués), contacts et favoris.
+- L'écran s'ouvre sur le **journal d'appels** — rappeler quelqu'un est ce que
+  l'on fait le plus souvent —, puis les contacts et les favoris.
+- Le **clavier de numérotation** s'ouvre sur le bouton flottant : recherche T9
+  dans les contacts, choix de la SIM, et le numéro peut être **collé** depuis le
+  presse-papiers ou **copié** vers une autre application (appui long sur le
+  numéro, sur une ligne du journal ou sur un contact).
 - Écran d'appel plein écran : répondre, raccrocher, muet, haut-parleur, mise en
   attente, clavier DTMF, affichage sur l'écran verrouillé.
 - L'application peut être définie comme **application Téléphone par défaut**
@@ -33,18 +37,35 @@ groupés — sans jamais avoir à changer d'application.
   par opérateur. La carte utilisée est toujours affichée avant l'opération.
 - Routage intelligent : un appel, un transfert ou un SMS part de la carte du même
   opérateur que le numéro destinataire lorsqu'elle est présente.
+- Dans le téléphone et les messages, la SIM tient dans une **icône de carte**
+  portant le numéro de l'emplacement utilisé ; un menu s'ouvre au clic pour en
+  changer. Les écrans qui dépensent du crédit (scan, forfaits, partage) gardent
+  la fiche complète : y lire la carte avant de composer est ce qui les rend sûrs.
 
 ### Messagerie complète
 Trois onglets réunis au même endroit — **Réception**, **Groupé**, **Contacts** :
 - **Boîte de réception** : conversations triées par date, compteur de non-lus,
   fil de discussion avec bulles, réponse directe, suppression. La liste se met à
   jour toute seule quand un message arrive (observateur sur la base SMS).
+- **Nouveau message** sur le bouton flottant : un contact, ou un numéro saisi ou
+  collé, et la discussion s'ouvre.
+- **Appui long** pour sélectionner plusieurs messages dans une discussion — les
+  copier ou les supprimer d'un coup — ou plusieurs discussions dans la réception.
+- Le champ de saisie **remonte au-dessus du clavier**, dans la discussion comme
+  dans l'envoi groupé.
 - L'application peut être définie comme **application SMS par défaut** : elle
   reçoit alors `SMS_DELIVER`, enregistre elle-même les messages entrants, notifie
   l'utilisateur, et propose la réponse rapide par message pendant un appel.
-- **Envoi groupé** : sélection multiple de contacts, ajout de numéros à la main,
-  modèles réutilisables, personnalisation par `{NAME}` et `{NUMBER}`, envoi
-  séquentiel avec progression et rapport d'échecs.
+- **Notification d'un message reçu** : le nom du contact quand le téléphone le
+  connaît, un avatar coloré avec ses initiales, les messages de la même personne
+  regroupés dans une seule notification, et trois actions — **répondre sans
+  ouvrir l'application**, marquer comme lu, rappeler. La toucher ouvre la
+  **discussion**, jamais l'écran d'accueil.
+- **Envoi groupé** : la liste des contacts occupe l'écran — le message s'écrit
+  dans une feuille ouverte depuis la barre du bas, qui ne cache plus les contacts
+  à choisir. Sélection multiple, ajout de numéros à la main, modèles
+  réutilisables, personnalisation par `{NAME}` et `{NUMBER}`, envoi séquentiel
+  avec progression et rapport d'échecs.
 - Répartition automatique par opérateur : chaque destinataire est servi par la
   carte SIM de son propre réseau quand elle est disponible.
 - **Contacts** : la même liste que dans l'onglet Téléphone, pour démarrer une
@@ -92,7 +113,9 @@ marque — sont dans [`docs/IDENTITE.md`](docs/IDENTITE.md), et le code
 correspondant dans `app/src/main/java/com/example/ui/theme/`.
 
 ## Langues
-Malagasy, français et anglais, changeables à tout moment depuis n'importe quel écran.
+Malagasy, français et anglais, dans **Réglages → Langue**. Les trois boutons
+occupaient la barre de titre de chaque écran ; la langue se choisit une fois, à
+l'endroit où l'on règle le reste de l'application.
 
 ## Permissions demandées
 Caméra (scan), téléphone et appels, état et numéro des SIM, contacts, journal

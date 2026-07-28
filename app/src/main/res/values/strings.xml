@@ -5,4 +5,5 @@
     <string name="calls_channel_name">Appels</string>
     <string name="calls_channel_desc">Notifications des appels entrants et en cours</string>
     <string name="sms_channel_name">Messages reçus</string>
+    <string name="sms_channel_desc">Notifications des messages reçus, avec réponse directe</string>
 </resources>

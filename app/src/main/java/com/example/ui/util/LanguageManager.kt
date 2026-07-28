@@ -3,9 +3,9 @@ package com.example.ui.util
 import android.content.Context
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -288,7 +289,27 @@ object LanguageManager {
             "default_sms_cta" to "Ataovy fototra",
             "default_sms_active" to "Ity no application hafatra fototra",
             "write_message" to "Soraty ny hafatra",
-            "delete_conversation" to "Hofafana ny resaka"
+            "delete_conversation" to "Hofafana ny resaka",
+            "new_message" to "Hafatra vaovao",
+            "new_conversation_hint" to "Soraty ny laharana na safidio ny mpifandray",
+            "paste" to "Apetaho",
+            "nothing_to_paste" to "Tsy misy laharana ao amin'ny fitehirizana",
+            "number_copied" to "Voadika ny laharana",
+            "message_copied" to "Voadika ny hafatra",
+            "selected_count" to "{count} voafidy",
+            "delete_selected_messages" to "Hofafana ny hafatra {count} voafidy?",
+            "delete_selected_threads" to "Hofafana ny resaka {count} voafidy?",
+            "long_press_hint" to "Tsindrio ela raha hisafidy maromaro",
+            "compose" to "Soraty",
+            "done" to "Vita",
+            "reply" to "Hamaly",
+            "mark_read" to "Efa novakiana",
+            "reply_failed" to "Tsy afaka nalefa ny valiny",
+            "you" to "Izaho",
+            "language_desc" to "Fiteny ampiasain'ny fampiharana",
+            "call_history" to "Tantaran'ny antso",
+            "open_keypad" to "Hanokatra ny kitendry",
+            "select_recipient" to "Iza no handefasana?"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -539,7 +560,27 @@ object LanguageManager {
             "default_sms_cta" to "Définir par défaut",
             "default_sms_active" to "Application SMS par défaut",
             "write_message" to "Écrire un message",
-            "delete_conversation" to "Supprimer la conversation"
+            "delete_conversation" to "Supprimer la conversation",
+            "new_message" to "Nouveau message",
+            "new_conversation_hint" to "Saisissez un numéro ou choisissez un contact",
+            "paste" to "Coller",
+            "nothing_to_paste" to "Aucun numéro dans le presse-papiers",
+            "number_copied" to "Numéro copié",
+            "message_copied" to "Message copié",
+            "selected_count" to "{count} sélectionné(s)",
+            "delete_selected_messages" to "Supprimer les {count} message(s) sélectionné(s) ?",
+            "delete_selected_threads" to "Supprimer les {count} discussion(s) sélectionnée(s) ?",
+            "long_press_hint" to "Appui long pour en sélectionner plusieurs",
+            "compose" to "Rédiger",
+            "done" to "Terminé",
+            "reply" to "Répondre",
+            "mark_read" to "Marquer comme lu",
+            "reply_failed" to "La réponse n'a pas pu être envoyée",
+            "you" to "Moi",
+            "language_desc" to "Langue de l'application",
+            "call_history" to "Historique des appels",
+            "open_keypad" to "Ouvrir le clavier",
+            "select_recipient" to "À qui écrivez-vous ?"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -790,7 +831,27 @@ object LanguageManager {
             "default_sms_cta" to "Set as default",
             "default_sms_active" to "Default SMS app",
             "write_message" to "Write a message",
-            "delete_conversation" to "Delete the conversation"
+            "delete_conversation" to "Delete the conversation",
+            "new_message" to "New message",
+            "new_conversation_hint" to "Type a number or pick a contact",
+            "paste" to "Paste",
+            "nothing_to_paste" to "No number in the clipboard",
+            "number_copied" to "Number copied",
+            "message_copied" to "Message copied",
+            "selected_count" to "{count} selected",
+            "delete_selected_messages" to "Delete the {count} selected message(s)?",
+            "delete_selected_threads" to "Delete the {count} selected conversation(s)?",
+            "long_press_hint" to "Long press to select several items",
+            "compose" to "Compose",
+            "done" to "Done",
+            "reply" to "Reply",
+            "mark_read" to "Mark as read",
+            "reply_failed" to "The reply could not be sent",
+            "you" to "Me",
+            "language_desc" to "Application language",
+            "call_history" to "Call history",
+            "open_keypad" to "Open the keypad",
+            "select_recipient" to "Who are you writing to?"
         )
     )
 
@@ -803,35 +864,54 @@ object LanguageManager {
         return result
     }
 
+    /**
+     * The language picker. It lives in the settings only: the app bar of every
+     * screen used to carry it, which cost space on the screens that need it most.
+     */
     @Composable
     fun LanguageSelector(modifier: Modifier = Modifier) {
         val context = LocalContext.current
         val current = currentLang.value
         Row(
-            modifier = modifier,
+            modifier = modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            listOf("mg" to "MG", "fr" to "FR", "en" to "EN").forEach { (code, label) ->
+            listOf(
+                "mg" to getString("lang_mg"),
+                "fr" to getString("lang_fr"),
+                "en" to getString("lang_en")
+            ).forEach { (code, label) ->
                 val isSelected = current == code
-                val containerColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
-                val contentColor = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant
-                
                 Surface(
                     onClick = { setLanguage(context, code) },
                     shape = RoundedCornerShape(12.dp),
-                    color = containerColor,
-                    contentColor = contentColor,
-                    border = if (isSelected) null else BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)),
-                    modifier = Modifier.size(height = 32.dp, width = 48.dp)
+                    color = if (isSelected) {
+                        MaterialTheme.colorScheme.primaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    },
+                    contentColor = if (isSelected) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    border = if (isSelected) {
+                        BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
+                    } else {
+                        null
+                    },
+                    modifier = Modifier.weight(1f)
                 ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = label,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
+                    Text(
+                        text = label,
+                        fontSize = 13.sp,
+                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 12.dp)
+                    )
                 }
             }
         }

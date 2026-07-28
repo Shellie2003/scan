@@ -5,6 +5,7 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -24,7 +25,9 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -41,12 +44,13 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.example.telephony.MessageNotifier
 import com.example.telephony.NumberUtils
 import com.example.telephony.PhoneCallService
-import com.example.telephony.SmsDeliverReceiver
 import com.example.ui.ScanScreen
 import com.example.ui.TolotraScreen
 import com.example.ui.components.WithSimRouting
+import com.example.ui.messages.ConversationScreen
 import com.example.ui.messages.MessagesScreen
 import com.example.ui.phone.PhoneScreen
 import com.example.ui.settings.SettingsScreen
@@ -58,13 +62,33 @@ import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
 import com.example.viewmodel.PhoneViewModel
 
+/** Every destination of the app, named in one place. */
+object Routes {
+    const val PHONE = "phone"
+    const val MESSAGES = "messages"
+    const val CONVERSATION = "messages/conversation"
+    const val SCAN = "scan"
+    const val OFFERS = "offers"
+    const val SHARE = "offers/share"
+    const val SETTINGS = "settings"
+}
+
+/**
+ * What an incoming intent asks the app to open.
+ *
+ * A message notification asks for the discussion itself — not for the dialer,
+ * which is what the app shows when it is simply launched.
+ */
+sealed interface AppTarget {
+    data class Dial(val number: String) : AppTarget
+    data class Conversation(val address: String, val name: String = "") : AppTarget
+    data object Messages : AppTarget
+}
+
 class MainActivity : ComponentActivity() {
 
-    /** Number received through a `tel:` intent, so the app can act as the phone app. */
-    private var incomingNumber by mutableStateOf("")
-
-    /** Number received through an `sms:` intent, so the app can act as the SMS app. */
-    private var incomingMessageNumber by mutableStateOf("")
+    /** Destination asked by the intent that started — or resumed — the activity. */
+    private var target by mutableStateOf<AppTarget?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -72,19 +96,13 @@ class MainActivity : ComponentActivity() {
         LanguageManager.init(this)
         ThemeController.init(this)
         PhoneCallService.createChannel(this)
-        SmsDeliverReceiver.createChannel(this)
-        incomingNumber = numberFromIntent(intent)
-        incomingMessageNumber = messageNumberFromIntent(intent)
+        MessageNotifier.createChannel(this)
+        target = targetFromIntent(intent)
 
         enableEdgeToEdge()
         setContent {
             ScanTheme {
-                MainScreen(
-                    incomingNumber = incomingNumber,
-                    incomingMessageNumber = incomingMessageNumber,
-                    onNumberConsumed = { incomingNumber = "" },
-                    onMessageNumberConsumed = { incomingMessageNumber = "" }
-                )
+                MainScreen(target = target, onTargetConsumed = { target = null })
             }
         }
     }
@@ -92,20 +110,41 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        incomingNumber = numberFromIntent(intent)
-        incomingMessageNumber = messageNumberFromIntent(intent)
+        target = targetFromIntent(intent)
     }
 
-    private fun numberFromIntent(intent: Intent?): String {
-        val data = intent?.data ?: return ""
-        if (data.scheme != "tel") return ""
-        return NumberUtils.sanitize(data.schemeSpecificPart.orEmpty())
-    }
+    private fun targetFromIntent(intent: Intent?): AppTarget? {
+        if (intent == null) return null
 
-    private fun messageNumberFromIntent(intent: Intent?): String {
-        val data = intent?.data ?: return ""
-        if (data.scheme !in listOf("sms", "smsto", "mms", "mmsto")) return ""
-        return NumberUtils.sanitize(data.schemeSpecificPart.orEmpty())
+        if (intent.action == MessageNotifier.ACTION_OPEN_CONVERSATION) {
+            val address = intent.getStringExtra(MessageNotifier.EXTRA_ADDRESS).orEmpty()
+            return if (address.isBlank()) {
+                AppTarget.Messages
+            } else {
+                AppTarget.Conversation(
+                    address = address,
+                    name = intent.getStringExtra(MessageNotifier.EXTRA_NAME).orEmpty()
+                )
+            }
+        }
+
+        val data = intent.data
+        if (data == null) {
+            // DIAL and CALL_BUTTON without a number: the user wants the keypad.
+            val wantsKeypad = intent.action == Intent.ACTION_DIAL ||
+                intent.action == Intent.ACTION_CALL_BUTTON
+            return if (wantsKeypad) AppTarget.Dial("") else null
+        }
+
+        val part = data.schemeSpecificPart.orEmpty().substringBefore('?')
+        return when (data.scheme) {
+            "tel" -> AppTarget.Dial(NumberUtils.sanitize(part))
+            "sms", "smsto", "mms", "mmsto" -> {
+                val address = NumberUtils.sanitize(part)
+                if (address.isBlank()) AppTarget.Messages else AppTarget.Conversation(address)
+            }
+            else -> null
+        }
     }
 }
 
@@ -116,19 +155,17 @@ private data class NavigationItem(
 )
 
 private val navigationItems = listOf(
-    NavigationItem("Phone", "nav_phone", Icons.Default.Phone),
-    NavigationItem("Messages", "nav_messages", Icons.Default.Message),
-    NavigationItem("Scan", "nav_scan", Icons.Default.QrCodeScanner),
-    NavigationItem("Tolotra", "nav_offers", Icons.Default.LocalOffer),
-    NavigationItem("Settings", "nav_settings", Icons.Default.Settings)
+    NavigationItem(Routes.PHONE, "nav_phone", Icons.Default.Phone),
+    NavigationItem(Routes.MESSAGES, "nav_messages", Icons.Default.Message),
+    NavigationItem(Routes.SCAN, "nav_scan", Icons.Default.QrCodeScanner),
+    NavigationItem(Routes.OFFERS, "nav_offers", Icons.Default.LocalOffer),
+    NavigationItem(Routes.SETTINGS, "nav_settings", Icons.Default.Settings)
 )
 
 @Composable
 fun MainScreen(
-    incomingNumber: String = "",
-    incomingMessageNumber: String = "",
-    onNumberConsumed: () -> Unit = {},
-    onMessageNumberConsumed: () -> Unit = {}
+    target: AppTarget? = null,
+    onTargetConsumed: () -> Unit = {}
 ) {
     val navController = rememberNavController()
     val currentLang by LanguageManager.currentLang
@@ -136,125 +173,190 @@ fun MainScreen(
     val phone: PhoneViewModel = viewModel()
     val messages: MessagesViewModel = viewModel()
 
-    var messageRecipient by remember { mutableStateOf("") }
+    // The number the dialer opens on, and a ticket that reopens the keypad even
+    // when the same number is dialled twice in a row.
+    var dialNumber by remember { mutableStateOf("") }
+    var dialTicket by remember { mutableIntStateOf(0) }
+
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentDestination = navBackStackEntry?.destination
+    // The bar belongs to the five main sections; a conversation or the sharing
+    // screen is a step inside one of them and takes the whole height.
+    val showBottomBar = currentDestination?.hierarchy?.any { destination ->
+        navigationItems.any { it.route == destination.route }
+    } == true
+
+    fun openSection(route: String) {
+        navController.navigate(route) {
+            popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+            launchSingleTop = true
+            restoreState = true
+        }
+    }
+
+    fun openConversation(address: String, name: String = "") {
+        if (address.isBlank()) return
+        messages.openWithAddress(address, name)
+        navController.navigate(Routes.CONVERSATION) { launchSingleTop = true }
+    }
 
     Scaffold(
         bottomBar = {
-            NavigationBar(
-                modifier = Modifier
-                    .padding(horizontal = 12.dp)
-                    .padding(bottom = 12.dp)
-                    .navigationBarsPadding()
-                    .shadow(
-                        elevation = 12.dp,
-                        shape = RoundedCornerShape(24.dp),
-                        clip = false,
-                        ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                        spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
-                    )
-                    .clip(RoundedCornerShape(24.dp)),
-                containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.97f),
-                tonalElevation = 8.dp
-            ) {
-                val navBackStackEntry by navController.currentBackStackEntryAsState()
-                val currentDestination = navBackStackEntry?.destination
-                navigationItems.forEach { item ->
-                    val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                    val label = LanguageManager.getString(item.labelKey)
-                    NavigationBarItem(
-                        icon = {
-                            Icon(
-                                imageVector = item.icon,
-                                contentDescription = label,
-                                modifier = Modifier.size(22.dp)
-                            )
-                        },
-                        label = {
-                            Text(
-                                text = label,
-                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.Medium,
-                                fontSize = 10.sp,
-                                letterSpacing = 0.2.sp,
-                                maxLines = 1
-                            )
-                        },
-                        selected = isSelected,
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = MaterialTheme.colorScheme.primary,
-                            selectedTextColor = MaterialTheme.colorScheme.primary,
-                            indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
-                        ),
-                        onClick = {
-                            navController.navigate(item.route) {
-                                popUpTo(navController.graph.findStartDestination().id) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                                restoreState = true
-                            }
-                        }
-                    )
-                }
+            if (showBottomBar) {
+                ScanBottomBar(
+                    isSelected = { route ->
+                        currentDestination?.hierarchy?.any { it.route == route } == true
+                    },
+                    onSelect = { route -> openSection(route) }
+                )
             }
         }
     ) { innerPadding ->
         WithSimRouting(app) { launcher ->
             NavHost(
                 navController = navController,
-                startDestination = "Phone",
-                modifier = Modifier.padding(innerPadding)
+                startDestination = Routes.PHONE,
+                modifier = Modifier
+                    .padding(innerPadding)
+                    // What the scaffold already paid for is consumed here, so the
+                    // keyboard padding of the message composer stays exact.
+                    .consumeWindowInsets(innerPadding)
             ) {
-                composable("Phone") {
+                composable(Routes.PHONE) {
                     PhoneScreen(
                         app = app,
                         phone = phone,
                         launcher = launcher,
-                        prefilledNumber = incomingNumber,
-                        onMessage = { number ->
-                            messageRecipient = number
-                            navController.navigate("Messages") { launchSingleTop = true }
-                        }
+                        dialNumber = dialNumber,
+                        dialTicket = dialTicket,
+                        onMessage = { number -> openConversation(number) }
                     )
                 }
-                composable("Messages") {
+                composable(Routes.MESSAGES) {
                     MessagesScreen(
                         app = app,
                         phone = phone,
                         messages = messages,
-                        prefilledNumber = messageRecipient,
-                        onCall = { number -> launcher.call(number) }
+                        onOpenConversation = { address, name -> openConversation(address, name) },
+                        onOpenThread = { thread ->
+                            messages.open(thread)
+                            navController.navigate(Routes.CONVERSATION) { launchSingleTop = true }
+                        }
                     )
                 }
-                composable("Scan") { ScanScreen(app = app, launcher = launcher) }
-                composable("Tolotra") {
+                composable(Routes.CONVERSATION) {
+                    val thread by messages.openThread.collectAsState()
+                    val current = thread
+                    // Closing the conversation — from the back arrow, a deletion or
+                    // the system back — is what leaves the screen.
+                    LaunchedEffect(current) {
+                        if (current == null) {
+                            navController.popBackStack(Routes.CONVERSATION, inclusive = true)
+                        }
+                    }
+                    if (current != null) {
+                        ConversationScreen(
+                            app = app,
+                            messages = messages,
+                            thread = current,
+                            onBack = { messages.close() },
+                            onCall = { number -> launcher.call(number) }
+                        )
+                    }
+                }
+                composable(Routes.SCAN) { ScanScreen(app = app, launcher = launcher) }
+                composable(Routes.OFFERS) {
                     TolotraScreen(
                         app = app,
                         launcher = launcher,
                         onOpenShare = {
-                            navController.navigate("Share") { launchSingleTop = true }
+                            navController.navigate(Routes.SHARE) { launchSingleTop = true }
                         }
                     )
                 }
-                composable("Share") { ShareScreen(app = app, phone = phone, launcher = launcher) }
-                composable("Settings") { SettingsScreen(app = app) }
+                composable(Routes.SHARE) { ShareScreen(app = app, phone = phone, launcher = launcher) }
+                composable(Routes.SETTINGS) { SettingsScreen(app = app) }
             }
         }
     }
 
-    LaunchedEffect(incomingNumber) {
-        if (incomingNumber.isNotBlank()) {
-            navController.navigate("Phone") { launchSingleTop = true }
-            onNumberConsumed()
+    LaunchedEffect(target) {
+        when (val asked = target) {
+            null -> Unit
+
+            is AppTarget.Dial -> {
+                dialNumber = asked.number
+                dialTicket += 1
+                openSection(Routes.PHONE)
+                onTargetConsumed()
+            }
+
+            is AppTarget.Conversation -> {
+                openSection(Routes.MESSAGES)
+                openConversation(asked.address, asked.name)
+                onTargetConsumed()
+            }
+
+            AppTarget.Messages -> {
+                openSection(Routes.MESSAGES)
+                onTargetConsumed()
+            }
         }
     }
+}
 
-    LaunchedEffect(incomingMessageNumber) {
-        if (incomingMessageNumber.isNotBlank()) {
-            messageRecipient = incomingMessageNumber
-            navController.navigate("Messages") { launchSingleTop = true }
-            onMessageNumberConsumed()
+/** The floating bar of the five main sections. */
+@Composable
+private fun ScanBottomBar(
+    isSelected: (String) -> Boolean,
+    onSelect: (String) -> Unit
+) {
+    NavigationBar(
+        modifier = Modifier
+            .padding(horizontal = 12.dp)
+            .padding(bottom = 12.dp)
+            .navigationBarsPadding()
+            .shadow(
+                elevation = 12.dp,
+                shape = RoundedCornerShape(24.dp),
+                clip = false,
+                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+            )
+            .clip(RoundedCornerShape(24.dp)),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.97f),
+        tonalElevation = 8.dp
+    ) {
+        navigationItems.forEach { item ->
+            val selected = isSelected(item.route)
+            val label = LanguageManager.getString(item.labelKey)
+            NavigationBarItem(
+                icon = {
+                    Icon(
+                        imageVector = item.icon,
+                        contentDescription = label,
+                        modifier = Modifier.size(22.dp)
+                    )
+                },
+                label = {
+                    Text(
+                        text = label,
+                        fontWeight = if (selected) FontWeight.ExtraBold else FontWeight.Medium,
+                        fontSize = 10.sp,
+                        letterSpacing = 0.2.sp,
+                        maxLines = 1
+                    )
+                },
+                selected = selected,
+                colors = NavigationBarItemDefaults.colors(
+                    selectedIconColor = MaterialTheme.colorScheme.primary,
+                    selectedTextColor = MaterialTheme.colorScheme.primary,
+                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                    unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+                ),
+                onClick = { onSelect(item.route) }
+            )
         }
     }
 }

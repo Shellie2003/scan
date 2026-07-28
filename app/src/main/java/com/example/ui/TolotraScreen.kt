@@ -181,7 +181,6 @@ fun TolotraScreen(
                         color = theme.mainColor
                     )
                 }
-                LanguageManager.LanguageSelector()
             }
 
             if (operators.isEmpty()) {

@@ -8,6 +8,9 @@ import android.os.Looper
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.telephony.Contact
+import com.example.telephony.ContactsRepository
+import com.example.telephony.MessageNotifier
+import com.example.telephony.NumberUtils
 import com.example.telephony.SmsMessageItem
 import com.example.telephony.SmsRepository
 import com.example.telephony.SmsSender
@@ -64,31 +67,68 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
             _loading.value = true
             _threads.value = SmsRepository.loadThreads(getApplication<Application>(), contacts)
             _loading.value = false
+            attachOpenThread()
         }
+    }
+
+    /**
+     * A conversation opened from a notification starts as a draft, because the
+     * inbox is not loaded yet. As soon as it is, the real conversation — with its
+     * id, and therefore its history and its deletion — takes its place.
+     */
+    private fun attachOpenThread() {
+        val open = _openThread.value ?: return
+        if (open.threadId >= 0) return
+        val match = _threads.value.firstOrNull { NumberUtils.sameNumber(it.address, open.address) }
+            ?: return
+        _openThread.value = if (open.contactName.isNotBlank() && match.contactName.isBlank()) {
+            match.copy(contactName = open.contactName)
+        } else {
+            match
+        }
+        loadMessages(_openThread.value ?: return)
     }
 
     fun open(thread: SmsThread) {
         _openThread.value = thread
         loadMessages(thread)
+        MessageNotifier.cancel(getApplication<Application>(), thread.address)
         viewModelScope.launch {
-            SmsRepository.markThreadRead(getApplication<Application>(), thread.threadId)
+            markRead(thread)
             refresh(contacts)
         }
     }
 
-    /** Opens — or starts — the conversation with a number. */
-    fun openWithAddress(address: String, name: String = "") {
-        val existing = _threads.value.firstOrNull {
-            com.example.telephony.NumberUtils.sameNumber(it.address, address)
+    /** Marks a conversation as read, whether it is known by id or by number only. */
+    private suspend fun markRead(thread: SmsThread) {
+        if (thread.threadId >= 0) {
+            SmsRepository.markThreadRead(getApplication<Application>(), thread.threadId)
+        } else {
+            SmsRepository.markAddressRead(getApplication<Application>(), thread.address)
         }
+    }
+
+    /**
+     * Opens — or starts — the conversation with a number.
+     *
+     * The name is looked up when the caller does not know it, which is the case
+     * when the conversation is opened from a notification.
+     */
+    fun openWithAddress(address: String, name: String = "") {
+        if (address.isBlank()) return
+        val known = name.ifBlank {
+            contacts.firstOrNull { NumberUtils.sameNumber(it.number, address) }?.name.orEmpty()
+        }
+        val existing = _threads.value.firstOrNull { NumberUtils.sameNumber(it.address, address) }
         if (existing != null) {
-            open(existing)
+            open(if (known.isNotBlank()) existing.copy(contactName = known) else existing)
+            if (known.isBlank()) resolveName(address)
             return
         }
         val draft = SmsThread(
             threadId = -1L,
             address = address,
-            contactName = name,
+            contactName = known,
             snippet = "",
             date = System.currentTimeMillis(),
             unreadCount = 0,
@@ -96,6 +136,24 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
         )
         _openThread.value = draft
         loadMessages(draft)
+        MessageNotifier.cancel(getApplication<Application>(), address)
+        viewModelScope.launch {
+            markRead(draft)
+            refresh(contacts)
+        }
+        if (known.isBlank()) resolveName(address)
+    }
+
+    /** Fills the title of an open conversation with the contact name, when there is one. */
+    private fun resolveName(address: String) {
+        viewModelScope.launch {
+            val resolved = ContactsRepository.nameFor(getApplication<Application>(), address).orEmpty()
+            if (resolved.isBlank()) return@launch
+            val current = _openThread.value ?: return@launch
+            if (NumberUtils.sameNumber(current.address, address) && current.contactName.isBlank()) {
+                _openThread.value = current.copy(contactName = resolved)
+            }
+        }
     }
 
     fun close() {
@@ -128,6 +186,31 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
             SmsRepository.deleteThread(getApplication<Application>(), thread.threadId)
             close()
             refresh(contacts)
+        }
+    }
+
+    /** Deletes the conversations selected in the inbox. */
+    fun deleteThreads(threads: Collection<SmsThread>) {
+        if (threads.isEmpty()) return
+        viewModelScope.launch {
+            threads.forEach { thread ->
+                if (thread.threadId >= 0) {
+                    SmsRepository.deleteThread(getApplication<Application>(), thread.threadId)
+                }
+                MessageNotifier.cancel(getApplication<Application>(), thread.address)
+            }
+            refresh(contacts)
+        }
+    }
+
+    /** Deletes the messages selected inside the open conversation. */
+    fun deleteMessages(ids: Collection<Long>, onDone: () -> Unit = {}) {
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            SmsRepository.deleteMessages(getApplication<Application>(), ids)
+            _openThread.value?.let { loadMessages(it) }
+            refresh(contacts)
+            onDone()
         }
     }
 

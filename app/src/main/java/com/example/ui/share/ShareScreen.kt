@@ -176,7 +176,6 @@ fun ShareScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
-            LanguageManager.LanguageSelector()
         }
 
         Spacer(Modifier.height(12.dp))

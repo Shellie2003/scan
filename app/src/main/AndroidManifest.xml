@@ -99,6 +99,11 @@
             </intent-filter>
         </receiver>
 
+        <!-- Direct reply and "mark as read" from the notification of a message. -->
+        <receiver
+            android:name=".telephony.SmsReplyReceiver"
+            android:exported="false" />
+
         <!-- Required to be eligible as the default SMS app. -->
         <receiver
             android:name=".telephony.MmsDeliverReceiver"
