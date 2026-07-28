@@ -16,6 +16,7 @@ import com.example.ui.call.InCallActivity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 
 /**
@@ -29,14 +30,29 @@ class PhoneCallService : InCallService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    override fun onCreate() {
+        super.onCreate()
+        // The notification follows the call instead of being written once: it
+        // used to keep reading "incoming call" for the whole conversation, and
+        // it showed a raw number even when the contact was known.
+        scope.launch {
+            OngoingCallStore.calls.collect { calls ->
+                val call = calls.firstOrNull { !it.isDisconnected }
+                if (call == null) cancelNotification() else notifyCall(call)
+            }
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        scope.cancel()
+    }
+
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
         OngoingCallStore.attach(this)
         OngoingCallStore.add(call)
         resolveContactName(call)
-        @Suppress("DEPRECATION")
-        val ringing = call.state == Call.STATE_RINGING
-        notifyCall(call, ringing)
         InCallActivity.start(this)
     }
 
@@ -44,8 +60,16 @@ class PhoneCallService : InCallService() {
         super.onCallRemoved(call)
         OngoingCallStore.remove(call)
         if (!OngoingCallStore.hasCalls()) {
-            NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
+            cancelNotification()
             OngoingCallStore.detach()
+        }
+    }
+
+    private fun cancelNotification() {
+        try {
+            NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
+        } catch (e: Exception) {
+            // Nothing was posted.
         }
     }
 
@@ -63,9 +87,8 @@ class PhoneCallService : InCallService() {
     }
 
     @android.annotation.SuppressLint("MissingPermission")
-    private fun notifyCall(call: Call, ringing: Boolean) {
+    private fun notifyCall(call: CallSnapshot) {
         createChannel(this)
-        val number = call.details?.handle?.schemeSpecificPart.orEmpty()
         val fullScreenIntent = PendingIntent.getActivity(
             this,
             0,
@@ -79,18 +102,20 @@ class PhoneCallService : InCallService() {
             .setColor(androidx.core.content.ContextCompat.getColor(this, com.example.R.color.brand_indigo))
             .setColorized(true)
             .setContentTitle(
-                if (ringing) {
+                if (call.isRinging) {
                     getString(com.example.R.string.incoming_call)
                 } else {
                     getString(com.example.R.string.ongoing_call)
                 }
             )
-            .setContentText(NumberUtils.formatForDisplay(number))
+            // The name of the contact when the phone knows it, the number otherwise.
+            .setContentText(call.label)
             .setOngoing(true)
+            .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setContentIntent(fullScreenIntent)
-        if (ringing) builder.setFullScreenIntent(fullScreenIntent, true)
+        if (call.isRinging) builder.setFullScreenIntent(fullScreenIntent, true)
         try {
             NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build())
         } catch (e: SecurityException) {

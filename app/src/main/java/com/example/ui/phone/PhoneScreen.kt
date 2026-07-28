@@ -2,6 +2,7 @@ package com.example.ui.phone
 
 import android.Manifest
 import android.content.Intent
+import android.os.Build
 import android.provider.CallLog
 import android.text.format.DateUtils
 import android.widget.Toast
@@ -81,6 +82,7 @@ import androidx.compose.ui.unit.sp
 import com.example.telephony.CallEntry
 import com.example.telephony.CallLogRepository
 import com.example.telephony.Contact
+import com.example.telephony.ContactIndex
 import com.example.telephony.ContactsRepository
 import com.example.telephony.DefaultDialerManager
 import com.example.telephony.NumberUtils
@@ -123,12 +125,18 @@ fun PhoneScreen(
     val context = LocalContext.current
     val currentLang by LanguageManager.currentLang
     val permissions = rememberMultiplePermissionsState(
-        listOf(
-            Manifest.permission.READ_CONTACTS,
-            Manifest.permission.READ_CALL_LOG,
-            Manifest.permission.READ_PHONE_STATE,
-            Manifest.permission.CALL_PHONE
-        )
+        buildList {
+            add(Manifest.permission.READ_CONTACTS)
+            add(Manifest.permission.READ_CALL_LOG)
+            add(Manifest.permission.READ_PHONE_STATE)
+            add(Manifest.permission.CALL_PHONE)
+            // Without it the SIM cards never report their own number, and naming
+            // two cards of the same operator becomes guesswork. The permission
+            // only exists from Android 8 on.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                add(Manifest.permission.READ_PHONE_NUMBERS)
+            }
+        }
     )
 
     var tab by remember { mutableStateOf(PhoneTab.RECENTS) }
@@ -337,8 +345,9 @@ private fun KeypadSheet(
     val clipboard = LocalClipboardManager.current
     val sims by app.sims.collectAsState()
     val routing = remember(input, sims) { app.routeForNumber(input) }
-    val suggestions = remember(input, contacts) {
-        if (input.length < 2) emptyList() else ContactsRepository.search(contacts, input).take(12)
+    val index = remember(contacts) { ContactIndex(contacts) }
+    val suggestions = remember(input, index) {
+        if (input.length < 2) emptyList() else index.search(input).take(12)
     }
 
     fun toast(key: String) {
@@ -707,7 +716,8 @@ private fun ContactsTab(
         return
     }
     var query by remember { mutableStateOf("") }
-    val filtered = remember(query, contacts) { ContactsRepository.search(contacts, query) }
+    val index = remember(contacts) { ContactIndex(contacts) }
+    val filtered = remember(query, index) { index.search(query) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(

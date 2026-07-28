@@ -585,7 +585,9 @@ fun CameraContent(
                     .background(Color.Black.copy(alpha = 0.3f))
             )
 
-            if (autoDetectedOperator != null && !showScanSuccessState) {
+            val detected = autoDetectedOperator
+            if (detected != null && !showScanSuccessState) {
+                val detectedOperatorName = detected.name
                 Surface(
                     color = brandColor,
                     shape = RoundedCornerShape(12.dp),
@@ -597,7 +599,7 @@ fun CameraContent(
                     Text(
                         text = LanguageManager.getString(
                             "operator_auto_detected",
-                            "operator" to autoDetectedOperator!!.name
+                            "operator" to detectedOperatorName
                         ),
                         style = MaterialTheme.typography.labelMedium,
                         fontWeight = FontWeight.Bold,
@@ -779,7 +781,8 @@ fun CameraContent(
             }
         }
 
-        if (safetyWarning != null) {
+        val warning = safetyWarning
+        if (warning != null) {
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -802,7 +805,7 @@ fun CameraContent(
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = safetyWarning!!,
+                        text = warning,
                         style = MaterialTheme.typography.bodySmall,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onErrorContainer
@@ -911,15 +914,16 @@ fun CameraContent(
                 }
             )
         ) {
+            val operatorName = selectedOperator?.name
             Text(
                 text = when {
                     isCooldownActive -> LanguageManager.getString(
                         "cooldown_active",
                         "seconds" to cooldownTimeLeft
                     )
-                    selectedOperator != null -> LanguageManager.getString(
+                    operatorName != null -> LanguageManager.getString(
                         "recharge_btn_text",
-                        "operator" to selectedOperator!!.name.uppercase()
+                        "operator" to operatorName.uppercase()
                     )
                     else -> LanguageManager.getString("recharge_btn_default")
                 },

@@ -64,7 +64,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.telephony.Contact
-import com.example.telephony.ContactsRepository
+import com.example.telephony.ContactIndex
 import com.example.telephony.DefaultSmsManager
 import com.example.telephony.NumberUtils
 import com.example.telephony.SmsRepository
@@ -306,7 +306,8 @@ private fun NewMessageSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var query by remember { mutableStateOf("") }
-    val filtered = remember(query, contacts) { ContactsRepository.search(contacts, query) }
+    val index = remember(contacts) { ContactIndex(contacts) }
+    val filtered = remember(query, index) { index.search(query) }
     val typedNumber = remember(query) { NumberUtils.sanitize(query) }
     val canUseTyped = typedNumber.length >= 5 &&
         filtered.none { NumberUtils.sameNumber(it.number, typedNumber) }
@@ -557,7 +558,8 @@ private fun MessageContactsTab(
     onOpen: (Contact) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
-    val filtered = remember(query, contacts) { ContactsRepository.search(contacts, query) }
+    val index = remember(contacts) { ContactIndex(contacts) }
+    val filtered = remember(query, index) { index.search(query) }
 
     Column(modifier = Modifier.fillMaxSize()) {
         OutlinedTextField(

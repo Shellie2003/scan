@@ -109,20 +109,14 @@ object ContactsRepository {
     /**
      * Name and T9-like search: matches the name, the number, or the digits typed
      * on the keypad ("226" finds "Bao" through the letters of the keys).
+     *
+     * Prefer [ContactIndex] on a screen that searches while the user types: this
+     * one lowercases and re-encodes every contact at each call.
      */
-    fun search(contacts: List<Contact>, query: String): List<Contact> {
-        val trimmed = query.trim()
-        if (trimmed.isEmpty()) return contacts
-        val lower = trimmed.lowercase()
-        val digits = trimmed.filter { it.isDigit() }
-        return contacts.filter { contact ->
-            contact.name.lowercase().contains(lower) ||
-                (digits.isNotEmpty() && NumberUtils.sanitize(contact.number).contains(digits)) ||
-                (digits.isNotEmpty() && t9(contact.name).contains(digits))
-        }
-    }
+    fun search(contacts: List<Contact>, query: String): List<Contact> =
+        ContactIndex(contacts).search(query)
 
-    private fun t9(name: String): String = buildString {
+    internal fun t9(name: String): String = buildString {
         name.lowercase().forEach { c ->
             append(
                 when (c) {
@@ -138,5 +132,46 @@ object ContactsRepository {
                 }
             )
         }
+    }
+}
+
+/**
+ * A contact list prepared for search.
+ *
+ * Lowercasing the names and encoding them the way a keypad does costs the same
+ * whether one letter or ten have been typed — so it is done once, when the list
+ * arrives, instead of at every keystroke. On a phone holding a few thousand
+ * contacts that is the difference between a smooth field and a stuttering one.
+ */
+class ContactIndex(val contacts: List<Contact>) {
+
+    private class Entry(
+        val contact: Contact,
+        val name: String,
+        val digits: String,
+        val keypad: String
+    )
+
+    private val entries: List<Entry> = contacts.map { contact ->
+        Entry(
+            contact = contact,
+            name = contact.name.lowercase(),
+            digits = NumberUtils.sanitize(contact.number),
+            keypad = ContactsRepository.t9(contact.name)
+        )
+    }
+
+    fun search(query: String): List<Contact> {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) return contacts
+        val lower = trimmed.lowercase()
+        val digits = trimmed.filter { it.isDigit() }
+        return entries
+            .filter { entry ->
+                entry.name.contains(lower) ||
+                    (digits.isNotEmpty() && entry.digits.contains(digits)) ||
+                    (digits.isNotEmpty() && entry.keypad.contains(digits))
+            }
+            .map { it.contact }
     }
 }

@@ -61,7 +61,7 @@ import com.example.data.AppSettings
 import com.example.data.model.MessageTemplate
 import com.example.data.model.ScanHistory
 import com.example.telephony.Contact
-import com.example.telephony.ContactsRepository
+import com.example.telephony.ContactIndex
 import com.example.telephony.NumberUtils
 import com.example.telephony.SmsRecipient
 import com.example.telephony.SmsSender
@@ -125,7 +125,8 @@ fun BulkMessagesTab(
     val report by messages.bulkReport.collectAsState()
 
     val routing = remember(sims, forcedSubscription) { app.routeFor(null, forcedSubscription) }
-    val filtered = remember(query, contacts) { ContactsRepository.search(contacts, query) }
+    val index = remember(contacts) { ContactIndex(contacts) }
+    val filtered = remember(query, index) { index.search(query) }
 
     fun toggle(contact: Contact) {
         val existing = selected.firstOrNull { NumberUtils.sameNumber(it.number, contact.number) }
