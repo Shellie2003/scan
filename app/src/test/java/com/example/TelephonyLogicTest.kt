@@ -3,6 +3,7 @@ package com.example
 import com.example.data.DefaultData
 import com.example.data.model.Operator
 import com.example.telephony.Contact
+import com.example.telephony.ContactIndex
 import com.example.telephony.ContactsRepository
 import com.example.telephony.NumberUtils
 import com.example.telephony.SimCard
@@ -168,17 +169,43 @@ class TelephonyLogicTest {
 
     // ----------------------------------------------------------------- contacts
 
+    private val someContacts = listOf(
+        Contact(1, "Rakoto", "0341234567"),
+        Contact(2, "Naivo", "0321112233")
+    )
+
     @Test
     fun `contact search matches the name the number and the keypad letters`() {
-        val contacts = listOf(
-            Contact(1, "Rakoto", "0341234567"),
-            Contact(2, "Naivo", "0321112233")
-        )
-        assertEquals(1, ContactsRepository.search(contacts, "rako").size)
-        assertEquals(1, ContactsRepository.search(contacts, "0321").size)
+        assertEquals(1, ContactsRepository.search(someContacts, "rako").size)
+        assertEquals(1, ContactsRepository.search(someContacts, "0321").size)
         // 7 2 5 6 = "rako" on a phone keypad
-        assertEquals("Rakoto", ContactsRepository.search(contacts, "7256").first().name)
-        assertEquals(2, ContactsRepository.search(contacts, "").size)
+        assertEquals("Rakoto", ContactsRepository.search(someContacts, "7256").first().name)
+        assertEquals(2, ContactsRepository.search(someContacts, "").size)
+    }
+
+    @Test
+    fun `the prepared index answers exactly like the plain search`() {
+        val index = ContactIndex(someContacts)
+        listOf("", "rako", "RAKO", " naivo ", "0321", "7256", "zzz").forEach { query ->
+            assertEquals(
+                query,
+                ContactsRepository.search(someContacts, query).map { it.number },
+                index.search(query).map { it.number }
+            )
+        }
+    }
+
+    @Test
+    fun `an empty contact list searches without failing`() {
+        assertTrue(ContactIndex(emptyList()).search("rako").isEmpty())
+        assertTrue(ContactIndex(emptyList()).search("").isEmpty())
+    }
+
+    @Test
+    fun `a contact without a name is still found by its number`() {
+        val index = ContactIndex(listOf(Contact(3, "", "0331234567")))
+        assertEquals(1, index.search("0331").size)
+        assertEquals(0, index.search("rako").size)
     }
 
     // ---------------------------------------------------------------- operators
