@@ -15,12 +15,14 @@ import com.example.telephony.SimCard
 import com.example.telephony.SimManager
 import com.example.telephony.SimRouting
 import com.example.telephony.SimRouter
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * Single source of truth for everything the user can configure: operators,
@@ -61,18 +63,25 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     init {
         refreshSims()
         viewModelScope.launch {
-            simProfiles.collect { profiles ->
-                _sims.value = SimManager.getSims(getApplication<Application>(), profiles)
-            }
+            simProfiles.collect { profiles -> _sims.value = readSims(profiles) }
         }
     }
 
     fun refreshSims() {
         viewModelScope.launch {
             val profiles = runCatching { simProfileDao.getAllOnce() }.getOrDefault(emptyList())
-            _sims.value = SimManager.getSims(getApplication<Application>(), profiles)
+            _sims.value = readSims(profiles)
         }
     }
+
+    /**
+     * Reading the cards goes through the telephony binder — never on the thread
+     * that draws the screen, which is where this used to run at every launch.
+     */
+    private suspend fun readSims(profiles: List<SimProfile>): List<SimCard> =
+        withContext(Dispatchers.IO) {
+            SimManager.getSims(getApplication<Application>(), profiles)
+        }
 
     // ------------------------------------------------------------------ routing
 

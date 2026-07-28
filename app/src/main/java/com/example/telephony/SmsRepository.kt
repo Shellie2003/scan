@@ -60,6 +60,9 @@ data class SmsThread(
  */
 object SmsRepository {
 
+    /** Safety net on a phone with a very long history; the inbox stops there. */
+    private const val MAX_SCANNED_ROWS = 20_000
+
     private val projection = arrayOf(
         Telephony.Sms._ID,
         Telephony.Sms.THREAD_ID,
@@ -83,37 +86,97 @@ object SmsRepository {
     /**
      * The conversations, most recent first.
      *
-     * The provider is read once and grouped by thread, which keeps a single query
-     * for the whole inbox.
+     * The rows are read once, newest first, and folded into one entry per thread
+     * as they come: nothing is kept in memory but the conversations themselves.
+     * Reading every row matters — a cap on messages used to make whole
+     * conversations disappear from the inbox on a well filled phone.
      */
     @SuppressLint("MissingPermission")
     suspend fun loadThreads(
         context: Context,
         contacts: List<Contact> = emptyList(),
-        limit: Int = 1000
+        maxThreads: Int = 500
     ): List<SmsThread> = withContext(Dispatchers.IO) {
-        val messages = queryMessages(context, selection = null, args = null, limit = limit)
-        if (messages.isEmpty()) return@withContext emptyList()
+        if (!hasReadPermission(context)) return@withContext emptyList()
 
-        messages
-            .groupBy { it.threadId }
-            .map { (threadId, thread) ->
-                val newest = thread.maxByOrNull { it.date } ?: thread.first()
-                val address = thread.firstOrNull { it.address.isNotBlank() }?.address.orEmpty()
+        val projection = arrayOf(
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.ADDRESS,
+            Telephony.Sms.BODY,
+            Telephony.Sms.DATE,
+            Telephony.Sms.TYPE,
+            Telephony.Sms.READ
+        )
+        val builders = LinkedHashMap<Long, ThreadBuilder>()
+        try {
+            context.contentResolver.query(
+                Telephony.Sms.CONTENT_URI,
+                projection,
+                null,
+                null,
+                Telephony.Sms.DATE + " DESC"
+            )?.use { cursor ->
+                val threadIndex = cursor.getColumnIndex(Telephony.Sms.THREAD_ID)
+                val addressIndex = cursor.getColumnIndex(Telephony.Sms.ADDRESS)
+                val bodyIndex = cursor.getColumnIndex(Telephony.Sms.BODY)
+                val dateIndex = cursor.getColumnIndex(Telephony.Sms.DATE)
+                val typeIndex = cursor.getColumnIndex(Telephony.Sms.TYPE)
+                val readIndex = cursor.getColumnIndex(Telephony.Sms.READ)
+                var scanned = 0
+                while (cursor.moveToNext() && scanned < MAX_SCANNED_ROWS) {
+                    scanned++
+                    val threadId = if (threadIndex >= 0) cursor.getLong(threadIndex) else 0L
+                    val existing = builders[threadId]
+                    if (existing == null && builders.size >= maxThreads) continue
+
+                    val address = if (addressIndex >= 0) cursor.getString(addressIndex).orEmpty() else ""
+                    val incoming = typeIndex >= 0 &&
+                        cursor.getInt(typeIndex) == Telephony.Sms.MESSAGE_TYPE_INBOX
+                    val unread = incoming && readIndex >= 0 && cursor.getInt(readIndex) == 0
+
+                    // The first row of a thread is its newest: it carries the snippet.
+                    val builder = existing ?: ThreadBuilder(
+                        address = address,
+                        snippet = if (bodyIndex >= 0) cursor.getString(bodyIndex).orEmpty() else "",
+                        date = if (dateIndex >= 0) cursor.getLong(dateIndex) else 0L
+                    ).also { builders[threadId] = it }
+
+                    if (builder.address.isBlank() && address.isNotBlank()) builder.address = address
+                    builder.messageCount++
+                    if (unread) builder.unreadCount++
+                }
+            }
+        } catch (e: SecurityException) {
+            return@withContext emptyList()
+        } catch (e: Exception) {
+            return@withContext emptyList()
+        }
+
+        builders
+            .map { (threadId, builder) ->
                 SmsThread(
                     threadId = threadId,
-                    address = address,
+                    address = builder.address,
                     contactName = contacts.firstOrNull {
-                        NumberUtils.sameNumber(it.number, address)
+                        NumberUtils.sameNumber(it.number, builder.address)
                     }?.name.orEmpty(),
-                    snippet = newest.body,
-                    date = newest.date,
-                    unreadCount = thread.count { it.isIncoming && !it.read },
-                    messageCount = thread.size
+                    snippet = builder.snippet,
+                    date = builder.date,
+                    unreadCount = builder.unreadCount,
+                    messageCount = builder.messageCount
                 )
             }
             .sortedByDescending { it.date }
     }
+
+    /** Accumulator of one conversation while the provider is being read. */
+    private class ThreadBuilder(
+        var address: String,
+        val snippet: String,
+        val date: Long,
+        var unreadCount: Int = 0,
+        var messageCount: Int = 0
+    )
 
     /** Every message of one conversation, oldest first. */
     suspend fun loadMessages(context: Context, threadId: Long): List<SmsMessageItem> =
@@ -126,14 +189,36 @@ object SmsRepository {
             ).sortedBy { it.date }
         }
 
-    /** Messages exchanged with a number, for a conversation opened from a contact. */
+    /**
+     * Messages exchanged with a number, for a conversation opened from a contact.
+     *
+     * The provider is asked for the number itself — the last nine digits, which
+     * is what identifies a subscriber whatever the shape the operator stored —
+     * instead of reading thousands of rows and sorting them here.
+     */
     suspend fun loadMessagesForAddress(context: Context, address: String): List<SmsMessageItem> =
         withContext(Dispatchers.IO) {
-            val national = NumberUtils.toNational(address)
-            queryMessages(context, null, null, limit = 2000)
-                .filter { NumberUtils.sameNumber(it.address, national) }
+            val tail = addressTail(address) ?: return@withContext emptyList()
+            queryMessages(
+                context,
+                selection = Telephony.Sms.ADDRESS + " LIKE ?",
+                args = arrayOf("%$tail"),
+                limit = 500
+            )
+                .filter { NumberUtils.sameNumber(it.address, address) }
                 .sortedBy { it.date }
         }
+
+    /**
+     * The significant end of a number, used to ask the provider for it.
+     * `null` when the number is too short to be matched without false positives.
+     */
+    private fun addressTail(address: String): String? {
+        val national = NumberUtils.toNational(address)
+        val digits = national.filter { it.isDigit() }
+        if (digits.length < 6) return null
+        return digits.takeLast(9)
+    }
 
     @SuppressLint("MissingPermission")
     private fun queryMessages(
@@ -203,10 +288,18 @@ object SmsRepository {
     /**
      * Marks every message received from a number as read, used when the user
      * answers or dismisses the notification of that conversation.
+     *
+     * Only the unread inbox rows are read — a handful at any time — because this
+     * runs inside a broadcast receiver, where a long query means a killed app.
      */
     suspend fun markAddressRead(context: Context, address: String) = withContext(Dispatchers.IO) {
-        val ids = loadMessagesForAddress(context, address)
-            .filter { it.isIncoming && !it.read }
+        val ids = queryMessages(
+            context,
+            selection = Telephony.Sms.READ + " = 0 AND " + Telephony.Sms.TYPE + " = ?",
+            args = arrayOf(Telephony.Sms.MESSAGE_TYPE_INBOX.toString()),
+            limit = 200
+        )
+            .filter { NumberUtils.sameNumber(it.address, address) }
             .map { it.id }
         if (ids.isEmpty()) return@withContext
         try {

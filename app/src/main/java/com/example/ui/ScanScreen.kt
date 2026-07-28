@@ -108,6 +108,7 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import java.util.concurrent.Executors
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -168,7 +169,6 @@ fun CameraContent(
     val haptic = LocalHapticFeedback.current
     val clipboardManager = androidx.compose.ui.platform.LocalClipboardManager.current
     val coroutineScope = rememberCoroutineScope()
-    val currentOperators by rememberUpdatedState(operators)
     val sims by app.sims.collectAsState()
 
     var selectedOperator by remember { mutableStateOf<Operator?>(null) }
@@ -282,8 +282,32 @@ fun CameraContent(
     }
 
     val textRecognizer = remember { TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS) }
-    val toneGenerator = remember { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100) }
+    // The audio service refuses to hand out a tone generator when it is busy;
+    // a beep is not worth crashing the scanner for.
+    val toneGenerator = remember {
+        runCatching { ToneGenerator(AudioManager.STREAM_NOTIFICATION, 100) }.getOrNull()
+    }
     val cameraController = remember { LifecycleCameraController(context) }
+    // Every frame used to be analysed on the thread that draws the screen.
+    val analysisExecutor = remember { Executors.newSingleThreadExecutor() }
+
+    // The keywords of an operator are stored as one string and split on every
+    // read: doing that per operator and per frame was pure garbage collection.
+    val keywordIndex by rememberUpdatedState(
+        remember(operators) { operators.map { it to it.keywordList } }
+    )
+
+    // Registered before the camera effect on purpose: effects are disposed in
+    // reverse order, so the camera is unbound before the executor stops.
+    DisposableEffect(Unit) {
+        onDispose {
+            // Native resources: a text recogniser and a tone generator that are
+            // never released are leaked for the lifetime of the process.
+            runCatching { textRecognizer.close() }
+            runCatching { toneGenerator?.release() }
+            analysisExecutor.shutdown()
+        }
+    }
 
     DisposableEffect(lifecycleOwner) {
         val hasPermission = ContextCompat.checkSelfPermission(
@@ -296,7 +320,7 @@ fun CameraContent(
                 cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
                 setTapToFocusEnabled(true)
                 setEnabledUseCases(CameraController.IMAGE_ANALYSIS)
-                setImageAnalysisAnalyzer(ContextCompat.getMainExecutor(context)) { imageProxy ->
+                setImageAnalysisAnalyzer(analysisExecutor) { imageProxy ->
                     if (isCooldownActive) {
                         imageProxy.close()
                         return@setImageAnalysisAnalyzer
@@ -313,9 +337,9 @@ fun CameraContent(
                                 // 1. Recognise the operator from the words printed on the ticket,
                                 //    using the keywords stored with each operator.
                                 val fullText = visionText.text.lowercase()
-                                val detectedOp = currentOperators.firstOrNull { operator ->
-                                    operator.keywordList.any { it.isNotBlank() && fullText.contains(it) }
-                                }
+                                val detectedOp = keywordIndex.firstOrNull { (_, keywords) ->
+                                    keywords.any { it.isNotBlank() && fullText.contains(it) }
+                                }?.first
                                 if (detectedOp != null && detectedOp.id != selectedOperator?.id) {
                                     selectedOperator = detectedOp
                                     autoDetectedOperator = detectedOp
@@ -333,7 +357,7 @@ fun CameraContent(
                                             val code = match.value.filter { it.isDigit() }
                                             if (code.length == length && scannedCode != code) {
                                                 scannedCode = code
-                                                toneGenerator.startTone(ToneGenerator.TONE_PROP_BEEP)
+                                                toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP)
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                                 return@addOnSuccessListener
                                             }

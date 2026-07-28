@@ -19,9 +19,12 @@ import com.example.telephony.SmsSender
 import com.example.telephony.SmsThread
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.BufferOverflow
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -47,14 +50,32 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
 
     private var contacts: List<Contact> = emptyList()
 
+    /**
+     * Requests to reload, coalesced.
+     *
+     * Every write to the SMS provider notifies the observer — including each of
+     * the two hundred copies a bulk send writes. Reloading the whole inbox that
+     * many times froze the phone; the requests are now folded into one.
+     */
+    private val reloadRequests = MutableSharedFlow<Unit>(
+        replay = 0,
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST
+    )
+
     private val observer = object : ContentObserver(Handler(Looper.getMainLooper())) {
         override fun onChange(selfChange: Boolean, uri: Uri?) {
-            refresh(contacts)
-            _openThread.value?.let { loadMessages(it) }
+            reloadRequests.tryEmit(Unit)
         }
     }
 
     init {
+        viewModelScope.launch {
+            reloadRequests.debounce(RELOAD_DEBOUNCE_MS).collect {
+                refresh(contacts)
+                _openThread.value?.let { loadMessages(it) }
+            }
+        }
         try {
             getApplication<Application>().contentResolver.registerContentObserver(
                 SmsRepository.contentUri,
@@ -281,6 +302,11 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
             refresh(contacts)
             onDone()
         }
+    }
+
+    private companion object {
+        /** Long enough to swallow a burst of writes, short enough to feel live. */
+        const val RELOAD_DEBOUNCE_MS = 350L
     }
 
     override fun onCleared() {
