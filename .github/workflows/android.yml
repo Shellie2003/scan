@@ -59,6 +59,10 @@ jobs:
           STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          # Every build gets a higher version code than the one before, so an
+          # APK can always be installed over the previous release.
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
         run: ./gradlew :app:assembleRelease
 
       - name: Upload Release APK

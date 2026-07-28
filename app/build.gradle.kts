@@ -17,8 +17,11 @@ android {
     applicationId = "com.aistudio.scan.xyzabc"
     minSdk = 24
     targetSdk = 36
-    versionCode = 1
-    versionName = "1.0"
+    // A fixed version code cannot be updated: the store refuses an APK whose
+    // code is not higher than the one already published. The build number of
+    // the CI run is what makes every release installable over the last.
+    versionCode = (System.getenv("VERSION_CODE") ?: "1").toIntOrNull() ?: 1
+    versionName = System.getenv("VERSION_NAME") ?: "1.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
