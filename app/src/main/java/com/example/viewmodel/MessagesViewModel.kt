@@ -7,6 +7,8 @@ import android.os.Handler
 import android.os.Looper
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.telephony.BulkSmsQueue
+import com.example.telephony.BulkSmsService
 import com.example.telephony.Contact
 import com.example.telephony.ContactsRepository
 import com.example.telephony.MessageNotifier
@@ -18,7 +20,6 @@ import com.example.telephony.SmsSendReport
 import com.example.telephony.SmsSender
 import com.example.telephony.SmsThread
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -213,62 +214,37 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
 
     // --------------------------------------------------------------- bulk send
 
-    /** How far a bulk send has gone, for the screen that started it. */
-    data class BulkProgress(val done: Int, val total: Int)
-
-    private val _bulkProgress = MutableStateFlow<BulkProgress?>(null)
-    val bulkProgress: StateFlow<BulkProgress?> = _bulkProgress.asStateFlow()
-
-    private val _bulkReport = MutableStateFlow<SmsSendReport?>(null)
-    val bulkReport: StateFlow<SmsSendReport?> = _bulkReport.asStateFlow()
-
-    private var bulkJob: Job? = null
+    /**
+     * Progress and result of the campaign, held by [BulkSmsQueue] so they
+     * survive this view model — and the screen that started them.
+     */
+    val bulkProgress: StateFlow<BulkSmsQueue.Progress?> = BulkSmsQueue.progress
+    val bulkReport: StateFlow<SmsSendReport?> = BulkSmsQueue.report
 
     /**
      * Sends one message to many recipients, each group going through its own SIM.
      *
-     * The send lives here and not in the screen: a campaign of two hundred
-     * messages takes more than a minute, and it used to be cut in half the moment
-     * the user changed tab or turned the phone. [onFinished] records the operation
-     * and runs even when nobody is watching any more.
+     * The work is handed to [BulkSmsService]: two hundred messages spaced out by
+     * the pause operators need take more than a minute, and the user must be
+     * free to leave the tab — or the application — while it finishes.
      */
     fun sendBulk(
         groups: Map<Int, List<SmsRecipient>>,
         body: String,
-        onFinished: (SmsSendReport) -> Unit = {}
+        subscriptionId: Int,
+        simLabel: String
     ) {
-        if (bulkJob?.isActive == true) return
-        val total = groups.values.sumOf { it.size }
-        if (total == 0 || body.isBlank()) return
-
-        bulkJob = viewModelScope.launch {
-            _bulkProgress.value = BulkProgress(0, total)
-            var alreadySent = 0
-            var merged = SmsSendReport()
-            groups.forEach { (subscriptionId, recipients) ->
-                val partial = SmsSender.sendBulk(
-                    context = getApplication<Application>(),
-                    recipients = recipients,
-                    body = body,
-                    subscriptionId = subscriptionId
-                ) { done, _, _ ->
-                    _bulkProgress.value = BulkProgress(alreadySent + done, total)
-                }
-                alreadySent += recipients.size
-                merged = SmsSendReport(
-                    sent = merged.sent + partial.sent,
-                    failed = merged.failed + partial.failed
-                )
-            }
-            _bulkProgress.value = null
-            _bulkReport.value = merged
-            refresh(contacts)
-            onFinished(merged)
-        }
+        BulkSmsService.start(
+            context = getApplication<Application>(),
+            groups = groups,
+            body = body,
+            subscriptionId = subscriptionId,
+            simLabel = simLabel
+        )
     }
 
     fun clearBulkReport() {
-        _bulkReport.value = null
+        BulkSmsQueue.clearReport()
     }
 
     fun deleteThread(thread: SmsThread) {

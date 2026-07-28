@@ -59,7 +59,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.AppSettings
 import com.example.data.model.MessageTemplate
-import com.example.data.model.ScanHistory
 import com.example.telephony.Contact
 import com.example.telephony.ContactIndex
 import com.example.telephony.NumberUtils
@@ -148,17 +147,14 @@ fun BulkMessagesTab(
             mapOf(fallbackSub to selected)
         }
 
-        val sim = routing.sim
-        messages.sendBulk(groups = groups, body = body) { merged ->
-            app.record(
-                operator = null,
-                code = "",
-                dialedCode = "",
-                sim = sim,
-                kind = ScanHistory.KIND_SMS,
-                label = LanguageManager.getString("recipients_count", "count" to merged.sent.size)
-            )
-        }
+        // The send goes to a foreground service, which also writes the history
+        // entry: leaving this screen — or the app — no longer stops it.
+        messages.sendBulk(
+            groups = groups,
+            body = body,
+            subscriptionId = routing.sim?.subscriptionId ?: AppSettings.NO_SUBSCRIPTION,
+            simLabel = routing.sim?.title.orEmpty()
+        )
     }
 
     Column(
