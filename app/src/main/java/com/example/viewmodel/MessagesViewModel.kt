@@ -12,13 +12,18 @@ import com.example.telephony.ContactsRepository
 import com.example.telephony.MessageNotifier
 import com.example.telephony.NumberUtils
 import com.example.telephony.SmsMessageItem
+import com.example.telephony.SmsRecipient
 import com.example.telephony.SmsRepository
+import com.example.telephony.SmsSendReport
 import com.example.telephony.SmsSender
 import com.example.telephony.SmsThread
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The inbox: conversations and the messages of the open one.
@@ -174,11 +179,75 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
     /** Sends a reply and refreshes the conversation. */
     fun send(address: String, body: String, subscriptionId: Int, onDone: (Boolean) -> Unit = {}) {
         viewModelScope.launch {
-            val sent = SmsSender.sendSingle(getApplication<Application>(), address, body, subscriptionId)
+            // Sending goes through the telephony binder and writes the copy to the
+            // SMS provider: never on the thread that draws the conversation.
+            val sent = withContext(Dispatchers.IO) {
+                SmsSender.sendSingle(getApplication<Application>(), address, body, subscriptionId)
+            }
             _openThread.value?.let { loadMessages(it) }
             refresh(contacts)
             onDone(sent)
         }
+    }
+
+    // --------------------------------------------------------------- bulk send
+
+    /** How far a bulk send has gone, for the screen that started it. */
+    data class BulkProgress(val done: Int, val total: Int)
+
+    private val _bulkProgress = MutableStateFlow<BulkProgress?>(null)
+    val bulkProgress: StateFlow<BulkProgress?> = _bulkProgress.asStateFlow()
+
+    private val _bulkReport = MutableStateFlow<SmsSendReport?>(null)
+    val bulkReport: StateFlow<SmsSendReport?> = _bulkReport.asStateFlow()
+
+    private var bulkJob: Job? = null
+
+    /**
+     * Sends one message to many recipients, each group going through its own SIM.
+     *
+     * The send lives here and not in the screen: a campaign of two hundred
+     * messages takes more than a minute, and it used to be cut in half the moment
+     * the user changed tab or turned the phone. [onFinished] records the operation
+     * and runs even when nobody is watching any more.
+     */
+    fun sendBulk(
+        groups: Map<Int, List<SmsRecipient>>,
+        body: String,
+        onFinished: (SmsSendReport) -> Unit = {}
+    ) {
+        if (bulkJob?.isActive == true) return
+        val total = groups.values.sumOf { it.size }
+        if (total == 0 || body.isBlank()) return
+
+        bulkJob = viewModelScope.launch {
+            _bulkProgress.value = BulkProgress(0, total)
+            var alreadySent = 0
+            var merged = SmsSendReport()
+            groups.forEach { (subscriptionId, recipients) ->
+                val partial = SmsSender.sendBulk(
+                    context = getApplication<Application>(),
+                    recipients = recipients,
+                    body = body,
+                    subscriptionId = subscriptionId
+                ) { done, _, _ ->
+                    _bulkProgress.value = BulkProgress(alreadySent + done, total)
+                }
+                alreadySent += recipients.size
+                merged = SmsSendReport(
+                    sent = merged.sent + partial.sent,
+                    failed = merged.failed + partial.failed
+                )
+            }
+            _bulkProgress.value = null
+            _bulkReport.value = merged
+            refresh(contacts)
+            onFinished(merged)
+        }
+    }
+
+    fun clearBulkReport() {
+        _bulkReport.value = null
     }
 
     fun deleteThread(thread: SmsThread) {

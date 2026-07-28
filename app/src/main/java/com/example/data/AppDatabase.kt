@@ -19,7 +19,10 @@ import com.example.data.model.SimProfile
         MessageTemplate::class
     ],
     version = 2,
-    exportSchema = false
+    // The schema is exported to `app/schemas`: a version bump without a written
+    // migration is then caught at build time, instead of wiping the operators,
+    // plans and templates the user configured.
+    exportSchema = true
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun operatorDao(): OperatorDao

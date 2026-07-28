@@ -309,7 +309,10 @@ object LanguageManager {
             "language_desc" to "Fiteny ampiasain'ny fampiharana",
             "call_history" to "Tantaran'ny antso",
             "open_keypad" to "Hanokatra ny kitendry",
-            "select_recipient" to "Iza no handefasana?"
+            "select_recipient" to "Iza no handefasana?",
+            "notifications_off_title" to "Mitsahatra ny fampandrenesana",
+            "notifications_off_desc" to "Raha tsy alefa izy ity dia tsy hiseho ny hafatra voaray sy ny antso miditra.",
+            "enable" to "Alefaso"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -580,7 +583,10 @@ object LanguageManager {
             "language_desc" to "Langue de l'application",
             "call_history" to "Historique des appels",
             "open_keypad" to "Ouvrir le clavier",
-            "select_recipient" to "À qui écrivez-vous ?"
+            "select_recipient" to "À qui écrivez-vous ?",
+            "notifications_off_title" to "Notifications désactivées",
+            "notifications_off_desc" to "Sans elles, les messages reçus et les appels entrants ne s'affichent pas.",
+            "enable" to "Activer"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -851,7 +857,10 @@ object LanguageManager {
             "language_desc" to "Application language",
             "call_history" to "Call history",
             "open_keypad" to "Open the keypad",
-            "select_recipient" to "Who are you writing to?"
+            "select_recipient" to "Who are you writing to?",
+            "notifications_off_title" to "Notifications are off",
+            "notifications_off_desc" to "Without them, received messages and incoming calls are not shown.",
+            "enable" to "Turn on"
         )
     )
 

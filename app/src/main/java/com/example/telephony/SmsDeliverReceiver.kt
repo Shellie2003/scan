@@ -11,23 +11,19 @@ import kotlinx.coroutines.launch
 /**
  * Receives incoming text messages.
  *
- * Two cases, and the difference matters:
- *  - `SMS_DELIVER` is sent only to the default SMS app, and that app is
- *    responsible for writing the message to the SMS database. Without this, an
- *    incoming message would simply be lost.
- *  - `SMS_RECEIVED` is sent to every app holding `RECEIVE_SMS`; the system has
- *    already stored the message, so we only refresh and notify.
+ * Only `SMS_DELIVER` is acted upon. It is sent to the default SMS app alone,
+ * and that app is responsible for writing the message to the SMS database —
+ * without this, an incoming message would simply be lost.
+ *
+ * `SMS_RECEIVED`, which every app holding `RECEIVE_SMS` gets, is deliberately
+ * ignored: when SCAN is not the default SMS app, the app that *is* already
+ * stores the message and notifies the user, and notifying here too would show
+ * every message twice.
  */
 class SmsDeliverReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        val action = intent.action ?: return
-        val isDeliver = action == Telephony.Sms.Intents.SMS_DELIVER_ACTION
-        val isReceived = action == Telephony.Sms.Intents.SMS_RECEIVED_ACTION
-        if (!isDeliver && !isReceived) return
-        // The default SMS app receives both broadcasts for the same message;
-        // only the delivery one is acted upon so nothing is done twice.
-        if (isReceived && DefaultSmsManager.isDefaultSmsApp(context)) return
+        if (intent.action != Telephony.Sms.Intents.SMS_DELIVER_ACTION) return
 
         val messages = try {
             Telephony.Sms.Intents.getMessagesFromIntent(intent)
@@ -47,9 +43,7 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         val pending = goAsync()
         CoroutineScope(Dispatchers.IO).launch {
             try {
-                if (isDeliver) {
-                    SmsRepository.storeIncoming(context, address, body, timestamp, subscriptionId)
-                }
+                SmsRepository.storeIncoming(context, address, body, timestamp, subscriptionId)
                 MessageNotifier.notifyIncoming(context, address, body, timestamp, subscriptionId)
             } finally {
                 pending.finish()

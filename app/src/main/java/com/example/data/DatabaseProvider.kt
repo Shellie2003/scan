@@ -22,7 +22,13 @@ object DatabaseProvider {
                     "scan-db"
                 )
                     .addMigrations(MIGRATION_1_2)
-                    .fallbackToDestructiveMigration(dropAllTables = true)
+                    // No destructive fallback on upgrade: losing the codes, the
+                    // plans and the templates a user configured is worse than
+                    // any bug. Every new version must bring its migration.
+                    // A downgrade — an older APK installed over a newer one —
+                    // has no schema to fall back to, and is the one case where
+                    // starting over is the only option left.
+                    .fallbackToDestructiveMigrationOnDowngrade(dropAllTables = true)
                     .addCallback(object : RoomDatabase.Callback() {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)

@@ -88,14 +88,15 @@
             android:theme="@style/Theme.Scan.Call" />
 
         <!-- Incoming text messages. SMS_DELIVER only reaches the default SMS app,
-             which is then responsible for storing the message. -->
+             which is then responsible for storing the message. SMS_RECEIVED is
+             deliberately not registered: it would wake the app for every message
+             the default SMS app already handles, and notify the user twice. -->
         <receiver
             android:name=".telephony.SmsDeliverReceiver"
             android:exported="true"
             android:permission="android.permission.BROADCAST_SMS">
             <intent-filter>
                 <action android:name="android.provider.Telephony.SMS_DELIVER" />
-                <action android:name="android.provider.Telephony.SMS_RECEIVED" />
             </intent-filter>
         </receiver>
 

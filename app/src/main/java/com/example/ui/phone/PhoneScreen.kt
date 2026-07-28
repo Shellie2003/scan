@@ -86,6 +86,7 @@ import com.example.telephony.DefaultDialerManager
 import com.example.telephony.NumberUtils
 import com.example.ui.components.EmptyState
 import com.example.ui.components.InitialsAvatar
+import com.example.ui.components.NotificationPermissionBanner
 import com.example.ui.components.SimLauncher
 import com.example.ui.components.SimSelector
 import com.example.ui.theme.scanColors
@@ -161,6 +162,10 @@ fun PhoneScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
         ) {
+            // Without notifications, an incoming call the system refuses to show
+            // full screen is simply lost.
+            NotificationPermissionBanner()
+
             DefaultDialerBanner()
 
             TabRow(selectedTabIndex = tab.ordinal) {

@@ -128,6 +128,18 @@ object AppSettings {
 
     // ------------------------------------------------------------------- misc
 
+    /**
+     * `true` once the system dialog for the notification permission has been
+     * shown. Android only ever displays it once, so the app must not count on it
+     * a second time — the banner takes over from there.
+     */
+    fun notificationPromptShown(context: Context): Boolean =
+        prefs(context).getBoolean("notification_prompt_shown", false)
+
+    fun setNotificationPromptShown(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean("notification_prompt_shown", value).apply()
+    }
+
     fun dialerPromptDismissed(context: Context): Boolean =
         prefs(context).getBoolean("dialer_prompt_dismissed", false)
 

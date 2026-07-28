@@ -49,6 +49,7 @@ import com.example.telephony.NumberUtils
 import com.example.telephony.PhoneCallService
 import com.example.ui.ScanScreen
 import com.example.ui.TolotraScreen
+import com.example.ui.components.NotificationPermissionGate
 import com.example.ui.components.WithSimRouting
 import com.example.ui.messages.ConversationScreen
 import com.example.ui.messages.MessagesScreen
@@ -177,6 +178,9 @@ fun MainScreen(
     // when the same number is dialled twice in a row.
     var dialNumber by remember { mutableStateOf("") }
     var dialTicket by remember { mutableIntStateOf(0) }
+
+    // Nothing the app receives is worth anything if it cannot be shown.
+    NotificationPermissionGate()
 
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination

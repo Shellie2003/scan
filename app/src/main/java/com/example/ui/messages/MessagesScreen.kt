@@ -71,6 +71,7 @@ import com.example.telephony.SmsRepository
 import com.example.telephony.SmsThread
 import com.example.ui.components.EmptyState
 import com.example.ui.components.InitialsAvatar
+import com.example.ui.components.NotificationPermissionBanner
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
@@ -160,6 +161,8 @@ fun MessagesScreen(
                 }
             }
 
+            NotificationPermissionBanner()
+
             DefaultSmsBanner()
 
             TabRow(selectedTabIndex = tab.ordinal) {
@@ -211,7 +214,11 @@ fun MessagesScreen(
                         }
                     )
 
-                    MessagesTab.BULK -> BulkMessagesTab(app = app, phone = phone)
+                    MessagesTab.BULK -> BulkMessagesTab(
+                        app = app,
+                        phone = phone,
+                        messages = messages
+                    )
 
                     MessagesTab.CONTACTS -> MessageContactsTab(
                         contacts = contacts,

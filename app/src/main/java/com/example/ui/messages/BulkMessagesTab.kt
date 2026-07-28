@@ -51,7 +51,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -65,17 +64,16 @@ import com.example.telephony.Contact
 import com.example.telephony.ContactsRepository
 import com.example.telephony.NumberUtils
 import com.example.telephony.SmsRecipient
-import com.example.telephony.SmsSendReport
 import com.example.telephony.SmsSender
 import com.example.ui.components.EmptyState
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.SimSelector
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
+import com.example.viewmodel.MessagesViewModel
 import com.example.viewmodel.PhoneViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import kotlinx.coroutines.launch
 
 /**
  * Sending one message to many contacts at once.
@@ -93,10 +91,10 @@ import kotlinx.coroutines.launch
 @Composable
 fun BulkMessagesTab(
     app: AppViewModel,
-    phone: PhoneViewModel
+    phone: PhoneViewModel,
+    messages: MessagesViewModel
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val currentLang by LanguageManager.currentLang
 
     val permissions = rememberMultiplePermissionsState(
@@ -120,8 +118,11 @@ fun BulkMessagesTab(
     var showComposer by remember { mutableStateOf(false) }
     var showManualDialog by remember { mutableStateOf(false) }
     var showTemplateDialog by remember { mutableStateOf(false) }
-    var progress by remember { mutableStateOf<Pair<Int, Int>?>(null) }
-    var report by remember { mutableStateOf<SmsSendReport?>(null) }
+
+    // Progress and report live in the view model: the campaign keeps running
+    // when this tab leaves the screen.
+    val progress by messages.bulkProgress.collectAsState()
+    val report by messages.bulkReport.collectAsState()
 
     val routing = remember(sims, forcedSubscription) { app.routeFor(null, forcedSubscription) }
     val filtered = remember(query, contacts) { ContactsRepository.search(contacts, query) }
@@ -146,33 +147,13 @@ fun BulkMessagesTab(
             mapOf(fallbackSub to selected)
         }
 
-        scope.launch {
-            var sent = 0
-            val total = selected.size
-            progress = 0 to total
-            var merged = SmsSendReport()
-            groups.forEach { (subscriptionId, recipients) ->
-                val partial = SmsSender.sendBulk(
-                    context = context,
-                    recipients = recipients,
-                    body = body,
-                    subscriptionId = subscriptionId
-                ) { done, _, _ ->
-                    progress = (sent + done) to total
-                }
-                sent += recipients.size
-                merged = SmsSendReport(
-                    sent = merged.sent + partial.sent,
-                    failed = merged.failed + partial.failed
-                )
-            }
-            progress = null
-            report = merged
+        val sim = routing.sim
+        messages.sendBulk(groups = groups, body = body) { merged ->
             app.record(
                 operator = null,
                 code = "",
                 dialedCode = "",
-                sim = routing.sim,
+                sim = sim,
                 kind = ScanHistory.KIND_SMS,
                 label = LanguageManager.getString("recipients_count", "count" to merged.sent.size)
             )
@@ -582,7 +563,7 @@ fun BulkMessagesTab(
 
     report?.let { result ->
         AlertDialog(
-            onDismissRequest = { report = null },
+            onDismissRequest = { messages.clearBulkReport() },
             title = { Text(LanguageManager.getString("messages_title"), fontWeight = FontWeight.Bold) },
             text = {
                 Column {
@@ -607,7 +588,9 @@ fun BulkMessagesTab(
                 }
             },
             confirmButton = {
-                Button(onClick = { report = null }) { Text(LanguageManager.getString("ok")) }
+                Button(onClick = { messages.clearBulkReport() }) {
+                    Text(LanguageManager.getString("ok"))
+                }
             }
         )
     }

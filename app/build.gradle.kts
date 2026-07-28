@@ -61,6 +61,13 @@ android {
   testOptions { unitTests { isIncludeAndroidResources = true } }
 }
 
+// Where Room writes the schema of each database version. The files belong in
+// version control: they are what lets Room verify a migration instead of
+// dropping the tables of a user who updates the app.
+ksp {
+  arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 // Configure the Secrets Gradle Plugin to use .env and .env.example files
 // to match the convention used in Web projects.
 secrets {
