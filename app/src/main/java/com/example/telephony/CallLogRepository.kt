@@ -87,6 +87,47 @@ object CallLogRepository {
             entries
         }
 
+    fun hasWritePermission(context: Context): Boolean =
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.WRITE_CALL_LOG
+        ) == PackageManager.PERMISSION_GRANTED
+
+    /**
+     * Removes calls from the history of the phone.
+     *
+     * The identifiers come from the provider itself and are numbers: they are
+     * written straight into the selection, which no text of the user ever reaches.
+     */
+    suspend fun delete(context: Context, ids: Collection<Long>): Boolean =
+        withContext(Dispatchers.IO) {
+            val kept = ids.filter { it > 0 }
+            if (kept.isEmpty() || !hasWritePermission(context)) return@withContext false
+            try {
+                context.contentResolver.delete(
+                    CallLog.Calls.CONTENT_URI,
+                    CallLog.Calls._ID + " IN (" + kept.joinToString(",") + ")",
+                    null
+                ) > 0
+            } catch (e: SecurityException) {
+                false
+            } catch (e: Exception) {
+                false
+            }
+        }
+
+    /** Empties the whole call history. */
+    suspend fun clear(context: Context): Boolean = withContext(Dispatchers.IO) {
+        if (!hasWritePermission(context)) return@withContext false
+        try {
+            context.contentResolver.delete(CallLog.Calls.CONTENT_URI, null, null) >= 0
+        } catch (e: SecurityException) {
+            false
+        } catch (e: Exception) {
+            false
+        }
+    }
+
     /** Groups consecutive calls with the same number, the way a call log reads. */
     fun group(entries: List<CallEntry>): List<List<CallEntry>> {
         val groups = mutableListOf<MutableList<CallEntry>>()

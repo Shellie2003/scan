@@ -119,6 +119,11 @@
             android:name=".telephony.SmsReplyReceiver"
             android:exported="false" />
 
+        <!-- Answering and refusing a call from the band at the top of the screen. -->
+        <receiver
+            android:name=".telephony.CallActionReceiver"
+            android:exported="false" />
+
         <!-- Required to be eligible as the default SMS app. -->
         <receiver
             android:name=".telephony.MmsDeliverReceiver"

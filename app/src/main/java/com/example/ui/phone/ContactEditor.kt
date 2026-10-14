@@ -23,9 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -67,6 +71,7 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
 import com.example.ui.theme.scanColors
+import com.example.data.BlockedNumbers
 import com.example.telephony.Contact
 import com.example.telephony.ContactsRepository
 import com.example.telephony.NumberUtils
@@ -346,10 +351,16 @@ fun ContactDetailsDialog(
     onCall: () -> Unit,
     onMessage: () -> Unit,
     onEdit: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onToggleFavorite: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
+
+    var favorite by remember(contact) { mutableStateOf(contact.isFavorite) }
+    var blocked by remember(contact) {
+        mutableStateOf(BlockedNumbers.isBlocked(context, contact.number))
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -359,7 +370,30 @@ fun ContactDetailsDialog(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                ContactAvatar(contact = contact, size = 88.dp)
+                // The picture is changed from the picture: tapping it opens the
+                // editor, where it is picked.
+                Box(
+                    modifier = Modifier.clickable(onClick = onEdit),
+                    contentAlignment = Alignment.BottomEnd
+                ) {
+                    ContactAvatar(contact = contact, size = 88.dp)
+                    if (contact.photoUri.isNullOrBlank()) {
+                        Box(
+                            modifier = Modifier
+                                .size(28.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.AddAPhoto,
+                                contentDescription = LanguageManager.getString("contact_photo"),
+                                tint = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier.size(15.dp)
+                            )
+                        }
+                    }
+                }
                 Spacer(Modifier.height(12.dp))
                 Text(
                     text = contact.name.ifBlank {
@@ -420,6 +454,56 @@ fun ContactDetailsDialog(
                         onClick = onDelete
                     )
                 }
+
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    // The star of the phone itself, which is what fills the
+                    // favourites tab — until now nothing could put anyone in it.
+                    ContactAction(
+                        icon = if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        label = LanguageManager.getString("favorite"),
+                        tint = MaterialTheme.scanColors.warning,
+                        onClick = {
+                            favorite = !favorite
+                            onToggleFavorite(favorite)
+                        }
+                    )
+                    ContactAction(
+                        icon = if (blocked) Icons.Default.Person else Icons.Default.Block,
+                        label = LanguageManager.getString(
+                            if (blocked) "unblock_number" else "block_number"
+                        ),
+                        tint = MaterialTheme.colorScheme.error,
+                        onClick = {
+                            if (blocked) {
+                                BlockedNumbers.unblock(context, contact.number)
+                                blocked = false
+                                Toast.makeText(
+                                    context,
+                                    LanguageManager.getString("number_unblocked"),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            } else {
+                                BlockedNumbers.block(context, contact.number)
+                                blocked = true
+                                Toast.makeText(
+                                    context,
+                                    LanguageManager.getString("number_blocked"),
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    )
+                    ContactAction(
+                        icon = Icons.Default.Share,
+                        label = LanguageManager.getString("share"),
+                        tint = MaterialTheme.colorScheme.primary,
+                        onClick = { shareContact(context, contact) }
+                    )
+                }
             }
         },
         confirmButton = {
@@ -428,6 +512,37 @@ fun ContactDetailsDialog(
             }
         }
     )
+}
+
+/**
+ * Passes a contact to whatever app the user wants to pass it to.
+ *
+ * Plain text, not a file: a name and a number sent through a message is how a
+ * number actually travels between two people here.
+ */
+private fun shareContact(context: android.content.Context, contact: Contact) {
+    val text = listOf(
+        contact.name.trim(),
+        NumberUtils.toNational(contact.number)
+    ).filter { it.isNotBlank() }.joinToString(" : ")
+    try {
+        val intent = android.content.Intent(android.content.Intent.ACTION_SEND).apply {
+            type = "text/plain"
+            putExtra(android.content.Intent.EXTRA_TEXT, text)
+        }
+        context.startActivity(
+            android.content.Intent.createChooser(
+                intent,
+                LanguageManager.getString("share")
+            )
+        )
+    } catch (e: Exception) {
+        Toast.makeText(
+            context,
+            LanguageManager.getString("contact_save_failed"),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
 }
 
 /** One round action of the contact card, with its name under it. */

@@ -21,6 +21,8 @@ import androidx.core.graphics.drawable.IconCompat
 import com.example.MainActivity
 import com.example.R
 import com.example.data.AppSettings
+import com.example.data.BlockedNumbers
+import com.example.data.ConversationLock
 import com.example.ui.util.LanguageManager
 
 /**
@@ -118,9 +120,61 @@ object MessageNotifier {
         timestamp: Long,
         subscriptionId: Int
     ) {
+        // A blocked number is stored — the app is the SMS app of the phone and
+        // throwing a message away is not its decision — but says nothing.
+        if (BlockedNumbers.isBlocked(context, address)) return
+
+        // A locked discussion never shows a name, nor a word of what was said.
+        if (ConversationLock.isLocked(context, address)) {
+            postPrivate(context, address, timestamp)
+            return
+        }
+
         val name = ContactsRepository.nameFor(context, address)?.takeIf { it.isNotBlank() }
         record(address, Entry(body, timestamp, fromSelf = false))
         post(context, address, name, subscriptionId, alert = true, failed = false)
+    }
+
+    /**
+     * A message in a locked discussion.
+     *
+     * One line, no sender, no content, no reply: the phone says something
+     * arrived and nothing else. Opening it lands on the inbox, where the code
+     * is what opens the discussion.
+     */
+    private fun postPrivate(context: Context, address: String, timestamp: Long) {
+        createChannel(context)
+        LanguageManager.init(context)
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = ACTION_OPEN_CONVERSATION
+            // No address: the notification carries nothing that names who wrote.
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        }
+        val pending = PendingIntent.getActivity(
+            context,
+            requestCode(address, 4),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+        val builder = NotificationCompat.Builder(context, channelId(context))
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ContextCompat.getColor(context, R.color.brand_indigo))
+            .setContentTitle(LanguageManager.getString("private_message"))
+            .setContentText(LanguageManager.getString("private_message_desc"))
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+            // Nothing of it on a locked screen: that is the point of the lock.
+            .setVisibility(NotificationCompat.VISIBILITY_SECRET)
+            .setAutoCancel(true)
+            .setWhen(timestamp)
+            .setShowWhen(true)
+            .setContentIntent(pending)
+        try {
+            NotificationManagerCompat.from(context).notify(notificationId(address), builder.build())
+        } catch (e: SecurityException) {
+            // Notifications refused by the user.
+        }
     }
 
     /** The user answered from the notification: keep the thread visible, silently. */
@@ -132,6 +186,8 @@ object MessageNotifier {
         body: String,
         failed: Boolean = false
     ) {
+        // Nothing of a locked discussion goes back on the screen.
+        if (ConversationLock.isLocked(context, address)) return
         record(address, Entry(body, System.currentTimeMillis(), fromSelf = true))
         post(context, address, name?.takeIf { it.isNotBlank() }, subscriptionId, alert = false, failed = failed)
     }

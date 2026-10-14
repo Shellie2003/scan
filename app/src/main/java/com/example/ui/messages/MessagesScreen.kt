@@ -28,11 +28,14 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inbox
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
 import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -63,6 +66,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.ConversationLock
 import com.example.telephony.Contact
 import com.example.telephony.ContactIndex
 import com.example.telephony.DefaultSmsManager
@@ -119,6 +123,29 @@ fun MessagesScreen(
     val contacts by phone.contacts.collectAsState()
     val threads by messages.threads.collectAsState()
 
+    // The lock on discussions: which ones are hidden, whether a code exists, and
+    // whether the hidden ones are being shown right now.
+    var lockedKeys by remember { mutableStateOf(ConversationLock.lockedKeys(context)) }
+    var hasPin by remember { mutableStateOf(ConversationLock.hasPin(context)) }
+    var secureOpen by remember { mutableStateOf(false) }
+    var askPin by remember { mutableStateOf(false) }
+    var setupPin by remember { mutableStateOf(false) }
+    var pendingLock by remember { mutableStateOf<Set<Long>>(emptySet()) }
+
+    val openThreads = remember(threads, lockedKeys) {
+        threads.filter { !lockedKeys.contains(ConversationLock.keyOf(it.address)) }
+    }
+    val secretThreads = remember(threads, lockedKeys) {
+        threads.filter { lockedKeys.contains(ConversationLock.keyOf(it.address)) }
+    }
+
+    fun lock(ids: Set<Long>) {
+        threads.filter { it.threadId in ids }
+            .forEach { ConversationLock.lock(context, it.address) }
+        lockedKeys = ConversationLock.lockedKeys(context)
+        selectedThreads = emptySet()
+    }
+
     LaunchedEffect(Unit) {
         if (!permissions.allPermissionsGranted) permissions.launchMultiplePermissionRequest()
         phone.refresh()
@@ -128,8 +155,10 @@ fun MessagesScreen(
         messages.refresh(contacts)
     }
 
-    // Leaving a selection must not leave the screen.
-    BackHandler(enabled = selectedThreads.isNotEmpty()) { selectedThreads = emptySet() }
+    // Leaving a selection — or the locked discussions — must not leave the screen.
+    BackHandler(enabled = selectedThreads.isNotEmpty() || secureOpen) {
+        if (selectedThreads.isNotEmpty()) selectedThreads = emptySet() else secureOpen = false
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -140,7 +169,23 @@ fun MessagesScreen(
             if (selectedThreads.isNotEmpty()) {
                 ThreadSelectionBar(
                     count = selectedThreads.size,
+                    locked = secureOpen,
                     onClose = { selectedThreads = emptySet() },
+                    onLock = {
+                        if (secureOpen) {
+                            threads.filter { it.threadId in selectedThreads }
+                                .forEach { ConversationLock.unlock(context, it.address) }
+                            lockedKeys = ConversationLock.lockedKeys(context)
+                            selectedThreads = emptySet()
+                        } else if (hasPin) {
+                            lock(selectedThreads)
+                        } else {
+                            // No code yet: it is created first, and the chosen
+                            // discussions are locked as soon as it exists.
+                            pendingLock = selectedThreads
+                            setupPin = true
+                        }
+                    },
                     onDelete = {
                         messages.deleteThreads(threads.filter { it.threadId in selectedThreads })
                         selectedThreads = emptySet()
@@ -173,6 +218,9 @@ fun MessagesScreen(
                         onClick = {
                             tab = entry
                             selectedThreads = emptySet()
+                            // Leaving the inbox closes the locked discussions: a
+                            // code is asked again on the way back in.
+                            secureOpen = false
                         },
                         text = {
                             Text(
@@ -199,7 +247,7 @@ fun MessagesScreen(
             Box(modifier = Modifier.weight(1f)) {
                 when (tab) {
                     MessagesTab.INBOX -> InboxTab(
-                        threads = threads,
+                        threads = if (secureOpen) secretThreads else openThreads,
                         selected = selectedThreads,
                         hasPermission = SmsRepository.hasReadPermission(context),
                         onRequestPermission = { permissions.launchMultiplePermissionRequest() },
@@ -212,7 +260,13 @@ fun MessagesScreen(
                         },
                         onToggleSelection = { thread ->
                             selectedThreads = selectedThreads.toggle(thread.threadId)
-                        }
+                        },
+                        // The way in and out of the locked discussions, at the top
+                        // of the list where it is seen without being in the way.
+                        secureCount = secretThreads.size,
+                        secureOpen = secureOpen,
+                        onOpenSecure = { if (hasPin) askPin = true else setupPin = true },
+                        onCloseSecure = { secureOpen = false }
                     )
 
                     MessagesTab.BULK -> BulkMessagesTab(
@@ -254,6 +308,35 @@ fun MessagesScreen(
             }
         )
     }
+
+    if (askPin) {
+        PinPromptDialog(
+            title = LanguageManager.getString("secure_conversations"),
+            message = LanguageManager.getString("secure_prompt_desc"),
+            onDismiss = { askPin = false },
+            onAccepted = {
+                askPin = false
+                secureOpen = true
+            }
+        )
+    }
+
+    if (setupPin) {
+        PinSetupDialog(
+            onDismiss = {
+                setupPin = false
+                pendingLock = emptySet()
+            },
+            onDone = {
+                setupPin = false
+                hasPin = true
+                if (pendingLock.isNotEmpty()) {
+                    lock(pendingLock)
+                    pendingLock = emptySet()
+                }
+            }
+        )
+    }
 }
 
 private fun Set<Long>.toggle(id: Long): Set<Long> = if (id in this) this - id else this + id
@@ -262,7 +345,10 @@ private fun Set<Long>.toggle(id: Long): Set<Long> = if (id in this) this - id el
 @Composable
 private fun ThreadSelectionBar(
     count: Int,
+    /** `true` when the selection is made among discussions already locked. */
+    locked: Boolean,
     onClose: () -> Unit,
+    onLock: () -> Unit,
     onDelete: () -> Unit
 ) {
     Surface(color = MaterialTheme.colorScheme.primaryContainer, tonalElevation = 3.dp) {
@@ -286,6 +372,15 @@ private fun ThreadSelectionBar(
                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                 modifier = Modifier.weight(1f)
             )
+            IconButton(onClick = onLock) {
+                Icon(
+                    imageVector = if (locked) Icons.Default.LockOpen else Icons.Default.Lock,
+                    contentDescription = LanguageManager.getString(
+                        if (locked) "unlock_conversation" else "lock_conversation"
+                    ),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
             IconButton(onClick = onDelete) {
                 Icon(
                     imageVector = Icons.Default.Delete,
@@ -460,7 +555,11 @@ private fun InboxTab(
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
     onOpen: (SmsThread) -> Unit,
-    onToggleSelection: (SmsThread) -> Unit
+    onToggleSelection: (SmsThread) -> Unit,
+    secureCount: Int = 0,
+    secureOpen: Boolean = false,
+    onOpenSecure: () -> Unit = {},
+    onCloseSecure: () -> Unit = {}
 ) {
     if (!hasPermission) {
         EmptyState(
@@ -472,81 +571,186 @@ private fun InboxTab(
         )
         return
     }
-    if (threads.isEmpty()) {
-        EmptyState(
-            icon = Icons.Default.Message,
-            title = LanguageManager.getString("no_conversations"),
-            description = LanguageManager.getString("long_press_hint")
-        )
-        return
-    }
-    LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
-        items(threads, key = { it.threadId }) { thread ->
-            val isSelected = thread.threadId in selected
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        if (isSelected) {
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
-                        } else {
-                            MaterialTheme.colorScheme.background
-                        }
-                    )
-                    .combinedClickable(
-                        onClick = { onOpen(thread) },
-                        onLongClick = { onToggleSelection(thread) }
-                    )
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                InitialsAvatar(text = thread.initials)
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = thread.title,
-                        style = MaterialTheme.typography.titleSmall,
-                        fontWeight = if (thread.unreadCount > 0) {
-                            FontWeight.ExtraBold
-                        } else {
-                            FontWeight.Bold
-                        },
-                        maxLines = 1
-                    )
-                    Text(
-                        text = thread.snippet,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        maxLines = 1
-                    )
+    Column(modifier = Modifier.fillMaxSize()) {
+        if (secureOpen) {
+            SecureHeader(count = threads.size, onBack = onCloseSecure)
+        }
+
+        if (threads.isEmpty()) {
+            if (!secureOpen && secureCount > 0) {
+                SecureEntryRow(count = secureCount, onClick = onOpenSecure)
+            }
+            EmptyState(
+                icon = if (secureOpen) Icons.Default.Lock else Icons.Default.Message,
+                title = LanguageManager.getString(
+                    if (secureOpen) "no_locked_conversations" else "no_conversations"
+                ),
+                description = LanguageManager.getString("long_press_hint")
+            )
+            return@Column
+        }
+
+        LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
+            if (!secureOpen && secureCount > 0) {
+                item {
+                    SecureEntryRow(count = secureCount, onClick = onOpenSecure)
                 }
-                Spacer(Modifier.width(8.dp))
-                Column(horizontalAlignment = Alignment.End) {
+            }
+            items(threads, key = { it.threadId }) { thread ->
+                ThreadRow(
+                    thread = thread,
+                    isSelected = thread.threadId in selected,
+                    onClick = { onOpen(thread) },
+                    onLongClick = { onToggleSelection(thread) }
+                )
+            }
+        }
+    }
+}
+
+/** Title of the locked discussions, with the way back to the inbox. */
+@Composable
+private fun SecureHeader(count: Int, onBack: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 4.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onBack) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = LanguageManager.getString("back")
+                )
+            }
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = LanguageManager.getString("secure_conversations"),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.ExtraBold
+                )
+                Text(
+                    text = LanguageManager.getString("secure_count", "count" to count),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+        }
+    }
+}
+
+/** The locked discussions, behind their code, from the top of the inbox. */
+@Composable
+private fun SecureEntryRow(count: Int, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(44.dp)
+                .background(
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                    CircleShape
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = LanguageManager.getString("secure_conversations"),
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Text(
+                text = LanguageManager.getString("secure_count", "count" to count),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+/** One conversation of the inbox. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ThreadRow(
+    thread: SmsThread,
+    isSelected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                if (isSelected) {
+                    MaterialTheme.colorScheme.primary.copy(alpha = 0.12f)
+                } else {
+                    MaterialTheme.colorScheme.background
+                }
+            )
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(horizontal = 16.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        InitialsAvatar(text = thread.initials)
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = thread.title,
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = if (thread.unreadCount > 0) {
+                    FontWeight.ExtraBold
+                } else {
+                    FontWeight.Bold
+                },
+                maxLines = 1
+            )
+            Text(
+                text = thread.snippet,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = android.text.format.DateUtils.getRelativeTimeSpanString(
+                    thread.date,
+                    System.currentTimeMillis(),
+                    android.text.format.DateUtils.MINUTE_IN_MILLIS
+                ).toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            if (thread.unreadCount > 0) {
+                Spacer(Modifier.height(4.dp))
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
                     Text(
-                        text = android.text.format.DateUtils.getRelativeTimeSpanString(
-                            thread.date,
-                            System.currentTimeMillis(),
-                            android.text.format.DateUtils.MINUTE_IN_MILLIS
-                        ).toString(),
+                        text = thread.unreadCount.toString(),
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onPrimary
                     )
-                    if (thread.unreadCount > 0) {
-                        Spacer(Modifier.height(4.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(20.dp)
-                                .background(MaterialTheme.colorScheme.primary, CircleShape),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = thread.unreadCount.toString(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    }
                 }
             }
         }

@@ -33,6 +33,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Backspace
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallMade
 import androidx.compose.material.icons.filled.CallMissed
@@ -50,6 +51,9 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -86,6 +90,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.data.BlockedNumbers
 import com.example.telephony.CallEntry
 import com.example.telephony.CallLogRepository
 import com.example.telephony.Contact
@@ -139,6 +144,10 @@ fun PhoneScreen(
             // creating or editing one never stops on a refusal later.
             add(Manifest.permission.WRITE_CONTACTS)
             add(Manifest.permission.READ_CALL_LOG)
+            // Asked with the read, and for the same reason as the contacts:
+            // without it a line of the history cannot be removed, which is
+            // exactly what the testers could not do.
+            add(Manifest.permission.WRITE_CALL_LOG)
             add(Manifest.permission.READ_PHONE_STATE)
             add(Manifest.permission.CALL_PHONE)
             // Without it the SIM cards never report their own number, and naming
@@ -160,6 +169,7 @@ fun PhoneScreen(
     var editingContact by remember { mutableStateOf<Contact?>(null) }
     var creatingContact by remember { mutableStateOf(false) }
     var deletingContact by remember { mutableStateOf<Contact?>(null) }
+    var confirmClearLog by remember { mutableStateOf(false) }
 
     // A `tel:` intent, or the phone button of another app, opens the keypad
     // ready to dial — even on the same number twice in a row.
@@ -228,7 +238,29 @@ fun PhoneScreen(
                         hasPermission = CallLogRepository.hasPermission(context),
                         onRequestPermission = { permissions.launchMultiplePermissionRequest() },
                         onCall = { launcher.call(it) },
-                        onMessage = onMessage
+                        onMessage = onMessage,
+                        onDelete = { group ->
+                            if (CallLogRepository.hasWritePermission(context)) {
+                                phone.deleteCalls(group.map { it.id })
+                            } else {
+                                permissions.launchMultiplePermissionRequest()
+                            }
+                        },
+                        onClear = {
+                            if (CallLogRepository.hasWritePermission(context)) {
+                                confirmClearLog = true
+                            } else {
+                                permissions.launchMultiplePermissionRequest()
+                            }
+                        },
+                        onBlock = { number ->
+                            BlockedNumbers.block(context, number)
+                            Toast.makeText(
+                                context,
+                                LanguageManager.getString("number_blocked"),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
                     )
 
                     PhoneTab.CONTACTS -> ContactsTab(
@@ -301,6 +333,39 @@ fun PhoneScreen(
             onDelete = {
                 detailsContact = null
                 deletingContact = contact
+            },
+            onToggleFavorite = { favorite ->
+                if (ContactsRepository.hasWritePermission(context)) {
+                    phone.setFavorite(contact, favorite)
+                } else {
+                    permissions.launchMultiplePermissionRequest()
+                }
+            }
+        )
+    }
+
+    if (confirmClearLog) {
+        AlertDialog(
+            onDismissRequest = { confirmClearLog = false },
+            title = {
+                Text(LanguageManager.getString("clear_history"), fontWeight = FontWeight.Bold)
+            },
+            text = { Text(LanguageManager.getString("clear_history_confirm")) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        confirmClearLog = false
+                        phone.clearCallLog()
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.error
+                    )
+                ) { Text(LanguageManager.getString("delete")) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmClearLog = false }) {
+                    Text(LanguageManager.getString("cancel"))
+                }
             }
         )
     }
@@ -666,7 +731,11 @@ private fun RecentsTab(
     hasPermission: Boolean,
     onRequestPermission: () -> Unit,
     onCall: (String) -> Unit,
-    onMessage: (String) -> Unit
+    onMessage: (String) -> Unit,
+    /** Removes one line — every call of the group shown on that line. */
+    onDelete: (List<CallEntry>) -> Unit,
+    onClear: () -> Unit,
+    onBlock: (String) -> Unit
 ) {
     if (!hasPermission) {
         EmptyState(
@@ -687,13 +756,38 @@ private fun RecentsTab(
     }
     val groups = remember(entries) { CallLogRepository.group(entries) }
     LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
+        // Emptying the history belongs where the history is, not in the settings.
+        item {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                TextButton(onClick = onClear) {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = LanguageManager.getString("clear_history"),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+        }
         items(groups) { group ->
             val first = group.first()
             CallRow(
                 entry = first,
                 count = group.size,
                 onCall = { onCall(first.number) },
-                onMessage = { onMessage(first.number) }
+                onMessage = { onMessage(first.number) },
+                onDelete = { onDelete(group) },
+                onBlock = { onBlock(first.number) }
             )
         }
     }
@@ -705,7 +799,9 @@ private fun CallRow(
     entry: CallEntry,
     count: Int,
     onCall: () -> Unit,
-    onMessage: () -> Unit
+    onMessage: () -> Unit,
+    onDelete: () -> Unit,
+    onBlock: () -> Unit
 ) {
     val title = entry.name.ifBlank {
         NumberUtils.formatForDisplay(entry.number).ifBlank {
@@ -713,10 +809,14 @@ private fun CallRow(
         }
     }
     val copy = rememberNumberCopier(entry.number)
+    // A long press on a line is where what can be done with it lives: copying
+    // the number, blocking it, and removing the line from the history.
+    var menuOpen by remember { mutableStateOf(false) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .combinedClickable(onClick = onCall, onLongClick = copy)
+            .combinedClickable(onClick = onCall, onLongClick = { menuOpen = true })
             .padding(horizontal = 16.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -783,6 +883,52 @@ private fun CallRow(
                 imageVector = Icons.Default.Call,
                 contentDescription = LanguageManager.getString("call"),
                 tint = MaterialTheme.scanColors.success
+            )
+        }
+
+        DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+            DropdownMenuItem(
+                text = { Text(LanguageManager.getString("copy")) },
+                leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    copy()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(LanguageManager.getString("send_message")) },
+                leadingIcon = { Icon(Icons.Default.Message, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    onMessage()
+                }
+            )
+            DropdownMenuItem(
+                text = { Text(LanguageManager.getString("block_number")) },
+                leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },
+                onClick = {
+                    menuOpen = false
+                    onBlock()
+                }
+            )
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        text = LanguageManager.getString("delete_call"),
+                        color = MaterialTheme.colorScheme.error
+                    )
+                },
+                leadingIcon = {
+                    Icon(
+                        imageVector = Icons.Default.Delete,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                onClick = {
+                    menuOpen = false
+                    onDelete()
+                }
             )
         }
     }

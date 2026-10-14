@@ -99,16 +99,33 @@ object OngoingCallStore {
     // ------------------------------------------------------------------ actions
 
     fun answer(id: String) {
-        tracked[id]?.answer(VideoProfile.STATE_AUDIO_ONLY)
+        resolve(id)?.answer(VideoProfile.STATE_AUDIO_ONLY)
     }
 
     fun reject(id: String) {
-        tracked[id]?.reject(false, null)
+        resolve(id)?.reject(false, null)
     }
 
     fun hangUp(id: String) {
-        tracked[id]?.disconnect()
+        resolve(id)?.disconnect()
     }
+
+    /** The number of a call, to answer it by message instead of by voice. */
+    fun numberOf(id: String): String =
+        tracked[id]?.details?.handle?.schemeSpecificPart.orEmpty()
+
+    /**
+     * The call an action is about.
+     *
+     * A notification button can be pressed after the call it was posted for has
+     * been replaced — the identifier it carries is then unknown, and doing
+     * nothing would leave the phone ringing in the hand of the user. The call
+     * that is ringing is what they meant.
+     */
+    @Suppress("DEPRECATION")
+    private fun resolve(id: String): Call? = tracked[id]
+        ?: tracked.values.firstOrNull { it.state == Call.STATE_RINGING }
+        ?: tracked.values.lastOrNull()
 
     fun hangUpAll() {
         tracked.values.toList().forEach { it.disconnect() }

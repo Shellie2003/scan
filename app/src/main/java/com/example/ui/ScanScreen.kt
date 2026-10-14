@@ -37,7 +37,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Clear
@@ -393,10 +395,15 @@ fun CameraContent(
         label = "laserPosition"
     )
 
+    // The whole page scrolls. On a small screen — the phones this app is made
+    // for — the operator row, the switch, the preview and the recharge button
+    // do not fit together: the preview used to be squeezed down to nothing and
+    // the reading frame was simply not on the screen any more.
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .verticalScroll(rememberScrollState())
             .padding(16.dp)
     ) {
         Text(
@@ -568,7 +575,10 @@ fun CameraContent(
 
         Box(
             modifier = Modifier
-                .weight(1f)
+                // A height of its own, not what is left over: inside a scrolling
+                // page there is no leftover, and a preview must have a size the
+                // ticket can be held up to.
+                .height(320.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color.Black)
@@ -612,7 +622,10 @@ fun CameraContent(
             BoxWithConstraints(
                 modifier = Modifier
                     .align(Alignment.Center)
-                    .size(280.dp, 120.dp)
+                    // Measured against the preview, not in fixed millimetres: on
+                    // a 320 dp screen a 280 dp frame touched both borders.
+                    .fillMaxWidth(0.86f)
+                    .height(120.dp)
                     .background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
                     .border(2.dp, viewfinderBorderColor, RoundedCornerShape(16.dp))
             ) {

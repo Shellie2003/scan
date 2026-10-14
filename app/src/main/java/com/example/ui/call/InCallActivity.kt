@@ -31,17 +31,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Dialpad
+import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.VolumeUp
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -55,6 +58,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.text.font.FontWeight
@@ -63,6 +67,7 @@ import androidx.compose.ui.unit.dp
 import com.example.telephony.CallSnapshot
 import com.example.telephony.NumberUtils
 import com.example.telephony.OngoingCallStore
+import com.example.telephony.RespondViaMessageService
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.theme.ScanTheme
 import com.example.ui.theme.ThemeController
@@ -124,10 +129,14 @@ class InCallActivity : ComponentActivity() {
 
 @Composable
 fun InCallScreen(onFinished: () -> Unit) {
+    val context = LocalContext.current
     val calls by OngoingCallStore.calls.collectAsState()
     val muted by OngoingCallStore.muted.collectAsState()
     val speakerOn by OngoingCallStore.speakerOn.collectAsState()
     var showKeypad by remember { mutableStateOf(false) }
+
+    /** Id of the call a written answer is being chosen for, `null` when none is. */
+    var quickReplyFor by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(calls) {
         if (calls.isEmpty()) {
@@ -230,8 +239,25 @@ fun InCallScreen(onFinished: () -> Unit) {
                 SwipeToAnswer(
                     onAnswer = { OngoingCallStore.answer(call.id) },
                     onDecline = { OngoingCallStore.reject(call.id) },
-                    modifier = Modifier.padding(bottom = 40.dp)
+                    modifier = Modifier.padding(bottom = 8.dp)
                 )
+                // Refusing without leaving the caller with nothing: the call is
+                // declined and the message goes out on its own.
+                TextButton(
+                    onClick = { quickReplyFor = call.id },
+                    modifier = Modifier.padding(bottom = 24.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Message,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = LanguageManager.getString("reply_by_message"),
+                        style = MaterialTheme.typography.labelLarge
+                    )
+                }
             } else {
                 Row(
                     modifier = Modifier
@@ -248,6 +274,85 @@ fun InCallScreen(onFinished: () -> Unit) {
                 }
             }
         }
+
+        val replyingTo = quickReplyFor
+        if (replyingTo != null) {
+            QuickReplyDialog(
+                onDismiss = { quickReplyFor = null },
+                onPick = { body ->
+                    quickReplyFor = null
+                    val number = OngoingCallStore.numberOf(replyingTo)
+                    OngoingCallStore.reject(replyingTo)
+                    sendQuickReply(context, number, body)
+                }
+            )
+        }
+    }
+}
+
+/** The three answers a ringing phone is refused with, in the language in use. */
+@Composable
+private fun QuickReplyDialog(onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    val replies = listOf(
+        LanguageManager.getString("quick_reply_call_back"),
+        LanguageManager.getString("quick_reply_busy"),
+        LanguageManager.getString("quick_reply_write")
+    )
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                text = LanguageManager.getString("reply_by_message"),
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(modifier = Modifier.fillMaxWidth()) {
+                replies.forEach { reply ->
+                    Surface(
+                        onClick = { onPick(reply) },
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                    ) {
+                        Text(
+                            text = reply,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 12.dp)
+                        )
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(LanguageManager.getString("cancel"))
+            }
+        }
+    )
+}
+
+/**
+ * Hands the written answer to the service that exists for it.
+ *
+ * The call screen closes the moment the call is refused, so the sending must
+ * not belong to it: the service carries the message out on its own and stops
+ * itself, which is exactly what it was written for.
+ */
+private fun sendQuickReply(context: Context, number: String, body: String) {
+    if (number.isBlank() || body.isBlank()) return
+    try {
+        context.startService(
+            Intent(context, RespondViaMessageService::class.java).apply {
+                action = RespondViaMessageService.ACTION_RESPOND_VIA_MESSAGE
+                data = android.net.Uri.fromParts("smsto", number, null)
+                putExtra(Intent.EXTRA_TEXT, body)
+            }
+        )
+    } catch (e: Exception) {
+        // Nothing more can be done: the call has already been refused.
     }
 }
 

@@ -40,4 +40,28 @@ class PhoneViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun favorites(): List<Contact> = _contacts.value.filter { it.isFavorite }
+
+    /** Removes calls from the history of the phone and shows the list without them. */
+    fun deleteCalls(ids: List<Long>) {
+        if (ids.isEmpty()) return
+        viewModelScope.launch {
+            CallLogRepository.delete(getApplication<Application>(), ids)
+            _callLog.value = CallLogRepository.load(getApplication<Application>())
+        }
+    }
+
+    fun clearCallLog() {
+        viewModelScope.launch {
+            CallLogRepository.clear(getApplication<Application>())
+            _callLog.value = CallLogRepository.load(getApplication<Application>())
+        }
+    }
+
+    /** Stars a contact, or takes the star away; the favourites tab reads it back. */
+    fun setFavorite(contact: Contact, favorite: Boolean) {
+        viewModelScope.launch {
+            ContactsRepository.setFavorite(getApplication<Application>(), contact, favorite)
+            _contacts.value = ContactsRepository.load(getApplication<Application>())
+        }
+    }
 }

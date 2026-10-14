@@ -310,6 +310,9 @@ fun SettingsScreen(app: AppViewModel) {
             modifier = Modifier.padding(vertical = 8.dp)
         )
 
+        // -------------------------------------------------------------- security
+        SecuritySection()
+
         // ------------------------------------------------------------ appearance
         AppearanceSection()
 

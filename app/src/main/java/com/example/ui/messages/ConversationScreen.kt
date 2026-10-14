@@ -28,15 +28,22 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
+import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -60,6 +67,8 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.data.AppSettings
+import com.example.data.BlockedNumbers
+import com.example.data.ConversationLock
 import com.example.telephony.NumberUtils
 import com.example.telephony.SmsMessageItem
 import com.example.telephony.SmsSender
@@ -98,6 +107,24 @@ fun ConversationScreen(
     var confirmDeleteThread by remember { mutableStateOf(false) }
     var selected by remember(thread.threadId) { mutableStateOf<Set<Long>>(emptySet()) }
     var confirmDeleteSelection by remember { mutableStateOf(false) }
+
+    // What this discussion is: hidden behind a code, blocked, or neither.
+    var menuOpen by remember(thread.address) { mutableStateOf(false) }
+    var locked by remember(thread.address) {
+        mutableStateOf(ConversationLock.isLocked(context, thread.address))
+    }
+    var blocked by remember(thread.address) {
+        mutableStateOf(BlockedNumbers.isBlocked(context, thread.address))
+    }
+    var setupPin by remember { mutableStateOf(false) }
+
+    fun toast(key: String) {
+        android.widget.Toast.makeText(
+            context,
+            LanguageManager.getString(key),
+            android.widget.Toast.LENGTH_SHORT
+        ).show()
+    }
 
     val selecting = selected.isNotEmpty()
     val routing = remember(thread.address, sims, forcedSubscription) {
@@ -181,13 +208,105 @@ fun ConversationScreen(
                         tint = MaterialTheme.scanColors.success
                     )
                 }
-                if (thread.threadId >= 0) {
-                    IconButton(onClick = { confirmDeleteThread = true }) {
+                Box {
+                    IconButton(onClick = { menuOpen = true }) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = LanguageManager.getString("delete_conversation"),
-                            tint = MaterialTheme.colorScheme.error
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = LanguageManager.getString("details")
                         )
+                    }
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    LanguageManager.getString(
+                                        if (locked) "unlock_conversation" else "lock_conversation"
+                                    )
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (locked) {
+                                        Icons.Default.LockOpen
+                                    } else {
+                                        Icons.Default.Lock
+                                    },
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                when {
+                                    locked -> {
+                                        ConversationLock.unlock(context, thread.address)
+                                        locked = false
+                                    }
+                                    // The code comes first: there is nothing to
+                                    // lock a discussion with before it exists.
+                                    !ConversationLock.hasPin(context) -> setupPin = true
+
+                                    else -> {
+                                        ConversationLock.lock(context, thread.address)
+                                        locked = true
+                                        toast("conversation_locked")
+                                    }
+                                }
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    LanguageManager.getString(
+                                        if (blocked) "unblock_number" else "block_number"
+                                    )
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = if (blocked) {
+                                        Icons.Default.Person
+                                    } else {
+                                        Icons.Default.Block
+                                    },
+                                    contentDescription = null
+                                )
+                            },
+                            onClick = {
+                                menuOpen = false
+                                if (blocked) {
+                                    BlockedNumbers.unblock(context, thread.address)
+                                    blocked = false
+                                    toast("number_unblocked")
+                                } else {
+                                    BlockedNumbers.block(context, thread.address)
+                                    blocked = true
+                                    toast("number_blocked")
+                                }
+                            }
+                        )
+                        if (thread.threadId >= 0) {
+                            // Deleting lives in the menu rather than on the bar:
+                            // a header of five buttons has no room for a name.
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = LanguageManager.getString("delete_conversation"),
+                                        color = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.error
+                                    )
+                                },
+                                onClick = {
+                                    menuOpen = false
+                                    confirmDeleteThread = true
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -283,6 +402,18 @@ fun ConversationScreen(
                 TextButton(onClick = { confirmDeleteThread = false }) {
                     Text(LanguageManager.getString("cancel"))
                 }
+            }
+        )
+    }
+
+    if (setupPin) {
+        PinSetupDialog(
+            onDismiss = { setupPin = false },
+            onDone = {
+                setupPin = false
+                ConversationLock.lock(context, thread.address)
+                locked = true
+                toast("conversation_locked")
             }
         )
     }

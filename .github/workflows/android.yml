@@ -70,3 +70,27 @@ jobs:
         with:
           name: app-release-apk
           path: app/build/outputs/apk/release/app-release.apk
+          # Builds used to pile up until the storage quota of the account was
+          # full and no APK could be uploaded at all. A week is long enough to
+          # install a build, and short enough that they stop accumulating.
+          retention-days: 7
+
+      # Run after the APK is built and uploaded: a failing test must be visible
+      # without costing the build the only installable artifact it produces.
+      # Only the logic suites — the screenshot test needs a recorded reference.
+      - name: Unit Tests (logic)
+        env:
+          # The same environment as the build: the release variant is configured
+          # from it, and a step without it would configure a signing config
+          # pointing at a keystore that is not there.
+          KEYSTORE_PATH: ${{ github.workspace }}/app/release.jks
+          STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.0.${{ github.run_number }}
+        run: >-
+          ./gradlew :app:testReleaseUnitTest
+          --tests "com.example.TelephonyLogicTest"
+          --tests "com.example.TranslationsTest"
+          --tests "com.example.ConversationLockTest"

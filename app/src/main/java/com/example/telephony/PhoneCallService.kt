@@ -1,5 +1,6 @@
 package com.example.telephony
 
+import android.app.KeyguardManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -7,12 +8,16 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
+import android.os.PowerManager
 import android.telecom.Call
 import android.telecom.CallAudioState
 import android.telecom.InCallService
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
+import androidx.core.app.Person
+import com.example.data.BlockedNumbers
 import com.example.ui.call.InCallActivity
+import com.example.ui.util.LanguageManager
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -22,9 +27,9 @@ import kotlinx.coroutines.launch
 /**
  * The in-call service the system binds to once the app is the default phone app.
  *
- * It owns nothing: every call is pushed to [OngoingCallStore], and the call
- * screen is either started directly or offered through a full screen
- * notification when the system forbids starting an activity from the background.
+ * It owns nothing: every call is pushed to [OngoingCallStore], and what the
+ * user sees is either the call screen — on a phone that is asleep or locked —
+ * or the band at the top, which carries the buttons to answer and to refuse.
  */
 class PhoneCallService : InCallService() {
 
@@ -50,11 +55,66 @@ class PhoneCallService : InCallService() {
 
     override fun onCallAdded(call: Call) {
         super.onCallAdded(call)
+        if (rejectIfBlocked(call)) return
         OngoingCallStore.attach(this)
         OngoingCallStore.add(call)
         resolveContactName(call)
-        InCallActivity.start(this)
+        if (shouldTakeTheScreen(call)) InCallActivity.start(this)
     }
+
+    /**
+     * Whether the call screen should take over the whole display.
+     *
+     * A phone that is asleep or locked has nothing else to show, so the call
+     * screen comes up. A phone being used — reading a message, typing a number —
+     * keeps what is on it: the band at the top carries the two buttons, and
+     * answering no longer costs a detour through a screen nobody asked for.
+     *
+     * Unless notifications are refused: there would then be no band at all, and
+     * an incoming call that shows nothing is a call that is lost.
+     */
+    private fun shouldTakeTheScreen(call: Call): Boolean {
+        if (stateOf(call) != Call.STATE_RINGING) return true
+        val notificationsAllowed = try {
+            NotificationManagerCompat.from(this).areNotificationsEnabled()
+        } catch (e: Exception) {
+            false
+        }
+        if (!notificationsAllowed) return true
+        val asleep = (getSystemService(Context.POWER_SERVICE) as? PowerManager)
+            ?.isInteractive == false
+        val locked = (getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)
+            ?.isKeyguardLocked == true
+        return asleep || locked
+    }
+
+    /**
+     * A blocked number is hung up before anything is shown.
+     *
+     * Only a ringing call is looked at: a call placed by the user to a number
+     * they blocked is a call they just asked for.
+     */
+    private fun rejectIfBlocked(call: Call): Boolean {
+        if (stateOf(call) != Call.STATE_RINGING) return false
+        val number = call.details?.handle?.schemeSpecificPart.orEmpty()
+        if (number.isBlank() || !BlockedNumbers.isBlocked(this, number)) return false
+        return try {
+            call.reject(false, null)
+            true
+        } catch (e: Exception) {
+            // The refusal did not go through: better a call that rings than one
+            // that rings with no screen to answer it on.
+            false
+        }
+    }
+
+    @Suppress("DEPRECATION")
+    private fun stateOf(call: Call): Int =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            call.details?.state ?: Call.STATE_NEW
+        } else {
+            call.state
+        }
 
     override fun onCallRemoved(call: Call) {
         super.onCallRemoved(call)
@@ -86,15 +146,42 @@ class PhoneCallService : InCallService() {
         }
     }
 
+    /**
+     * The band at the top of the screen, with what to do about the call on it.
+     *
+     * A ringing call carries its two buttons — answer and refuse — and an
+     * ongoing one the button to hang up, so a call is handled without leaving
+     * whatever the user was doing. The call style of the system is asked for
+     * first; a phone that refuses it still gets the same two buttons, plainly.
+     */
     @android.annotation.SuppressLint("MissingPermission")
     private fun notifyCall(call: CallSnapshot) {
         createChannel(this)
+        LanguageManager.init(this)
+
         val fullScreenIntent = PendingIntent.getActivity(
             this,
             0,
             InCallActivity.intent(this),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
+        val answer = CallActionReceiver.pendingIntent(
+            this,
+            CallActionReceiver.ACTION_ANSWER,
+            call.id
+        )
+        val decline = CallActionReceiver.pendingIntent(
+            this,
+            CallActionReceiver.ACTION_DECLINE,
+            call.id
+        )
+        val hangUp = CallActionReceiver.pendingIntent(
+            this,
+            CallActionReceiver.ACTION_HANG_UP,
+            call.id
+        )
+
+        val caller = call.label.ifBlank { LanguageManager.getString("unknown_number") }
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             // The system glyph on purpose: in the status bar, a call must read
             // as a call. The SCAN colour below is what says which app it is.
@@ -109,17 +196,55 @@ class PhoneCallService : InCallService() {
                 }
             )
             // The name of the contact when the phone knows it, the number otherwise.
-            .setContentText(call.label)
+            .setContentText(caller)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_CALL)
             .setPriority(NotificationCompat.PRIORITY_MAX)
+            .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(fullScreenIntent)
+
+        val person = Person.Builder().setName(caller).setKey(call.id).setImportant(true).build()
+        val styled = runCatching {
+            builder.setStyle(
+                if (call.isRinging) {
+                    NotificationCompat.CallStyle.forIncomingCall(person, decline, answer)
+                } else {
+                    NotificationCompat.CallStyle.forOngoingCall(person, hangUp)
+                }
+            )
+        }.isSuccess
+
+        if (!styled) {
+            // No call style on this phone: the buttons are added as plain actions,
+            // which is the one thing that must not be lost.
+            if (call.isRinging) {
+                builder.addAction(
+                    com.example.R.drawable.ic_action_call,
+                    LanguageManager.getString("answer"),
+                    answer
+                )
+                builder.addAction(
+                    com.example.R.drawable.ic_action_call_end,
+                    LanguageManager.getString("decline"),
+                    decline
+                )
+            } else {
+                builder.addAction(
+                    com.example.R.drawable.ic_action_call_end,
+                    LanguageManager.getString("hang_up"),
+                    hangUp
+                )
+            }
+        }
+
         if (call.isRinging) builder.setFullScreenIntent(fullScreenIntent, true)
         try {
             NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build())
         } catch (e: SecurityException) {
             // Notification permission refused: the call screen is still started directly.
+        } catch (e: Exception) {
+            // A notification is never worth taking the call process down.
         }
     }
 

@@ -207,6 +207,31 @@ object ContactsRepository {
         }
     }
 
+    /**
+     * Stars a contact, or takes the star away.
+     *
+     * The favourites tab of the app reads the star of the phone itself, so a
+     * contact starred here is starred everywhere — and the tab stops being a
+     * list nothing could ever be added to.
+     */
+    suspend fun setFavorite(context: Context, contact: Contact, favorite: Boolean): Boolean =
+        withContext(Dispatchers.IO) {
+            if (!hasWritePermission(context)) return@withContext false
+            try {
+                val values = android.content.ContentValues().apply {
+                    put(ContactsContract.Contacts.STARRED, if (favorite) 1 else 0)
+                }
+                context.contentResolver.update(
+                    ContactsContract.Contacts.CONTENT_URI,
+                    values,
+                    ContactsContract.Contacts._ID + " = ?",
+                    arrayOf(contact.id.toString())
+                ) > 0
+            } catch (e: Exception) {
+                false
+            }
+        }
+
     /** Removes the contact from the phone, with every number it carried. */
     suspend fun delete(context: Context, contact: Contact): Boolean =
         withContext(Dispatchers.IO) {
