@@ -72,6 +72,36 @@ object ConversationLock {
     fun isAcceptable(pin: String): Boolean =
         pin.length in MIN_LENGTH..MAX_LENGTH && pin.all { it.isDigit() }
 
+    // ------------------------------------------------------------------- access
+
+    /**
+     * How long a code typed once keeps opening the locked discussions.
+     *
+     * Hiding a discussion from the inbox is not enough: it can still be reached
+     * from a contact, from the call history or from an `smsto:` link, and it
+     * would open with no code asked. Every way in now goes through the same
+     * question — but a code typed in the locked list must not be asked again
+     * for each discussion of that list, so it stands for two minutes.
+     *
+     * In memory only: closing the application asks for the code again.
+     */
+    private const val GRANT_MS = 2 * 60 * 1000L
+
+    @Volatile
+    private var grantedAt = 0L
+
+    fun grantAccess() {
+        grantedAt = System.currentTimeMillis()
+    }
+
+    fun hasRecentAccess(): Boolean =
+        grantedAt > 0L && System.currentTimeMillis() - grantedAt < GRANT_MS
+
+    /** Closes the locked discussions again, without waiting for the delay. */
+    fun revokeAccess() {
+        grantedAt = 0L
+    }
+
     // ------------------------------------------------------------ conversations
 
     fun lockedKeys(context: Context): Set<String> {

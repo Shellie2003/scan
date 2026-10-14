@@ -4,6 +4,8 @@
     <string name="ongoing_call">Appel en cours</string>
     <string name="calls_channel_name">Appels</string>
     <string name="calls_channel_desc">Notifications des appels entrants et en cours</string>
+    <string name="missed_calls_channel_name">Appels manqués</string>
+    <string name="missed_calls_channel_desc">Notification d\'un appel que vous n\'avez pas pris</string>
     <string name="sms_channel_name">Messages reçus</string>
     <string name="sms_channel_desc">Notifications des messages reçus, avec réponse directe</string>
     <string name="bulk_channel_name">Envoi groupé</string>

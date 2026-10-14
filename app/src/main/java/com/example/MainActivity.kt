@@ -50,6 +50,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.example.telephony.MessageNotifier
+import com.example.telephony.MissedCallNotifier
 import com.example.telephony.NumberUtils
 import com.example.telephony.PhoneCallService
 import com.example.ui.ScanScreen
@@ -103,6 +104,7 @@ class MainActivity : ComponentActivity() {
         ThemeController.init(this)
         PhoneCallService.createChannel(this)
         MessageNotifier.createChannel(this)
+        MissedCallNotifier.createChannel(this)
         target = targetFromIntent(intent)
 
         enableEdgeToEdge()

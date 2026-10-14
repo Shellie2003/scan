@@ -145,7 +145,12 @@ fun InCallScreen(onFinished: () -> Unit) {
         }
     }
 
-    val call = calls.firstOrNull { !it.isDisconnected } ?: calls.firstOrNull()
+    // A ringing call takes the screen over an ongoing one: a second call must be
+    // answerable, and telecom puts the first one on hold by itself.
+    val call = calls.firstOrNull { it.isRinging }
+        ?: calls.firstOrNull { it.isActive }
+        ?: calls.firstOrNull { !it.isDisconnected }
+        ?: calls.firstOrNull()
 
     Box(
         modifier = Modifier

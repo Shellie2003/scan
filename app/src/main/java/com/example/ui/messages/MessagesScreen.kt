@@ -157,7 +157,14 @@ fun MessagesScreen(
 
     // Leaving a selection — or the locked discussions — must not leave the screen.
     BackHandler(enabled = selectedThreads.isNotEmpty() || secureOpen) {
-        if (selectedThreads.isNotEmpty()) selectedThreads = emptySet() else secureOpen = false
+        if (selectedThreads.isNotEmpty()) {
+            selectedThreads = emptySet()
+        } else {
+            secureOpen = false
+            // Leaving the locked list closes it for good: the code is asked
+            // again on the way back in, not once per application launch.
+            ConversationLock.revokeAccess()
+        }
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -221,6 +228,7 @@ fun MessagesScreen(
                             // Leaving the inbox closes the locked discussions: a
                             // code is asked again on the way back in.
                             secureOpen = false
+                            ConversationLock.revokeAccess()
                         },
                         text = {
                             Text(
@@ -266,7 +274,10 @@ fun MessagesScreen(
                         secureCount = secretThreads.size,
                         secureOpen = secureOpen,
                         onOpenSecure = { if (hasPin) askPin = true else setupPin = true },
-                        onCloseSecure = { secureOpen = false }
+                        onCloseSecure = {
+                            secureOpen = false
+                            ConversationLock.revokeAccess()
+                        }
                     )
 
                     MessagesTab.BULK -> BulkMessagesTab(

@@ -118,6 +118,16 @@ fun ConversationScreen(
     }
     var setupPin by remember { mutableStateOf(false) }
 
+    // A locked discussion is not merely hidden from the inbox: whichever way it
+    // was reached — a contact, the call history, an `smsto:` link — the code is
+    // asked before a single message is drawn.
+    var unlocked by remember(thread.address) {
+        mutableStateOf(
+            !ConversationLock.isLocked(context, thread.address) ||
+                ConversationLock.hasRecentAccess()
+        )
+    }
+
     fun toast(key: String) {
         android.widget.Toast.makeText(
             context,
@@ -148,6 +158,11 @@ fun ConversationScreen(
     // Back leaves the selection first, and the conversation only after.
     BackHandler(enabled = true) {
         if (selecting) selected = emptySet() else onBack()
+    }
+
+    if (!unlocked) {
+        LockedConversationGate(onBack = onBack, onUnlocked = { unlocked = true })
+        return
     }
 
     Column(

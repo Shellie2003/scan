@@ -4,6 +4,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.provider.Telephony
+import com.example.data.BlockedNumbers
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -44,7 +45,14 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 SmsRepository.storeIncoming(context, address, body, timestamp, subscriptionId)
-                MessageNotifier.notifyIncoming(context, address, body, timestamp, subscriptionId)
+                if (BlockedNumbers.isBlocked(context, address)) {
+                    // Kept, because the app is the SMS app of the phone and
+                    // losing a message is not its decision — but read, so a
+                    // blocked number leaves neither a sound nor a badge.
+                    SmsRepository.markAddressRead(context, address)
+                } else {
+                    MessageNotifier.notifyIncoming(context, address, body, timestamp, subscriptionId)
+                }
             } finally {
                 pending.finish()
             }

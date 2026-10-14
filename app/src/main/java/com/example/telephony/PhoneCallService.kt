@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.PowerManager
 import android.telecom.Call
 import android.telecom.CallAudioState
+import android.telecom.DisconnectCause
 import android.telecom.InCallService
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -42,7 +43,11 @@ class PhoneCallService : InCallService() {
         // it showed a raw number even when the contact was known.
         scope.launch {
             OngoingCallStore.calls.collect { calls ->
-                val call = calls.firstOrNull { !it.isDisconnected }
+                // A call that is ringing comes first: during a conversation, a
+                // second call must be the one the band lets you answer.
+                val call = calls.firstOrNull { it.isRinging }
+                    ?: calls.firstOrNull { it.isActive }
+                    ?: calls.firstOrNull { !it.isDisconnected }
                 if (call == null) cancelNotification() else notifyCall(call)
             }
         }
@@ -59,6 +64,10 @@ class PhoneCallService : InCallService() {
         OngoingCallStore.attach(this)
         OngoingCallStore.add(call)
         resolveContactName(call)
+        // Calling back — or being called again — settles the missed call.
+        call.details?.handle?.schemeSpecificPart?.takeIf { it.isNotBlank() }?.let { number ->
+            MissedCallNotifier.cancel(this, number)
+        }
         if (shouldTakeTheScreen(call)) InCallActivity.start(this)
     }
 
@@ -118,10 +127,29 @@ class PhoneCallService : InCallService() {
 
     override fun onCallRemoved(call: Call) {
         super.onCallRemoved(call)
+        notifyIfMissed(call)
         OngoingCallStore.remove(call)
         if (!OngoingCallStore.hasCalls()) {
             cancelNotification()
             OngoingCallStore.detach()
+        }
+    }
+
+    /**
+     * A call nobody took leaves a notification behind.
+     *
+     * Only a call the telecom framework itself calls missed: a call the user
+     * refused on purpose is not a call they need to be reminded of, and neither
+     * is one from a number they blocked.
+     */
+    private fun notifyIfMissed(call: Call) {
+        val details = call.details ?: return
+        if (details.disconnectCause?.code != DisconnectCause.MISSED) return
+        val number = details.handle?.schemeSpecificPart.orEmpty()
+        if (number.isBlank() || BlockedNumbers.isBlocked(this, number)) return
+        scope.launch {
+            val name = ContactsRepository.nameFor(this@PhoneCallService, number)
+            MissedCallNotifier.notifyMissed(this@PhoneCallService, number, name)
         }
     }
 
@@ -133,7 +161,13 @@ class PhoneCallService : InCallService() {
         }
     }
 
+    // Replaced by onCallEndpointChanged on Android 14, which does not exist on
+    // the phones this application is made for. The old callback is the one that
+    // works from Android 7 up, so it stays — declared, not left as a warning.
+    @Deprecated("Kept for Android 7 to 13; the endpoint API only exists from 14.")
+    @Suppress("DEPRECATION")
     override fun onCallAudioStateChanged(audioState: CallAudioState) {
+        @Suppress("DEPRECATION")
         super.onCallAudioStateChanged(audioState)
         OngoingCallStore.onAudioStateChanged(audioState)
     }

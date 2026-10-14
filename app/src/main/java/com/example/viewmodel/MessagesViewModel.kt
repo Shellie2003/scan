@@ -71,6 +71,10 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
     }
 
     init {
+        // debounce is still marked preview by the coroutines library; it is what
+        // folds a burst of provider writes into one reload, and it is stable in
+        // practice. Declared rather than left as a warning at every build.
+        @OptIn(kotlinx.coroutines.FlowPreview::class)
         viewModelScope.launch {
             reloadRequests.debounce(RELOAD_DEBOUNCE_MS).collect {
                 refresh(contacts)
