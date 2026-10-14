@@ -89,8 +89,21 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
           VERSION_CODE: ${{ github.run_number }}
           VERSION_NAME: 1.0.${{ github.run_number }}
-        run: >-
-          ./gradlew :app:testReleaseUnitTest
-          --tests "com.example.TelephonyLogicTest"
-          --tests "com.example.TranslationsTest"
-          --tests "com.example.ConversationLockTest"
+        run: |
+          # The Android plugin renames the unit test task between its major
+          # versions — testReleaseUnitTest does not exist under AGP 9 — so the
+          # name is asked for rather than guessed, and printed either way.
+          set -o pipefail
+          CANDIDATES=$(./gradlew :app:tasks --all -q \
+            | grep -oE '^test[A-Za-z]+(UnitTest|HostTest)' | sort -u || true)
+          echo "Unit test tasks in :app: ${CANDIDATES:-none}"
+          TASK=$(echo "$CANDIDATES" | grep -i release | head -1 || true)
+          if [ -z "$TASK" ]; then TASK=$(echo "$CANDIDATES" | head -1 || true); fi
+          if [ -z "$TASK" ]; then
+            echo "No unit test task exposed by the Android plugin."
+            exit 1
+          fi
+          ./gradlew ":app:$TASK" \
+            --tests "com.example.TelephonyLogicTest" \
+            --tests "com.example.TranslationsTest" \
+            --tests "com.example.ConversationLockTest"
