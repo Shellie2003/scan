@@ -95,6 +95,34 @@ object AppSettings {
         prefs(context).edit().putBoolean("in_app_ussd", value).apply()
     }
 
+    /**
+     * `false` once the in-app USSD channel has failed twice on this phone.
+     *
+     * `sendUssdRequest` is refused outright by some manufacturers. Asking it
+     * every time costs the user two taps and a failed dialog before the code
+     * finally goes through the dialer, so the app stops asking.
+     */
+    fun inAppUssdWorks(context: Context): Boolean =
+        prefs(context).getInt("in_app_ussd_failures", 0) < IN_APP_USSD_GIVE_UP
+
+    /** Returns `true` when this failure is the one that gives up for good. */
+    fun recordInAppUssdFailure(context: Context): Boolean {
+        val failures = prefs(context).getInt("in_app_ussd_failures", 0) + 1
+        prefs(context).edit().putInt("in_app_ussd_failures", failures).apply()
+        return failures >= IN_APP_USSD_GIVE_UP
+    }
+
+    fun recordInAppUssdSuccess(context: Context) {
+        prefs(context).edit().putInt("in_app_ussd_failures", 0).apply()
+    }
+
+    /** Lets the user ask the app to try the in-app channel again. */
+    fun resetInAppUssd(context: Context) {
+        prefs(context).edit().putInt("in_app_ussd_failures", 0).apply()
+    }
+
+    private const val IN_APP_USSD_GIVE_UP = 2
+
     // ---------------------------------------------------------------- messages
 
     /** Delay in milliseconds between two messages of a bulk send. */

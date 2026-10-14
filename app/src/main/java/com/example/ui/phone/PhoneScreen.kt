@@ -156,6 +156,7 @@ fun PhoneScreen(
 
     // Editing a contact: null means nothing open, a Contact means it is being
     // changed, and the "new contact" case is carried by [creatingContact].
+    var detailsContact by remember { mutableStateOf<Contact?>(null) }
     var editingContact by remember { mutableStateOf<Contact?>(null) }
     var creatingContact by remember { mutableStateOf(false) }
     var deletingContact by remember { mutableStateOf<Contact?>(null) }
@@ -236,6 +237,7 @@ fun PhoneScreen(
                         onRequestPermission = { permissions.launchMultiplePermissionRequest() },
                         onCall = { launcher.call(it) },
                         onMessage = onMessage,
+                        onOpen = { contact -> detailsContact = contact },
                         onCreate = {
                             if (ContactsRepository.hasWritePermission(context)) {
                                 creatingContact = true
@@ -274,6 +276,33 @@ fun PhoneScreen(
                 contentDescription = LanguageManager.getString("open_keypad")
             )
         }
+    }
+
+    detailsContact?.let { contact ->
+        ContactDetailsDialog(
+            contact = contact,
+            onDismiss = { detailsContact = null },
+            onCall = {
+                detailsContact = null
+                launcher.call(contact.number)
+            },
+            onMessage = {
+                detailsContact = null
+                onMessage(contact.number)
+            },
+            onEdit = {
+                detailsContact = null
+                if (ContactsRepository.hasWritePermission(context)) {
+                    editingContact = contact
+                } else {
+                    permissions.launchMultiplePermissionRequest()
+                }
+            },
+            onDelete = {
+                detailsContact = null
+                deletingContact = contact
+            }
+        )
     }
 
     val editorContact = editingContact
@@ -321,7 +350,8 @@ fun PhoneScreen(
                 onMessage = {
                     showKeypad = false
                     onMessage(it)
-                }
+                },
+                onRequestSimPermission = { permissions.launchMultiplePermissionRequest() }
             )
         }
     }
@@ -398,7 +428,8 @@ private fun KeypadSheet(
     contacts: List<Contact>,
     onInputChange: (String) -> Unit,
     onCall: (String) -> Unit,
-    onMessage: (String) -> Unit
+    onMessage: (String) -> Unit,
+    onRequestSimPermission: () -> Unit
 ) {
     val context = LocalContext.current
     val clipboard = LocalClipboardManager.current
@@ -555,6 +586,7 @@ private fun KeypadSheet(
                 routing = routing,
                 sims = sims,
                 onPick = { sim -> app.setPreferredSim(routing.operator, sim) },
+                onRequestPermission = onRequestSimPermission,
                 modifier = Modifier.size(56.dp)
             )
             FilledIconButton(
@@ -763,6 +795,7 @@ private fun ContactsTab(
     onRequestPermission: () -> Unit,
     onCall: (String) -> Unit,
     onMessage: (String) -> Unit,
+    onOpen: (Contact) -> Unit,
     onCreate: () -> Unit,
     onEdit: (Contact) -> Unit,
     onDelete: (Contact) -> Unit
@@ -841,6 +874,7 @@ private fun ContactsTab(
                     contact = contact,
                     onCall = { onCall(contact.number) },
                     onMessage = { onMessage(contact.number) },
+                    onOpen = { onOpen(contact) },
                     onEdit = { onEdit(contact) },
                     onDelete = { onDelete(contact) }
                 )
@@ -870,6 +904,8 @@ private fun ContactRow(
     contact: Contact,
     onCall: () -> Unit,
     onMessage: () -> Unit,
+    /** Opens the card of the contact. Without it, a tap places the call. */
+    onOpen: (() -> Unit)? = null,
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
@@ -884,7 +920,7 @@ private fun ContactRow(
             modifier = Modifier
                 .fillMaxWidth()
                 .combinedClickable(
-                    onClick = onCall,
+                    onClick = onOpen ?: onCall,
                     onLongClick = { if (hasMenu) menuOpen = true else copy() }
                 )
                 .padding(horizontal = 16.dp, vertical = 10.dp),

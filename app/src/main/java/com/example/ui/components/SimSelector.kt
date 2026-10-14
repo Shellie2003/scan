@@ -25,10 +25,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.telephony.RoutingStatus
+import com.example.telephony.SimAvailability
+import com.example.telephony.SimManager
 import com.example.telephony.SimCard
 import com.example.telephony.SimRouting
 import com.example.ui.util.LanguageManager
@@ -48,8 +51,10 @@ fun SimSelector(
     sims: List<SimCard>,
     onPick: (SimCard) -> Unit,
     modifier: Modifier = Modifier,
-    tint: Color = MaterialTheme.colorScheme.primary
+    tint: Color = MaterialTheme.colorScheme.primary,
+    onRequestPermission: (() -> Unit)? = null
 ) {
+    val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     val choices = routing.candidates.ifEmpty { sims }
     val warning = routing.status == RoutingStatus.NO_SIM ||
@@ -105,16 +110,50 @@ fun SimSelector(
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
             )
             if (choices.isEmpty()) {
-                DropdownMenuItem(
-                    text = {
-                        Text(
-                            text = LanguageManager.getString("no_sim_detected"),
-                            color = MaterialTheme.colorScheme.error
-                        )
-                    },
-                    enabled = false,
-                    onClick = {}
-                )
+                // An empty list used to read "no SIM card", whatever the reason.
+                // On several phones the cards are there and the permission is
+                // not, and the user had no way of knowing — nor of fixing it.
+                val reason = remember(sims) { SimManager.availability(context) }
+                if (reason == SimAvailability.PERMISSION_MISSING && onRequestPermission != null) {
+                    DropdownMenuItem(
+                        text = {
+                            Column {
+                                Text(
+                                    text = LanguageManager.getString("no_sim_permission"),
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                                Text(
+                                    text = LanguageManager.getString("grant_permission"),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = tint
+                                )
+                            }
+                        },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Warning,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        onClick = {
+                            expanded = false
+                            onRequestPermission()
+                        }
+                    )
+                } else {
+                    DropdownMenuItem(
+                        text = {
+                            Text(
+                                text = LanguageManager.getString("no_sim_detected"),
+                                color = MaterialTheme.colorScheme.error
+                            )
+                        },
+                        enabled = false,
+                        onClick = {}
+                    )
+                }
             }
             choices.forEach { sim ->
                 val selected = sim.subscriptionId == current?.subscriptionId

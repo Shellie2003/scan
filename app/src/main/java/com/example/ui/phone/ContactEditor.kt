@@ -55,6 +55,18 @@ import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Message
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.style.TextAlign
+import com.example.ui.theme.scanColors
 import com.example.telephony.Contact
 import com.example.telephony.ContactsRepository
 import com.example.telephony.NumberUtils
@@ -317,4 +329,132 @@ fun DeleteContactDialog(
             }
         }
     )
+}
+
+/**
+ * The card of a contact, opened by tapping their line.
+ *
+ * Tapping used to place the call straight away, which is a hard thing to undo
+ * when the wrong line was touched. The card shows who it is — photo included —
+ * and lets the call be the deliberate gesture it should be.
+ */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+fun ContactDetailsDialog(
+    contact: Contact,
+    onDismiss: () -> Unit,
+    onCall: () -> Unit,
+    onMessage: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
+) {
+    val context = LocalContext.current
+    val clipboard = LocalClipboardManager.current
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = null,
+        text = {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                ContactAvatar(contact = contact, size = 88.dp)
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    text = contact.name.ifBlank {
+                        LanguageManager.getString("unknown_number")
+                    },
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(2.dp))
+                // A long press on the number copies it, as everywhere else.
+                Text(
+                    text = NumberUtils.formatForDisplay(contact.number),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.combinedClickable(
+                        onClick = {},
+                        onLongClick = {
+                            clipboard.setText(
+                                AnnotatedString(NumberUtils.toNational(contact.number))
+                            )
+                            Toast.makeText(
+                                context,
+                                LanguageManager.getString("number_copied"),
+                                Toast.LENGTH_SHORT
+                            ).show()
+                        }
+                    )
+                )
+
+                Spacer(Modifier.height(20.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    ContactAction(
+                        icon = Icons.Default.Call,
+                        label = LanguageManager.getString("call"),
+                        tint = MaterialTheme.scanColors.success,
+                        onClick = onCall
+                    )
+                    ContactAction(
+                        icon = Icons.Default.Message,
+                        label = LanguageManager.getString("send_message"),
+                        tint = MaterialTheme.colorScheme.primary,
+                        onClick = onMessage
+                    )
+                    ContactAction(
+                        icon = Icons.Default.Edit,
+                        label = LanguageManager.getString("edit"),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        onClick = onEdit
+                    )
+                    ContactAction(
+                        icon = Icons.Default.Delete,
+                        label = LanguageManager.getString("delete"),
+                        tint = MaterialTheme.colorScheme.error,
+                        onClick = onDelete
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) {
+                Text(LanguageManager.getString("close"))
+            }
+        }
+    )
+}
+
+/** One round action of the contact card, with its name under it. */
+@Composable
+private fun ContactAction(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    tint: Color,
+    onClick: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        FilledIconButton(
+            onClick = onClick,
+            modifier = Modifier.size(48.dp),
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = tint.copy(alpha = 0.14f),
+                contentColor = tint
+            )
+        ) {
+            Icon(imageVector = icon, contentDescription = label, modifier = Modifier.size(22.dp))
+        }
+        Spacer(Modifier.height(4.dp))
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+    }
 }

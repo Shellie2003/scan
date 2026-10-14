@@ -48,6 +48,18 @@ data class SimCard(
             .joinToString(" • ")
 }
 
+/** Why the app has no SIM card to show. */
+enum class SimAvailability {
+    /** Cards were found. */
+    READY,
+
+    /** The phone state permission was never granted, or was refused. */
+    PERMISSION_MISSING,
+
+    /** The permission is held but the phone reports no usable card. */
+    NONE
+}
+
 object SimManager {
 
     fun hasPhoneStatePermission(context: Context): Boolean =
@@ -62,29 +74,124 @@ object SimManager {
             Manifest.permission.CALL_PHONE
         ) == PackageManager.PERMISSION_GRANTED
 
-    /** Every active SIM, ordered by slot. Empty when the permission is missing. */
+    /** What to tell the user when the card list is empty. */
+    fun availability(context: Context): SimAvailability = when {
+        !hasPhoneStatePermission(context) -> SimAvailability.PERMISSION_MISSING
+        getSims(context).isEmpty() -> SimAvailability.NONE
+        else -> SimAvailability.READY
+    }
+
+    /**
+     * Every active SIM, ordered by slot.
+     *
+     * Three ways of asking, because one is not enough: the subscription list is
+     * the right question, but several manufacturers — MIUI among them — answer
+     * it with nothing while still holding two cards. The phone is then asked
+     * slot by slot, and finally through the telecom accounts, which is what the
+     * dialer of the system itself uses.
+     */
     @SuppressLint("MissingPermission")
     fun getSims(context: Context): List<SimCard> {
         if (!hasPhoneStatePermission(context)) return emptyList()
         val subscriptionManager = context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE)
-                as? SubscriptionManager ?: return emptyList()
+                as? SubscriptionManager
+
+        fromSubscriptionList(subscriptionManager)
+            .takeIf { it.isNotEmpty() }
+            ?.let { return it }
+
+        fromSlots(subscriptionManager)
+            .takeIf { it.isNotEmpty() }
+            ?.let { return it }
+
+        return fromPhoneAccounts(context)
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun fromSubscriptionList(manager: SubscriptionManager?): List<SimCard> = try {
+        manager?.activeSubscriptionInfoList
+            ?.map { info -> info.toSimCard() }
+            ?.sortedBy { it.slotIndex }
+            .orEmpty()
+    } catch (e: Exception) {
+        emptyList()
+    }
+
+    /** Slot by slot: answers on phones where the whole list comes back empty. */
+    @SuppressLint("MissingPermission")
+    private fun fromSlots(manager: SubscriptionManager?): List<SimCard> {
+        if (manager == null) return emptyList()
+        val slots = try {
+            manager.activeSubscriptionInfoCountMax.coerceIn(1, MAX_SLOTS)
+        } catch (e: Exception) {
+            MAX_SLOTS
+        }
+        val found = mutableListOf<SimCard>()
+        for (slot in 0 until slots) {
+            val info = try {
+                manager.getActiveSubscriptionInfoForSimSlotIndex(slot)
+            } catch (e: Exception) {
+                null
+            }
+            if (info != null) found += info.toSimCard()
+        }
+        return found.distinctBy { it.subscriptionId }.sortedBy { it.slotIndex }
+    }
+
+    /**
+     * Last resort: the telecom accounts that can place a call.
+     *
+     * Only the accounts of the telephony service of the system are kept — a
+     * wifi-calling or a messaging account is not a SIM card, and a call sent to
+     * one of those never rings.
+     */
+    @SuppressLint("MissingPermission")
+    private fun fromPhoneAccounts(context: Context): List<SimCard> {
+        if (!hasCallPermission(context)) return emptyList()
+        val telecomManager = context.getSystemService(Context.TELECOM_SERVICE)
+                as? TelecomManager ?: return emptyList()
         return try {
-            val list = subscriptionManager.activeSubscriptionInfoList ?: return emptyList()
-            list.map { info ->
-                SimCard(
-                    subscriptionId = info.subscriptionId,
-                    slotIndex = info.simSlotIndex,
-                    carrierName = info.carrierName?.toString().orEmpty(),
-                    displayName = info.displayName?.toString().orEmpty(),
-                    number = readNumber(info)
-                )
-            }.sortedBy { it.slotIndex }
-        } catch (e: SecurityException) {
-            emptyList()
+            telecomManager.callCapablePhoneAccounts
+                .orEmpty()
+                .filter { isTelephonyAccount(it) }
+                .mapIndexed { index, handle ->
+                    val account = try {
+                        telecomManager.getPhoneAccount(handle)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    val subscriptionId = handle.id.toIntOrNull()
+                        ?: subscriptionIdOf(context, handle)
+                    SimCard(
+                        subscriptionId = subscriptionId,
+                        slotIndex = index,
+                        carrierName = account?.label?.toString().orEmpty(),
+                        displayName = account?.label?.toString().orEmpty(),
+                        number = account?.address?.schemeSpecificPart.orEmpty()
+                    )
+                }
+                .filter { it.subscriptionId != SubscriptionManager.INVALID_SUBSCRIPTION_ID }
         } catch (e: Exception) {
             emptyList()
         }
     }
+
+    private fun isTelephonyAccount(handle: PhoneAccountHandle): Boolean {
+        val component = handle.componentName.className.lowercase()
+        return component.contains("telephony") || component.contains("telecom")
+    }
+
+    @Suppress("DEPRECATION")
+    private fun android.telephony.SubscriptionInfo.toSimCard(): SimCard = SimCard(
+        subscriptionId = subscriptionId,
+        slotIndex = simSlotIndex,
+        carrierName = carrierName?.toString().orEmpty(),
+        displayName = displayName?.toString().orEmpty(),
+        number = readNumber(this)
+    )
+
+    /** Phones with three card slots exist; four is a safe ceiling to probe. */
+    private const val MAX_SLOTS = 4
 
     @Suppress("DEPRECATION")
     private fun readNumber(info: android.telephony.SubscriptionInfo): String = try {
@@ -133,8 +240,11 @@ object SimManager {
 
     /**
      * The telecom account backing a SIM, used to force a call onto that exact card.
-     * Returns `null` on devices that do not expose the mapping, the caller then
-     * falls back to the legacy dialer extras.
+     *
+     * Only a positive match is returned. Guessing by slot used to pick whatever
+     * account came in that position — a wifi-calling or a VoIP account among
+     * them — and a call placed on the wrong account never rings anywhere. No
+     * account means the system picks, which at least rings.
      */
     @SuppressLint("MissingPermission")
     fun phoneAccountHandle(context: Context, sim: SimCard): PhoneAccountHandle? {
@@ -142,12 +252,13 @@ object SimManager {
         val telecomManager = context.getSystemService(Context.TELECOM_SERVICE)
                 as? TelecomManager ?: return null
         return try {
-            val accounts = telecomManager.callCapablePhoneAccounts
-            if (accounts.isNullOrEmpty()) return null
-            accounts.firstOrNull { handle ->
-                handle.id == sim.subscriptionId.toString() ||
-                    subscriptionIdOf(context, handle) == sim.subscriptionId
-            } ?: accounts.getOrNull(sim.slotIndex)
+            telecomManager.callCapablePhoneAccounts
+                .orEmpty()
+                .filter { isTelephonyAccount(it) }
+                .firstOrNull { handle ->
+                    handle.id == sim.subscriptionId.toString() ||
+                        subscriptionIdOf(context, handle) == sim.subscriptionId
+                }
         } catch (e: SecurityException) {
             null
         } catch (e: Exception) {

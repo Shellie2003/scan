@@ -11,6 +11,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -18,6 +19,8 @@ import com.example.data.AppSettings
 import com.example.data.model.Operator
 import com.example.data.model.ScanHistory
 import com.example.telephony.CallManager
+import com.example.telephony.DefaultDialerManager
+import com.example.telephony.OngoingCallStore
 import com.example.telephony.DialOutcome
 import com.example.telephony.RoutingStatus
 import com.example.telephony.SimCard
@@ -26,6 +29,8 @@ import com.example.telephony.UssdResult
 import com.example.telephony.UssdRunner
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** An operation waiting to be sent to a SIM card. */
 sealed class DialRequest {
@@ -79,6 +84,7 @@ fun WithSimRouting(
     content: @Composable (SimLauncher) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val sims by app.sims.collectAsState()
 
     var pendingChoice by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
@@ -86,39 +92,70 @@ fun WithSimRouting(
     var ussdAnswer by remember { mutableStateOf<String?>(null) }
     var ussdFailed by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
 
+    fun toast(key: String) {
+        Toast.makeText(context, LanguageManager.getString(key), Toast.LENGTH_SHORT).show()
+    }
+
+    /**
+     * Dials a code through the dialer of the system, which is the path that
+     * works everywhere. Used on its own, and as the fallback when the in-app
+     * USSD channel refuses.
+     */
+    fun dialCode(code: String, sim: SimCard?) {
+        if (CallManager.dial(context, code, sim, direct = true) == DialOutcome.FAILED) {
+            toast("action_failed")
+        }
+    }
+
     fun execute(request: DialRequest, routing: SimRouting) {
         val sim = routing.sim
         when (request) {
             is DialRequest.Call -> {
                 val outcome = CallManager.dial(context, request.number, sim, direct = true)
                 if (outcome == DialOutcome.FAILED) {
-                    Toast.makeText(
-                        context,
-                        LanguageManager.getString("action_failed"),
-                        Toast.LENGTH_SHORT
-                    ).show()
+                    toast("action_failed")
+                    return
+                }
+                // A call placed through telecom can be swallowed in silence —
+                // a refused phone account, a modem that says nothing. When the
+                // app is the phone app it can see the call appear; if nothing
+                // appears, the call is placed again the ordinary way.
+                if (outcome == DialOutcome.CALLED && DefaultDialerManager.isDefaultDialer(context)) {
+                    scope.launch {
+                        delay(CALL_WATCHDOG_MS)
+                        if (!OngoingCallStore.hasCalls()) {
+                            toast("call_retry")
+                            CallManager.dialWithIntent(context, request.number, sim)
+                        }
+                    }
                 }
             }
 
             is DialRequest.Code -> {
                 val code = request.code
-                val useInApp = AppSettings.inAppUssd(context) && UssdRunner.isAvailable(context, code)
+                val useInApp = AppSettings.inAppUssd(context) &&
+                    AppSettings.inAppUssdWorks(context) &&
+                    UssdRunner.isAvailable(context, code)
                 if (useInApp) {
                     UssdRunner.run(context, code, sim) { result ->
                         when (result) {
-                            is UssdResult.Success -> ussdAnswer = result.response
-                            else -> ussdFailed = request to routing
+                            is UssdResult.Success -> {
+                                AppSettings.recordInAppUssdSuccess(context)
+                                ussdAnswer = result.response
+                            }
+                            // The operator answer could not be read in the app.
+                            // The code itself is good: it is dialled straight
+                            // away instead of asking the user to try again, and
+                            // a phone that keeps refusing stops being asked.
+                            else -> {
+                                val giveUp = AppSettings.recordInAppUssdFailure(context)
+                                toast(if (giveUp) "ussd_direct_from_now" else "ussd_falling_back")
+                                dialCode(code, sim)
+                            }
                         }
                     }
                 } else {
-                    val outcome = CallManager.dial(context, code, sim, direct = true)
-                    if (outcome == DialOutcome.FAILED) {
-                        Toast.makeText(
-                            context,
-                            LanguageManager.getString("action_failed"),
-                            Toast.LENGTH_SHORT
-                        ).show()
-                    }
+                    dialCode(code, sim)
                 }
                 app.record(
                     operator = request.operator,
@@ -230,6 +267,9 @@ private fun fallbackWarning(routing: SimRouting): String? = when {
         )
     else -> null
 }
+
+/** How long a call is given to appear before it is placed again. */
+private const val CALL_WATCHDOG_MS = 3_000L
 
 /** Convenience used by the screens that only need the resolved SIM of an operator. */
 fun SimRouting.simOrFirst(sims: List<SimCard>): SimCard? = sim ?: sims.firstOrNull()

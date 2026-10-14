@@ -282,11 +282,14 @@ fun SettingsScreen(app: AppViewModel) {
         )
         SettingSwitch(
             title = LanguageManager.getString("ussd_response"),
-            description = LanguageManager.getString("auto_validation_short_desc"),
+            description = LanguageManager.getString("in_app_ussd_desc"),
             checked = inAppUssd,
             onCheckedChange = {
                 inAppUssd = it
                 AppSettings.setInAppUssd(context, it)
+                // Switching it back on is the user saying "try again", after the
+                // app gave up on a phone that kept refusing the channel.
+                if (it) AppSettings.resetInAppUssd(context)
             }
         )
 

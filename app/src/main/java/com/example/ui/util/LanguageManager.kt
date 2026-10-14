@@ -334,7 +334,12 @@ object LanguageManager {
             "ringtone_permission" to "Mila alalana hanova ny feon'ny finday. Omeo alalana eo amin'ny pejy manaraka.",
             "contact_photo" to "Sary",
             "swipe_to_answer" to "Sintono ankavanana raha hamaly, ankavia raha handà",
-            "placeholders_hint" to "Ampiasao {NUMBER} sy {AMOUNT}. Azo soratana in-droa ny {NUMBER} raha miverina ao amin'ny kaody (Orange)."
+            "placeholders_hint" to "Ampiasao {NUMBER} sy {AMOUNT}. Azo soratana in-droa ny {NUMBER} raha miverina ao amin'ny kaody (Orange).",
+            "call_retry" to "Tsy nandeha ny antso, andramana indray",
+            "ussd_falling_back" to "Tsy voavaky ny valin'ny mpanome, alefa mivantana ny kaody",
+            "ussd_direct_from_now" to "Tsy mandeha amin'ity finday ity ny famakiana USSD : halefa mivantana hatrany ny kaody",
+            "in_app_ussd_desc" to "Mamaky ny valin'ny mpanome ao anatin'ny fampiharana. Raha tsy mandeha dia alefa mivantana ny kaody.",
+            "contact_details" to "Mombamomba ny kontaka"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -628,7 +633,14 @@ object LanguageManager {
             "message_sound" to "Son des messages",
             "sound_default" to "Son par défaut",
             "ringtone_permission" to "Modifier la sonnerie du téléphone demande une autorisation système. Accordez-la sur l'écran suivant.",
-            "contact_photo" to "Photo"
+            "contact_photo" to "Photo",
+            "swipe_to_answer" to "Glissez à droite pour répondre, à gauche pour refuser",
+            "placeholders_hint" to "Utilisez {NUMBER} et {AMOUNT}. {NUMBER} peut être écrit deux fois si le code le répète (Orange).",
+            "call_retry" to "L'appel n'est pas parti, nouvelle tentative",
+            "ussd_falling_back" to "Réponse de l'opérateur illisible, le code est composé directement",
+            "ussd_direct_from_now" to "Ce téléphone refuse la lecture USSD : les codes seront désormais composés directement",
+            "in_app_ussd_desc" to "Lit la réponse de l'opérateur dans l'application. En cas d'échec, le code est composé directement.",
+            "contact_details" to "Fiche du contact"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -922,9 +934,27 @@ object LanguageManager {
             "message_sound" to "Message sound",
             "sound_default" to "Default sound",
             "ringtone_permission" to "Changing the ringtone of the phone needs a system permission. Grant it on the next screen.",
-            "contact_photo" to "Photo"
+            "contact_photo" to "Photo",
+            "swipe_to_answer" to "Slide right to answer, left to refuse",
+            "placeholders_hint" to "Use {NUMBER} and {AMOUNT}. {NUMBER} can be written twice when the code repeats it (Orange).",
+            "call_retry" to "The call did not go out, trying again",
+            "ussd_falling_back" to "The operator answer could not be read, dialling the code directly",
+            "ussd_direct_from_now" to "This phone refuses in-app USSD: codes will be dialled directly from now on",
+            "in_app_ussd_desc" to "Reads the operator answer inside the app. When it fails, the code is dialled directly.",
+            "contact_details" to "Contact details"
         )
     )
+
+    /** Switches language without a Context; used by the translation test. */
+    internal fun setLanguageForTest(lang: String) {
+        if (lang in translations.keys) _currentLang.value = lang
+    }
+
+    /** The three language codes, for the test that keeps them in step. */
+    internal val languages: Set<String> get() = translations.keys
+
+    /** The keys one language carries, for the test that keeps them in step. */
+    internal fun keysOf(lang: String): Set<String> = translations[lang]?.keys.orEmpty()
 
     fun getString(key: String, vararg args: Pair<String, Any>): String {
         val lang = _currentLang.value

@@ -112,6 +112,23 @@ object CallManager {
         return if (start(context, dialIntent)) DialOutcome.DIALER_OPENED else DialOutcome.FAILED
     }
 
+    /**
+     * Places the call through an intent only, never through telecom.
+     *
+     * This is the path the watchdog takes when a call placed through telecom
+     * never materialised: it hands the number to whatever can ring it.
+     */
+    fun dialWithIntent(context: Context, number: String, sim: SimCard?): DialOutcome {
+        if (number.isBlank()) return DialOutcome.FAILED
+        val uri = Uri.fromParts("tel", number, null)
+        if (SimManager.hasCallPermission(context)) {
+            val callIntent = Intent(Intent.ACTION_CALL, uri).applySimExtras(context, sim)
+            if (start(context, callIntent)) return DialOutcome.CALLED
+        }
+        val dialIntent = Intent(Intent.ACTION_DIAL, uri).applySimExtras(context, sim)
+        return if (start(context, dialIntent)) DialOutcome.DIALER_OPENED else DialOutcome.FAILED
+    }
+
     /** Opens the system dialer without placing the call. */
     fun openDialer(context: Context, code: String): Boolean =
         start(context, Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", code, null)))
