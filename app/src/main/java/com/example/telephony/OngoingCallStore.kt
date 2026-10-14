@@ -16,7 +16,9 @@ data class CallSnapshot(
     val state: Int,
     val connectTimeMillis: Long,
     val creationTimeMillis: Long,
-    val isConference: Boolean
+    val isConference: Boolean,
+    /** Which card the phone is ringing on, when it is known. */
+    val simLabel: String = ""
 ) {
     val isRinging: Boolean get() = state == Call.STATE_RINGING
     val isActive: Boolean get() = state == Call.STATE_ACTIVE
@@ -52,6 +54,9 @@ object OngoingCallStore {
     /** Contact names resolved asynchronously, keyed by national number. */
     private val nameCache = HashMap<String, String>()
 
+    /** SIM card of a call, resolved asynchronously, keyed by call id. */
+    private val simLabels = HashMap<String, String>()
+
     @Volatile
     private var service: InCallService? = null
 
@@ -80,12 +85,25 @@ object OngoingCallStore {
         val id = idOf(call)
         callbacks.remove(id)?.let { call.unregisterCallback(it) }
         tracked.remove(id)
+        simLabels.remove(id)
         publish()
     }
 
     fun cacheName(number: String, name: String) {
         if (number.isBlank() || name.isBlank()) return
         nameCache[NumberUtils.toNational(number)] = name
+        publish()
+    }
+
+    /**
+     * Which card a call came in on.
+     *
+     * On a phone holding three cards, this is who is being called: the line of
+     * the shop, or the one the family knows.
+     */
+    fun cacheSimLabel(call: Call, label: String) {
+        if (label.isBlank()) return
+        simLabels[idOf(call)] = label
         publish()
     }
 
@@ -174,7 +192,8 @@ object OngoingCallStore {
                 creationTimeMillis = if (details != null &&
                     android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
                 ) details.creationTimeMillis else 0L,
-                isConference = call.children.isNotEmpty()
+                isConference = call.children.isNotEmpty(),
+                simLabel = simLabels[id].orEmpty()
             )
         }
     }

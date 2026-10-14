@@ -36,6 +36,7 @@ import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SimCard
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledIconButton
@@ -187,6 +188,24 @@ fun InCallScreen(onFinished: () -> Unit) {
             )
             Spacer(Modifier.height(6.dp))
             CallStatusLine(call)
+            // Which line is ringing, on a phone that holds three of them.
+            if (call.simLabel.isNotBlank()) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.SimCard,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        text = call.simLabel,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Spacer(Modifier.height(2.dp))
+            }
             if (call.displayName.isNotBlank() && call.number.isNotBlank()) {
                 Text(
                     text = NumberUtils.formatForDisplay(call.number),

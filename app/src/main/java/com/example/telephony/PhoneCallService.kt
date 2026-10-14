@@ -17,6 +17,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 import com.example.data.BlockedNumbers
+import com.example.data.DatabaseProvider
 import com.example.ui.call.InCallActivity
 import com.example.ui.util.LanguageManager
 import kotlinx.coroutines.CoroutineScope
@@ -24,6 +25,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /**
  * The in-call service the system binds to once the app is the default phone app.
@@ -64,6 +66,7 @@ class PhoneCallService : InCallService() {
         OngoingCallStore.attach(this)
         OngoingCallStore.add(call)
         resolveContactName(call)
+        resolveSim(call)
         // Calling back — or being called again — settles the missed call.
         call.details?.handle?.schemeSpecificPart?.takeIf { it.isNotBlank() }?.let { number ->
             MissedCallNotifier.cancel(this, number)
@@ -172,6 +175,39 @@ class PhoneCallService : InCallService() {
         OngoingCallStore.onAudioStateChanged(audioState)
     }
 
+    /**
+     * The card the call is on, named the way the user named it.
+     *
+     * Three cards in one phone is the normal case here, and the line that rings
+     * says who is calling before the number does. The nickname given in the
+     * settings comes first; the label of the operator otherwise.
+     */
+    private fun resolveSim(call: Call) {
+        val handle = call.details?.accountHandle ?: return
+        scope.launch {
+            val label = withContext(Dispatchers.IO) {
+                runCatching {
+                    val profiles = runCatching {
+                        DatabaseProvider.getDatabase(this@PhoneCallService)
+                            .simProfileDao()
+                            .getAllOnce()
+                    }.getOrDefault(emptyList())
+                    SimManager.getSims(this@PhoneCallService, profiles)
+                        .firstOrNull {
+                            SimManager.phoneAccountHandle(this@PhoneCallService, it) == handle
+                        }
+                        ?.let { sim ->
+                            listOf(sim.slotLabel, sim.label.ifBlank { sim.carrierName })
+                                .filter { it.isNotBlank() }
+                                .joinToString(" • ")
+                        }
+                        .orEmpty()
+                }.getOrDefault("")
+            }
+            OngoingCallStore.cacheSimLabel(call, label)
+        }
+    }
+
     private fun resolveContactName(call: Call) {
         val number = call.details?.handle?.schemeSpecificPart ?: return
         scope.launch {
@@ -237,6 +273,9 @@ class PhoneCallService : InCallService() {
             .setPriority(NotificationCompat.PRIORITY_MAX)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
             .setContentIntent(fullScreenIntent)
+
+        // The line that is ringing, on the band itself.
+        if (call.simLabel.isNotBlank()) builder.setSubText(call.simLabel)
 
         val person = Person.Builder().setName(caller).setKey(call.id).setImportant(true).build()
         val styled = runCatching {
