@@ -378,7 +378,9 @@ object LanguageManager {
             "delete_call" to "Hafao amin'ny tantara",
             "clear_history_confirm" to "Hofafana ny tantaran'ny antso rehetra. Tsy azo averina.",
             "favorite" to "Ankafiziko",
-            "share" to "Hizara"
+            "share" to "Hizara",
+            "search_conversations" to "Hitady resaka na laharana",
+            "no_result" to "Tsy nisy hita"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -718,7 +720,9 @@ object LanguageManager {
             "delete_call" to "Supprimer de l'historique",
             "clear_history_confirm" to "Tout l'historique des appels sera effacé. C'est définitif.",
             "favorite" to "Favori",
-            "share" to "Partager"
+            "share" to "Partager",
+            "search_conversations" to "Chercher une discussion ou un numéro",
+            "no_result" to "Aucun résultat"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -1058,7 +1062,9 @@ object LanguageManager {
             "delete_call" to "Remove from the history",
             "clear_history_confirm" to "The whole call history will be erased. This cannot be undone.",
             "favorite" to "Favourite",
-            "share" to "Share"
+            "share" to "Share",
+            "search_conversations" to "Search a discussion or a number",
+            "no_result" to "No result"
         )
     )
 

@@ -582,9 +582,40 @@ private fun InboxTab(
         )
         return
     }
+    // Searching the inbox: a phone that is used every day holds hundreds of
+    // conversations, and the one being looked for is rarely at the top.
+    var query by remember { mutableStateOf("") }
+    val shown = remember(threads, query) {
+        val trimmed = query.trim()
+        if (trimmed.isEmpty()) {
+            threads
+        } else {
+            val digits = trimmed.filter { it.isDigit() }
+            threads.filter { thread ->
+                thread.title.contains(trimmed, ignoreCase = true) ||
+                    thread.snippet.contains(trimmed, ignoreCase = true) ||
+                    (digits.isNotEmpty() && NumberUtils.sanitize(thread.address).contains(digits))
+            }
+        }
+    }
+
     Column(modifier = Modifier.fillMaxSize()) {
         if (secureOpen) {
             SecureHeader(count = threads.size, onBack = onCloseSecure)
+        }
+
+        if (threads.isNotEmpty()) {
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                placeholder = { Text(LanguageManager.getString("search_conversations")) },
+                singleLine = true,
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 6.dp)
+            )
         }
 
         if (threads.isEmpty()) {
@@ -607,7 +638,17 @@ private fun InboxTab(
                     SecureEntryRow(count = secureCount, onClick = onOpenSecure)
                 }
             }
-            items(threads, key = { it.threadId }) { thread ->
+            if (shown.isEmpty()) {
+                item {
+                    Text(
+                        text = LanguageManager.getString("no_result"),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 24.dp)
+                    )
+                }
+            }
+            items(shown, key = { it.threadId }) { thread ->
                 ThreadRow(
                     thread = thread,
                     isSelected = thread.threadId in selected,

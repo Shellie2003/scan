@@ -171,6 +171,9 @@ fun PhoneScreen(
     var deletingContact by remember { mutableStateOf<Contact?>(null) }
     var confirmClearLog by remember { mutableStateOf(false) }
 
+    // Number a new contact starts from, when it comes from a call nobody named.
+    var newContactNumber by remember { mutableStateOf("") }
+
     // A `tel:` intent, or the phone button of another app, opens the keypad
     // ready to dial — even on the same number twice in a row.
     LaunchedEffect(dialTicket) {
@@ -260,6 +263,14 @@ fun PhoneScreen(
                                 LanguageManager.getString("number_blocked"),
                                 Toast.LENGTH_SHORT
                             ).show()
+                        },
+                        onAddContact = { number ->
+                            if (ContactsRepository.hasWritePermission(context)) {
+                                newContactNumber = number
+                                creatingContact = true
+                            } else {
+                                permissions.launchMultiplePermissionRequest()
+                            }
                         }
                     )
 
@@ -374,13 +385,16 @@ fun PhoneScreen(
     if (creatingContact || editorContact != null) {
         ContactEditorSheet(
             contact = editorContact,
+            initialNumber = newContactNumber,
             onDismiss = {
                 creatingContact = false
                 editingContact = null
+                newContactNumber = ""
             },
             onSaved = {
                 creatingContact = false
                 editingContact = null
+                newContactNumber = ""
                 phone.refresh()
             }
         )
@@ -735,7 +749,8 @@ private fun RecentsTab(
     /** Removes one line — every call of the group shown on that line. */
     onDelete: (List<CallEntry>) -> Unit,
     onClear: () -> Unit,
-    onBlock: (String) -> Unit
+    onBlock: (String) -> Unit,
+    onAddContact: (String) -> Unit
 ) {
     if (!hasPermission) {
         EmptyState(
@@ -787,7 +802,8 @@ private fun RecentsTab(
                 onCall = { onCall(first.number) },
                 onMessage = { onMessage(first.number) },
                 onDelete = { onDelete(group) },
-                onBlock = { onBlock(first.number) }
+                onBlock = { onBlock(first.number) },
+                onAddContact = { onAddContact(first.number) }
             )
         }
     }
@@ -801,7 +817,8 @@ private fun CallRow(
     onCall: () -> Unit,
     onMessage: () -> Unit,
     onDelete: () -> Unit,
-    onBlock: () -> Unit
+    onBlock: () -> Unit,
+    onAddContact: () -> Unit
 ) {
     val title = entry.name.ifBlank {
         NumberUtils.formatForDisplay(entry.number).ifBlank {
@@ -903,6 +920,17 @@ private fun CallRow(
                     onMessage()
                 }
             )
+            // A number with no name is almost always someone to keep.
+            if (entry.name.isBlank()) {
+                DropdownMenuItem(
+                    text = { Text(LanguageManager.getString("new_contact")) },
+                    leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
+                    onClick = {
+                        menuOpen = false
+                        onAddContact()
+                    }
+                )
+            }
             DropdownMenuItem(
                 text = { Text(LanguageManager.getString("block_number")) },
                 leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },

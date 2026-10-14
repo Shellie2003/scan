@@ -91,14 +91,18 @@ import kotlinx.coroutines.launch
 fun ContactEditorSheet(
     contact: Contact?,
     onDismiss: () -> Unit,
-    onSaved: () -> Unit
+    onSaved: () -> Unit,
+    /** Number already known for a new contact — one that just called, say. */
+    initialNumber: String = ""
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var name by remember(contact) { mutableStateOf(contact?.name.orEmpty()) }
-    var number by remember(contact) { mutableStateOf(contact?.number.orEmpty()) }
+    var number by remember(contact, initialNumber) {
+        mutableStateOf(contact?.number ?: initialNumber)
+    }
     var saving by remember { mutableStateOf(false) }
 
     // The picture picked in this session, still in memory: it is written with
