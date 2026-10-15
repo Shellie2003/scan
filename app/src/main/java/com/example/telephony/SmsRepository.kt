@@ -266,6 +266,35 @@ object SmsRepository {
         return result
     }
 
+    /**
+     * Messages whose text carries [query], newest first.
+     *
+     * This is how a recharge code is found again three weeks later: the
+     * confirmation of the operator sits in a conversation nobody remembers
+     * opening, and scrolling the inbox will not find it.
+     *
+     * The wildcards of `LIKE` are escaped: looking for `100%` must look for
+     * `100%`, not for everything that starts with `100`.
+     */
+    suspend fun searchBodies(
+        context: Context,
+        query: String,
+        limit: Int = 60
+    ): List<SmsMessageItem> = withContext(Dispatchers.IO) {
+        val trimmed = query.trim()
+        if (trimmed.length < 2) return@withContext emptyList()
+        val escaped = trimmed
+            .replace("!", "!!")
+            .replace("%", "!%")
+            .replace("_", "!_")
+        queryMessages(
+            context,
+            selection = Telephony.Sms.BODY + " LIKE ? ESCAPE '!'",
+            args = arrayOf("%$escaped%"),
+            limit = limit
+        )
+    }
+
     /** Marks a conversation as read. Only effective for the default SMS app. */
     suspend fun markThreadRead(context: Context, threadId: Long) = withContext(Dispatchers.IO) {
         try {

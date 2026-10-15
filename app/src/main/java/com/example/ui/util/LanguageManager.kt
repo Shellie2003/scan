@@ -380,7 +380,8 @@ object LanguageManager {
             "favorite" to "Ankafiziko",
             "share" to "Hizara",
             "search_conversations" to "Hitady resaka na laharana",
-            "no_result" to "Tsy nisy hita"
+            "no_result" to "Tsy nisy hita",
+            "in_messages" to "Ao anatin'ny hafatra ({count})"
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -722,7 +723,8 @@ object LanguageManager {
             "favorite" to "Favori",
             "share" to "Partager",
             "search_conversations" to "Chercher une discussion ou un numéro",
-            "no_result" to "Aucun résultat"
+            "no_result" to "Aucun résultat",
+            "in_messages" to "Dans les messages ({count})"
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -1064,7 +1066,8 @@ object LanguageManager {
             "favorite" to "Favourite",
             "share" to "Share",
             "search_conversations" to "Search a discussion or a number",
-            "no_result" to "No result"
+            "no_result" to "No result",
+            "in_messages" to "In the messages ({count})"
         )
     )
 

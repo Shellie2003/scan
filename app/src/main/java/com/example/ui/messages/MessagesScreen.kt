@@ -71,6 +71,7 @@ import com.example.telephony.Contact
 import com.example.telephony.ContactIndex
 import com.example.telephony.DefaultSmsManager
 import com.example.telephony.NumberUtils
+import com.example.telephony.SmsMessageItem
 import com.example.telephony.SmsRepository
 import com.example.telephony.SmsThread
 import com.example.ui.components.EmptyState
@@ -83,6 +84,7 @@ import com.example.viewmodel.MessagesViewModel
 import com.example.viewmodel.PhoneViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
+import kotlinx.coroutines.delay
 
 private enum class MessagesTab(val labelKey: String) {
     INBOX("tab_inbox"),
@@ -584,7 +586,27 @@ private fun InboxTab(
     }
     // Searching the inbox: a phone that is used every day holds hundreds of
     // conversations, and the one being looked for is rarely at the top.
+    val context = LocalContext.current
     var query by remember { mutableStateOf("") }
+
+    // The text of the messages themselves, which is what finds a recharge code
+    // weeks later. Only matches belonging to a conversation of this list are
+    // shown: a locked discussion must not come back through a search.
+    var matches by remember { mutableStateOf<List<SmsMessageItem>>(emptyList()) }
+    LaunchedEffect(query) {
+        val trimmed = query.trim()
+        if (trimmed.length < 2) {
+            matches = emptyList()
+            return@LaunchedEffect
+        }
+        // Long enough not to query the provider at every keystroke.
+        delay(300)
+        matches = SmsRepository.searchBodies(context, trimmed)
+    }
+    val threadsById = remember(threads) { threads.associateBy { it.threadId } }
+    val bodyMatches = remember(matches, threadsById) {
+        matches.filter { threadsById.containsKey(it.threadId) }
+    }
     val shown = remember(threads, query) {
         val trimmed = query.trim()
         if (trimmed.isEmpty()) {
@@ -638,7 +660,7 @@ private fun InboxTab(
                     SecureEntryRow(count = secureCount, onClick = onOpenSecure)
                 }
             }
-            if (shown.isEmpty()) {
+            if (shown.isEmpty() && bodyMatches.isEmpty()) {
                 item {
                     Text(
                         text = LanguageManager.getString("no_result"),
@@ -656,7 +678,81 @@ private fun InboxTab(
                     onLongClick = { onToggleSelection(thread) }
                 )
             }
+
+            // What was written, not only who wrote it.
+            if (bodyMatches.isNotEmpty()) {
+                item {
+                    Text(
+                        text = LanguageManager.getString(
+                            "in_messages",
+                            "count" to bodyMatches.size
+                        ),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                    )
+                }
+                items(bodyMatches, key = { "body:" + it.id }) { message ->
+                    val thread = threadsById[message.threadId]
+                    MessageMatchRow(
+                        title = thread?.title.orEmpty(),
+                        body = message.body,
+                        date = message.date,
+                        onClick = { thread?.let(onOpen) }
+                    )
+                }
+            }
         }
+    }
+}
+
+/** One message found by its text, with the conversation it belongs to. */
+@Composable
+private fun MessageMatchRow(
+    title: String,
+    body: String,
+    date: Long,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.Search,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(16.dp)
+        )
+        Spacer(Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.Bold,
+                maxLines = 1
+            )
+            Text(
+                text = body,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2
+            )
+        }
+        Spacer(Modifier.width(8.dp))
+        Text(
+            text = android.text.format.DateUtils.getRelativeTimeSpanString(
+                date,
+                System.currentTimeMillis(),
+                android.text.format.DateUtils.MINUTE_IN_MILLIS
+            ).toString(),
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
     }
 }
 
