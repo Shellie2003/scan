@@ -48,6 +48,13 @@ android {
     }
     debug {
       signingConfig = signingConfigs.getByName("debugConfig")
+      // A debug build carried the same applicationId as the release one while
+      // being signed with another key: Android then refuses to replace one by
+      // the other and says only "App not installed", with no reason given.
+      // Under its own id, a debug build sits beside the real app instead of
+      // blocking it.
+      applicationIdSuffix = ".debug"
+      versionNameSuffix = "-debug"
     }
   }
   compileOptions {

@@ -7,6 +7,10 @@ on:
       - master
   workflow_dispatch: # Allows manual trigger
 
+# Writing is needed to attach the APK to a release; everything else stays read.
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -74,6 +78,33 @@ jobs:
           # full and no APK could be uploaded at all. A week is long enough to
           # install a build, and short enough that they stop accumulating.
           retention-days: 7
+
+      # An artifact of Actions is handed over inside a zip, which a phone cannot
+      # install and which asks the tester for a GitHub account. A release holds
+      # the APK itself, at an address that does not move:
+      # github.com/Shellie2003/scan/releases/latest
+      - name: Publish the APK as a release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -o pipefail
+          TAG="v1.0.${{ github.run_number }}"
+          APK="scan-1.0.${{ github.run_number }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk "$APK"
+          # The name carries the version, so a tester knows what they are holding.
+          NOTES=$(printf '%s\n' \
+            "SCAN 1.0.${{ github.run_number }} (versionCode ${{ github.run_number }})" \
+            "" \
+            "Telechargez le fichier .apk ci-dessous et ouvrez-le sur le telephone." \
+            "" \
+            "Android 7 et plus. Sur Xiaomi/Redmi, le Mode pur de MIUI doit etre" \
+            "desactive pour installer une application hors boutique." \
+            "" \
+            "Commit: ${{ github.sha }}")
+          gh release create "$TAG" "$APK" \
+            --title "SCAN 1.0.${{ github.run_number }}" \
+            --notes "$NOTES" \
+            || gh release upload "$TAG" "$APK" --clobber
 
       # Run after the APK is built and uploaded: a failing test must be visible
       # without costing the build the only installable artifact it produces.
