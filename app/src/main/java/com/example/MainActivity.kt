@@ -14,8 +14,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Settings
@@ -164,7 +164,7 @@ private data class NavigationItem(
 
 private val navigationItems = listOf(
     NavigationItem(Routes.PHONE, "nav_phone", Icons.Default.Phone),
-    NavigationItem(Routes.MESSAGES, "nav_messages", Icons.Default.Message),
+    NavigationItem(Routes.MESSAGES, "nav_messages", Icons.AutoMirrored.Filled.Message),
     NavigationItem(Routes.SCAN, "nav_scan", Icons.Default.QrCodeScanner),
     NavigationItem(Routes.OFFERS, "nav_offers", Icons.Default.LocalOffer),
     NavigationItem(Routes.SETTINGS, "nav_settings", Icons.Default.Settings)

@@ -21,13 +21,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Send
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -164,7 +164,7 @@ fun BulkMessagesTab(
     ) {
         if (!SmsSender.hasPermission(context)) {
             EmptyState(
-                icon = Icons.Default.Message,
+                icon = Icons.AutoMirrored.Filled.Message,
                 title = LanguageManager.getString("permission_sms_desc"),
                 actionLabel = LanguageManager.getString("grant_permission"),
                 onAction = { permissions.launchMultiplePermissionRequest() }
@@ -353,7 +353,7 @@ fun BulkMessagesTab(
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Send,
+                            imageVector = Icons.AutoMirrored.Filled.Send,
                             contentDescription = LanguageManager.getString("send"),
                             modifier = Modifier.size(16.dp)
                         )

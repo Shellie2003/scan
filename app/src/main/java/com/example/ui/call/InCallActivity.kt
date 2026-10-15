@@ -28,16 +28,16 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.CallEnd
 import androidx.compose.material.icons.filled.Dialpad
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.MicOff
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.SimCard
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -238,7 +238,7 @@ fun InCallScreen(onFinished: () -> Unit) {
                         onClick = { OngoingCallStore.setMuted(!muted) }
                     )
                     CallToggle(
-                        icon = Icons.Default.VolumeUp,
+                        icon = Icons.AutoMirrored.Filled.VolumeUp,
                         label = LanguageManager.getString("speaker"),
                         active = speakerOn,
                         onClick = { OngoingCallStore.setSpeaker(!speakerOn) }
@@ -272,7 +272,7 @@ fun InCallScreen(onFinished: () -> Unit) {
                     modifier = Modifier.padding(bottom = 24.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Message,
+                        imageVector = Icons.AutoMirrored.Filled.Message,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )

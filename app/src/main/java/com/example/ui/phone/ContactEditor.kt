@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
@@ -63,7 +64,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.graphics.Color
@@ -440,7 +440,7 @@ fun ContactDetailsDialog(
                         onClick = onCall
                     )
                     ContactAction(
-                        icon = Icons.Default.Message,
+                        icon = Icons.AutoMirrored.Filled.Message,
                         label = LanguageManager.getString("send_message"),
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = onMessage

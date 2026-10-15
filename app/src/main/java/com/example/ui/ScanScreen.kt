@@ -197,6 +197,16 @@ fun CameraContent(
     val expectedLength = selectedOperator?.codeLength ?: 14
     val routing = remember(selectedOperator, sims) { app.routeFor(selectedOperator) }
 
+    // The page scrolls, so the recharge button can sit below the fold on a small
+    // screen. A code that has just been read brings it into view by itself:
+    // scanning a ticket must not be followed by hunting for the button.
+    val pageScroll = rememberScrollState()
+    LaunchedEffect(scannedCode) {
+        if (scannedCode.replace(" ", "").length == expectedLength) {
+            pageScroll.animateScrollTo(pageScroll.maxValue)
+        }
+    }
+
     LaunchedEffect(scannedCode, expectedLength) {
         val sanitized = scannedCode.replace(" ", "")
         if (sanitized.length == expectedLength) {
@@ -403,7 +413,7 @@ fun CameraContent(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .verticalScroll(rememberScrollState())
+            .verticalScroll(pageScroll)
             .padding(16.dp)
     ) {
         Text(

@@ -28,6 +28,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Contacts
@@ -36,7 +37,6 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -300,7 +300,7 @@ fun MessagesScreen(
         if (tab != MessagesTab.BULK && selectedThreads.isEmpty()) {
             ExtendedFloatingActionButton(
                 onClick = { showNewMessage = true },
-                icon = { Icon(Icons.Default.Message, contentDescription = null) },
+                icon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
                 text = { Text(LanguageManager.getString("new_message")) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -475,7 +475,7 @@ private fun NewMessageSheet(
                         )
                     }
                     Icon(
-                        imageVector = Icons.Default.Message,
+                        imageVector = Icons.AutoMirrored.Filled.Message,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -645,7 +645,7 @@ private fun InboxTab(
                 SecureEntryRow(count = secureCount, onClick = onOpenSecure)
             }
             EmptyState(
-                icon = if (secureOpen) Icons.Default.Lock else Icons.Default.Message,
+                icon = if (secureOpen) Icons.Default.Lock else Icons.AutoMirrored.Filled.Message,
                 title = LanguageManager.getString(
                     if (secureOpen) "no_locked_conversations" else "no_conversations"
                 ),
@@ -963,7 +963,7 @@ private fun ContactLine(contact: Contact, onClick: () -> Unit) {
             )
         }
         Icon(
-            imageVector = Icons.Default.Message,
+            imageVector = Icons.AutoMirrored.Filled.Message,
             contentDescription = LanguageManager.getString("send_message"),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(20.dp)

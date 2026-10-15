@@ -32,12 +32,13 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.automirrored.filled.CallMade
+import androidx.compose.material.icons.automirrored.filled.CallMissed
+import androidx.compose.material.icons.automirrored.filled.CallReceived
+import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CallMade
-import androidx.compose.material.icons.filled.CallMissed
-import androidx.compose.material.icons.filled.CallReceived
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.ContentPaste
 import androidx.compose.material.icons.filled.Delete
@@ -45,7 +46,6 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Contacts
 import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.Message
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.PersonAdd
@@ -612,7 +612,7 @@ private fun KeypadSheet(
                 }
                 TextButton(onClick = { onMessage(input) }) {
                     Icon(
-                        imageVector = Icons.Default.Message,
+                        imageVector = Icons.AutoMirrored.Filled.Message,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -696,7 +696,7 @@ private fun KeypadSheet(
             ) {
                 if (input.isNotEmpty()) {
                     Icon(
-                        imageVector = Icons.Default.Backspace,
+                        imageVector = Icons.AutoMirrored.Filled.Backspace,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -860,9 +860,9 @@ private fun CallRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = when {
-                        entry.isMissed -> Icons.Default.CallMissed
-                        entry.isIncoming -> Icons.Default.CallReceived
-                        else -> Icons.Default.CallMade
+                        entry.isMissed -> Icons.AutoMirrored.Filled.CallMissed
+                        entry.isIncoming -> Icons.AutoMirrored.Filled.CallReceived
+                        else -> Icons.AutoMirrored.Filled.CallMade
                     },
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -889,7 +889,7 @@ private fun CallRow(
         }
         IconButton(onClick = onMessage) {
             Icon(
-                imageVector = Icons.Default.Message,
+                imageVector = Icons.AutoMirrored.Filled.Message,
                 contentDescription = LanguageManager.getString("send_message"),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
@@ -914,7 +914,7 @@ private fun CallRow(
             )
             DropdownMenuItem(
                 text = { Text(LanguageManager.getString("send_message")) },
-                leadingIcon = { Icon(Icons.Default.Message, contentDescription = null) },
+                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
                 onClick = {
                     menuOpen = false
                     onMessage()
@@ -1118,7 +1118,7 @@ private fun ContactRow(
             }
             IconButton(onClick = onMessage) {
                 Icon(
-                    imageVector = Icons.Default.Message,
+                    imageVector = Icons.AutoMirrored.Filled.Message,
                     contentDescription = LanguageManager.getString("send_message"),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
