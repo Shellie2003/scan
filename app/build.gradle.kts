@@ -42,7 +42,12 @@ android {
   buildTypes {
     release {
       isCrunchPngs = false
-      isMinifyEnabled = false
+      // R8 removes the code and the resources nothing reaches, and renames the
+      // rest. On a phone bought for 200 000 Ar, a smaller application is one
+      // that starts faster and leaves room for the photos of its owner.
+      // What R8 cannot prove reachable is listed in proguard-rules.pro.
+      isMinifyEnabled = true
+      isShrinkResources = true
       proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
       signingConfig = signingConfigs.getByName("release")
     }

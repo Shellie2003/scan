@@ -91,6 +91,16 @@ jobs:
           TAG="v1.0.${{ github.run_number }}"
           APK="scan-1.0.${{ github.run_number }}.apk"
           cp app/build/outputs/apk/release/app-release.apk "$APK"
+          echo "APK size: $(du -h "$APK" | cut -f1)"
+          # R8 renames everything it can, so a crash report is unreadable
+          # without this file. It travels with the build it belongs to.
+          MAPPING="mapping-1.0.${{ github.run_number }}.txt"
+          if [ -f app/build/outputs/mapping/release/mapping.txt ]; then
+            cp app/build/outputs/mapping/release/mapping.txt "$MAPPING"
+          else
+            echo "no mapping file: R8 is off for this build"
+            MAPPING=""
+          fi
           # The name carries the version, so a tester knows what they are holding.
           NOTES=$(printf '%s\n' \
             "SCAN 1.0.${{ github.run_number }} (versionCode ${{ github.run_number }})" \
@@ -101,10 +111,10 @@ jobs:
             "desactive pour installer une application hors boutique." \
             "" \
             "Commit: ${{ github.sha }}")
-          gh release create "$TAG" "$APK" \
+          gh release create "$TAG" "$APK" $MAPPING \
             --title "SCAN 1.0.${{ github.run_number }}" \
             --notes "$NOTES" \
-            || gh release upload "$TAG" "$APK" --clobber
+            || gh release upload "$TAG" "$APK" $MAPPING --clobber
 
       # Run after the APK is built and uploaded: a failing test must be visible
       # without costing the build the only installable artifact it produces.
