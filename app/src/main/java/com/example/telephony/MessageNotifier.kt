@@ -234,6 +234,38 @@ object MessageNotifier {
         }
     }
 
+    /**
+     * A message the operator refused.
+     *
+     * Said plainly and at once: a message believed sent is worse than one known
+     * to have failed. Tapping it opens the conversation, where the message
+     * carries its mark and can be written again.
+     */
+    fun notifySendFailed(context: Context, address: String, name: String?, reason: String) {
+        createChannel(context)
+        LanguageManager.init(context)
+
+        val who = name?.takeIf { it.isNotBlank() } ?: NumberUtils.formatForDisplay(address)
+        val builder = NotificationCompat.Builder(context, channelId(context))
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ContextCompat.getColor(context, R.color.brand_indigo))
+            .setContentTitle(LanguageManager.getString("send_failed_title", "name" to who))
+            .setContentText(reason)
+            .setCategory(NotificationCompat.CATEGORY_ERROR)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setContentIntent(openConversationIntent(context, address, name))
+
+        try {
+            NotificationManagerCompat.from(context)
+                .notify(("failed:" + key(address)).hashCode(), builder.build())
+        } catch (e: SecurityException) {
+            // Notifications refused by the user.
+        } catch (e: Exception) {
+            // Never worth taking the receiver down.
+        }
+    }
+
     /** The page of the phone where the default SMS application is chosen. */
     private fun defaultAppsIntent(context: Context): PendingIntent? {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null

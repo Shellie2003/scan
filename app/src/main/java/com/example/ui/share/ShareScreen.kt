@@ -131,12 +131,16 @@ fun ShareScreen(
         ShareMode.PLAN -> sendingOperator?.shareTemplate.orEmpty()
         ShareMode.WITHDRAW -> sendingOperator?.withdrawTemplate.orEmpty()
     }
-    val code = remember(template, number, amount, pin) {
+    val code = remember(template, number, amount, pin, mode) {
         UssdFormatter.fill(
             template = template,
             number = NumberUtils.toNational(number),
             amount = amount.trim(),
-            pin = pin.trim()
+            // A withdrawal never carries a secret code, whatever is written in
+            // the template of the operator — those templates are editable, and
+            // a {PIN} left in one must stay unfilled rather than quietly take
+            // the code typed a minute earlier on the transfer tab.
+            pin = if (mode == ShareMode.WITHDRAW) "" else pin.trim()
         )
     }
     val formattedCode = remember(code, sendingOperator) {

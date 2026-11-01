@@ -33,8 +33,12 @@ object DatabaseProvider {
                         override fun onOpen(db: SupportSQLiteDatabase) {
                             super.onOpen(db)
                             CoroutineScope(Dispatchers.IO).launch {
-                                val database = INSTANCE ?: return@launch
-                                runCatching { DataSeeder.seed(appContext, database) }
+                                // Asked for again rather than read from the
+                                // field: the field is written just after this
+                                // builder returns, and a seeding skipped here
+                                // means an application that opens with no
+                                // operator and no plan, saying nothing.
+                                runCatching { DataSeeder.seed(appContext, getDatabase(appContext)) }
                             }
                         }
                     })

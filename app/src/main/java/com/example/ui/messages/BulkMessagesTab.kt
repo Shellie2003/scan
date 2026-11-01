@@ -122,6 +122,7 @@ fun BulkMessagesTab(
     // when this tab leaves the screen.
     val progress by messages.bulkProgress.collectAsState()
     val report by messages.bulkReport.collectAsState()
+    val lateFailures by messages.bulkLateFailures.collectAsState()
 
     val routing = remember(sims, forcedSubscription) { app.routeFor(null, forcedSubscription) }
     val index = remember(contacts) { ContactIndex(contacts) }
@@ -572,6 +573,20 @@ fun BulkMessagesTab(
                         ),
                         fontWeight = FontWeight.Bold
                     )
+                    // The operator answers for each message seconds after
+                    // accepting it, so refusals arrive after the count is done.
+                    if (lateFailures > 0) {
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = LanguageManager.getString(
+                                "send_refused_late",
+                                "count" to lateFailures
+                            ),
+                            style = MaterialTheme.typography.bodySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                     if (result.failed.isNotEmpty()) {
                         Spacer(Modifier.height(8.dp))
                         result.failed.take(10).forEach { (recipient, reason) ->

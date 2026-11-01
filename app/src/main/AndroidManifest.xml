@@ -129,6 +129,12 @@
             android:name=".telephony.CallActionReceiver"
             android:exported="false" />
 
+        <!-- What the operator answered about a message we handed it: accepted,
+             or refused for want of credit, network or a real recipient. -->
+        <receiver
+            android:name=".telephony.SmsSentReceiver"
+            android:exported="false" />
+
         <!-- Required to be eligible as the default SMS app. -->
         <receiver
             android:name=".telephony.MmsDeliverReceiver"

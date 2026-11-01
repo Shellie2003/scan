@@ -125,6 +125,22 @@ class TelephonyLogicTest {
     }
 
     @Test
+    fun `a withdrawal template keeps its pin placeholder unfilled`() {
+        // The templates of an operator are editable: a user can write {PIN}
+        // into a withdrawal code. Filling it would send a secret code the
+        // application promised never to carry, so the screen passes an empty
+        // pin for a withdrawal — whatever was typed on the transfer tab.
+        val filled = UssdFormatter.fill(
+            template = "#111*4*{NUMBER}*{AMOUNT}*{PIN}#",
+            number = "0341234567",
+            amount = "5000",
+            pin = ""
+        )
+        assertEquals("#111*4*0341234567*5000*#", filled)
+        assertFalse(filled.contains("1234"))
+    }
+
+    @Test
     fun `transfer templates fill every placeholder`() {
         val filled = UssdFormatter.fill(
             template = "#321*{NUMBER}*{AMOUNT}*{PIN}#",

@@ -394,6 +394,11 @@ object LanguageManager {
             "backup_saved" to "Voatahiry ny rakitra",
             "backup_restored" to "Naverina : {count} zavatra",
             "backup_failed" to "Tsy nahomby ny rakitra",
+            "send_failed_title" to "Tsy lasa ny hafatra ho an'i {name}",
+            "send_failed_no_service" to "Tsy misy fifandraisana amin'ny tambajotra",
+            "send_failed_radio_off" to "Mijanona ny tambajotra (mode fiaramanidina?)",
+            "send_failed_generic" to "Nolavin'ny mpanome ny hafatra. Jereo ny fahana.",
+            "send_refused_late" to "Nolavina avy eo : hafatra {count}",
             "fullscreen_off_desc" to "Mila alalana ny fampiharana hampiseho ny antso rehefa voahidy ny efijery. Raha tsy izany dia maneno fotsiny ny finday, tsy misy bokotra hamaliana."
         ),
         "fr" to mapOf(
@@ -750,6 +755,11 @@ object LanguageManager {
             "backup_saved" to "Sauvegarde enregistrée",
             "backup_restored" to "Restauré : {count} éléments",
             "backup_failed" to "Fichier illisible ou incomplet",
+            "send_failed_title" to "Message non envoyé à {name}",
+            "send_failed_no_service" to "Aucun réseau pour l'envoyer",
+            "send_failed_radio_off" to "Réseau coupé (mode avion ?)",
+            "send_failed_generic" to "L'opérateur a refusé le message. Vérifiez le crédit.",
+            "send_refused_late" to "Refusés après coup : {count} message(s)",
             "fullscreen_off_desc" to "L'application a besoin de l'autorisation plein écran pour afficher un appel quand le téléphone est verrouillé. Sans elle, le téléphone sonne sans bouton pour répondre."
         ),
         "en" to mapOf(
@@ -1106,6 +1116,11 @@ object LanguageManager {
             "backup_saved" to "Backup saved",
             "backup_restored" to "Restored: {count} items",
             "backup_failed" to "The file could not be read",
+            "send_failed_title" to "Message not sent to {name}",
+            "send_failed_no_service" to "No network to send it on",
+            "send_failed_radio_off" to "The radio is off (flight mode?)",
+            "send_failed_generic" to "The operator refused the message. Check the credit.",
+            "send_refused_late" to "Refused afterwards: {count} message(s)",
             "fullscreen_off_desc" to "The application needs the full screen permission to show a call while the phone is locked. Without it, the phone rings with no button to answer."
         )
     )

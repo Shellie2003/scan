@@ -44,6 +44,25 @@ object BulkSmsQueue {
     private val _report = MutableStateFlow<SmsSendReport?>(null)
     val report: StateFlow<SmsSendReport?> = _report.asStateFlow()
 
+    /**
+     * Messages the operator refused after the campaign had finished counting.
+     *
+     * The telephony stack answers for each message seconds after accepting it,
+     * which is after the last one has been handed over. A campaign therefore
+     * cannot know its real result when it ends — but the user can be told the
+     * moment it is known.
+     */
+    private val _lateFailures = MutableStateFlow(0)
+    val lateFailures: StateFlow<Int> = _lateFailures.asStateFlow()
+
+    internal fun recordLateFailure() {
+        _lateFailures.value = _lateFailures.value + 1
+    }
+
+    fun clearLateFailures() {
+        _lateFailures.value = 0
+    }
+
     /** What a running campaign needs to know, handed to the service. */
     internal class Campaign(
         val groups: Map<Int, List<SmsRecipient>>,
@@ -65,6 +84,9 @@ object BulkSmsQueue {
 
     internal fun submit(campaign: Campaign) {
         pending = campaign
+        // A new campaign starts from a clean count: the refusals of the
+        // previous one have already been shown.
+        _lateFailures.value = 0
     }
 
     internal fun take(): Campaign? {

@@ -369,13 +369,19 @@ object SmsRepository {
         if (subscriptionId >= 0) put(Telephony.Sms.SUBSCRIPTION_ID, subscriptionId)
     }
 
-    /** Keeps a copy of what we send, the way any messaging app does. */
+    /**
+     * Keeps a copy of what we send, the way any messaging app does.
+     *
+     * The row it creates is returned, because what happens to the message
+     * afterwards — accepted by the operator, or refused for want of credit —
+     * arrives later and has to find this exact row again.
+     */
     fun storeSent(
         context: Context,
         address: String,
         body: String,
         subscriptionId: Int
-    ): Boolean = write(context, Telephony.Sms.Sent.CONTENT_URI) {
+    ): Uri? = insert(context, Telephony.Sms.Sent.CONTENT_URI) {
         put(Telephony.Sms.ADDRESS, address)
         put(Telephony.Sms.BODY, body)
         put(Telephony.Sms.DATE, System.currentTimeMillis())
@@ -383,6 +389,24 @@ object SmsRepository {
         put(Telephony.Sms.SEEN, 1)
         put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_SENT)
         if (subscriptionId >= 0) put(Telephony.Sms.SUBSCRIPTION_ID, subscriptionId)
+    }
+
+    /**
+     * Marks a sent message as not sent.
+     *
+     * A message the operator refused — no credit, no network, a number that
+     * does not exist — used to sit in the conversation looking exactly like one
+     * that arrived. The conversation already draws a failed message with its
+     * mark; what was missing was anybody telling it.
+     */
+    fun markFailed(context: Context, row: Uri): Boolean = try {
+        val values = ContentValues().apply {
+            put(Telephony.Sms.TYPE, Telephony.Sms.MESSAGE_TYPE_FAILED)
+            put(Telephony.Sms.READ, 1)
+        }
+        context.contentResolver.update(row, values, null, null) > 0
+    } catch (e: Exception) {
+        false
     }
 
     suspend fun delete(context: Context, messageId: Long): Boolean = withContext(Dispatchers.IO) {
@@ -424,9 +448,12 @@ object SmsRepository {
         }
     }
 
-    private fun write(context: Context, uri: Uri, block: ContentValues.() -> Unit): Boolean = try {
-        context.contentResolver.insert(uri, ContentValues().apply(block)) != null
+    private fun write(context: Context, uri: Uri, block: ContentValues.() -> Unit): Boolean =
+        insert(context, uri, block) != null
+
+    private fun insert(context: Context, uri: Uri, block: ContentValues.() -> Unit): Uri? = try {
+        context.contentResolver.insert(uri, ContentValues().apply(block))
     } catch (e: Exception) {
-        false
+        null
     }
 }

@@ -60,16 +60,15 @@ object SmsSender {
 
         recipients.forEachIndexed { index, recipient ->
             val text = personalize(body, recipient)
+            // The copy is written first: the slip the operator answers on has
+            // to point at a row that already exists. A send that throws right
+            // after marks that row failed itself.
+            val row = SmsRepository.storeSent(context, recipient.number, text, subscriptionId)
             try {
-                val parts = manager.divideMessage(text)
-                if (parts.size <= 1) {
-                    manager.sendTextMessage(recipient.number, null, text, null, null)
-                } else {
-                    manager.sendMultipartTextMessage(recipient.number, null, parts, null, null)
-                }
-                SmsRepository.storeSent(context, recipient.number, text, subscriptionId)
+                send(context, manager, recipient.number, text, row, notify = false)
                 sent += recipient
             } catch (e: Exception) {
+                row?.let { SmsRepository.markFailed(context, it) }
                 failed += recipient to (e.message ?: e.javaClass.simpleName)
             }
             onProgress(index + 1, recipients.size, recipient)
@@ -91,18 +90,44 @@ object SmsSender {
     ): Boolean {
         if (!hasPermission(context) || number.isBlank() || body.isBlank()) return false
         val manager = smsManager(context, subscriptionId) ?: return false
+        val row = SmsRepository.storeSent(context, number, body, subscriptionId)
         return try {
-            val parts = manager.divideMessage(body)
-            if (parts.size <= 1) {
-                manager.sendTextMessage(number, null, body, null, null)
-            } else {
-                manager.sendMultipartTextMessage(number, null, parts, null, null)
-            }
-            SmsRepository.storeSent(context, number, body, subscriptionId)
+            // A single message is one the user is watching: its refusal is
+            // worth a notification, which a campaign of two hundred is not.
+            send(context, manager, number, body, row, notify = true)
             true
         } catch (e: Exception) {
+            row?.let { SmsRepository.markFailed(context, it) }
             false
         }
+    }
+
+    /**
+     * Hands one message to the telephony stack, with the slip it answers on.
+     *
+     * A long message goes out in parts, and each part gets the same slip: a
+     * single part refused is a message the recipient cannot read.
+     */
+    private fun send(
+        context: Context,
+        manager: SmsManager,
+        number: String,
+        body: String,
+        row: android.net.Uri?,
+        notify: Boolean
+    ) {
+        val parts = manager.divideMessage(body)
+        val answer = SmsSentReceiver.pendingIntent(context, row, number, notify)
+        if (parts.size <= 1) {
+            manager.sendTextMessage(number, null, body, answer, null)
+            return
+        }
+        val answers = answer?.let { slip ->
+            ArrayList<android.app.PendingIntent>(parts.size).apply {
+                repeat(parts.size) { add(slip) }
+            }
+        }
+        manager.sendMultipartTextMessage(number, null, parts, answers, null)
     }
 
     fun personalize(body: String, recipient: SmsRecipient): String = body

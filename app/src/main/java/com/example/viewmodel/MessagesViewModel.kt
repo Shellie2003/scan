@@ -225,6 +225,9 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
     val bulkProgress: StateFlow<BulkSmsQueue.Progress?> = BulkSmsQueue.progress
     val bulkReport: StateFlow<SmsSendReport?> = BulkSmsQueue.report
 
+    /** Messages the operator refused after the campaign finished counting. */
+    val bulkLateFailures: StateFlow<Int> = BulkSmsQueue.lateFailures
+
     /**
      * Sends one message to many recipients, each group going through its own SIM.
      *
@@ -249,6 +252,7 @@ class MessagesViewModel(application: Application) : AndroidViewModel(application
 
     fun clearBulkReport() {
         BulkSmsQueue.clearReport()
+        BulkSmsQueue.clearLateFailures()
     }
 
     fun deleteThread(thread: SmsThread) {

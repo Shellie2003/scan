@@ -164,6 +164,16 @@ sealed class UssdResult {
     data class Success(val response: String) : UssdResult()
     data class Failure(val code: Int) : UssdResult()
 
+    /**
+     * The modem never answered — neither a response nor a failure.
+     *
+     * This happens, and it used to leave the application waiting for ever: the
+     * user pressed the button and nothing whatsoever occurred, not even an
+     * error. It is treated like a failure, so the code is dialled the ordinary
+     * way instead.
+     */
+    object Timeout : UssdResult()
+
     /** The in-app channel is unavailable; the caller should dial instead. */
     object Unsupported : UssdResult()
 }
@@ -181,6 +191,17 @@ object UssdRunner {
             SimManager.hasCallPermission(context) &&
             UssdFormatter.isUssd(code)
 
+    /**
+     * How long the modem is given to say anything at all.
+     *
+     * An answer normally arrives within a few seconds. Some modems answer
+     * neither way: no response, no failure, nothing. Without this, the
+     * application waited for ever and the user saw no reaction to the button
+     * they pressed — the hardest kind of failure to report, and one of the
+     * complaints that came back from the field.
+     */
+    private const val ANSWER_TIMEOUT_MS = 12_000L
+
     fun run(
         context: Context,
         code: String,
@@ -191,8 +212,26 @@ object UssdRunner {
             onResult(UssdResult.Unsupported)
             return
         }
-        sendRequest(context, code, sim, onResult)
+        // Exactly one answer reaches the caller, whichever comes first: the
+        // modem, or the clock.
+        val answered = java.util.concurrent.atomic.AtomicBoolean(false)
+        val handler = Handler(Looper.getMainLooper())
+        val once: (UssdResult) -> Unit = { result ->
+            if (answered.compareAndSet(false, true)) {
+                handler.removeCallbacksAndMessages(TIMEOUT_TOKEN)
+                onResult(result)
+            }
+        }
+        handler.postAtTime(
+            { once(UssdResult.Timeout) },
+            TIMEOUT_TOKEN,
+            android.os.SystemClock.uptimeMillis() + ANSWER_TIMEOUT_MS
+        )
+        sendRequest(context, code, sim, once)
     }
+
+    /** Identifies the timeout message, so answering cancels it. */
+    private val TIMEOUT_TOKEN = Any()
 
     @RequiresApi(Build.VERSION_CODES.O)
     @SuppressLint("MissingPermission")
