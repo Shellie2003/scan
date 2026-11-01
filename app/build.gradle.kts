@@ -71,6 +71,17 @@ android {
     buildConfig = true
   }
   testOptions { unitTests { isIncludeAndroidResources = true } }
+
+  // The logic suites run on every build. The two tests that need Robolectric
+  // are left out of that run: they download an Android runtime of their own and
+  // check the scaffold rather than the application. Listing what runs by name
+  // in the workflow was worse — a new test added here would never have run.
+  tasks.withType<Test>().configureEach {
+    filter {
+      excludeTestsMatching("com.example.GreetingScreenshotTest")
+      excludeTestsMatching("com.example.ExampleRobolectricTest")
+    }
+  }
 }
 
 // Where Room writes the schema of each database version. The files belong in

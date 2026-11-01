@@ -94,9 +94,11 @@ jobs:
           echo "APK size: $(du -h "$APK" | cut -f1)"
           # R8 renames everything it can, so a crash report is unreadable
           # without this file. It travels with the build it belongs to.
-          MAPPING="mapping-1.0.${{ github.run_number }}.txt"
+          # Compressed: the plain file is fifty megabytes, and every release
+          # was carrying one.
+          MAPPING="mapping-1.0.${{ github.run_number }}.txt.gz"
           if [ -f app/build/outputs/mapping/release/mapping.txt ]; then
-            cp app/build/outputs/mapping/release/mapping.txt "$MAPPING"
+            gzip -c app/build/outputs/mapping/release/mapping.txt > "$MAPPING"
           else
             echo "no mapping file: R8 is off for this build"
             MAPPING=""
@@ -144,7 +146,6 @@ jobs:
             echo "No unit test task exposed by the Android plugin."
             exit 1
           fi
-          ./gradlew ":app:$TASK" \
-            --tests "com.example.TelephonyLogicTest" \
-            --tests "com.example.TranslationsTest" \
-            --tests "com.example.ConversationLockTest"
+          # No list of names: the build file leaves out the two Robolectric
+          # tests, so every suite added from now on runs here by itself.
+          ./gradlew ":app:$TASK"

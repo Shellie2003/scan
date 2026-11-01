@@ -313,6 +313,9 @@ fun SettingsScreen(app: AppViewModel) {
         // -------------------------------------------------------------- security
         SecuritySection()
 
+        // --------------------------------------------------------------- backup
+        BackupSection()
+
         // ------------------------------------------------------------ appearance
         AppearanceSection()
 

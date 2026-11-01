@@ -39,6 +39,10 @@ interface MessageTemplateDao {
     @Query("SELECT COUNT(*) FROM message_templates")
     suspend fun count(): Int
 
+    /** Read once, for the backup of the settings. */
+    @Query("SELECT * FROM message_templates ORDER BY sortOrder ASC, id ASC")
+    suspend fun getAllOnce(): List<MessageTemplate>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insert(template: MessageTemplate)
 

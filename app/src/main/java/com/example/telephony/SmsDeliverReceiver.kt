@@ -61,9 +61,45 @@ class SmsDeliverReceiver : BroadcastReceiver() {
 }
 
 /**
- * Required to be eligible as the default SMS app. Multimedia messages are not
- * handled by the app, they are left to the system.
+ * Multimedia messages.
+ *
+ * Only the default SMS app receives this, and only it can fetch what the
+ * operator is holding. SCAN cannot assemble a multimedia message yet — that is
+ * a download over the operator MMS network and a multipart PDU to parse — but
+ * staying silent would be the worst of both: the message reaches nobody and
+ * nobody knows it exists.
+ *
+ * So the notification is read for who sent it, and the user is told. The
+ * message itself waits at the operator for several days, which is long enough
+ * to hand the SMS role back to another application and receive it there.
  */
 class MmsDeliverReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) = Unit
+
+    override fun onReceive(context: Context, intent: Intent) {
+        val pdu = try {
+            intent.getByteArrayExtra("data")
+        } catch (e: Exception) {
+            null
+        }
+        val notification = MmsPdu.readNotification(pdu)
+
+        val pending = goAsync()
+        CoroutineScope(Dispatchers.IO).launch {
+            try {
+                val from = notification.from.orEmpty()
+                if (from.isNotBlank() && BlockedNumbers.isBlocked(context, from)) return@launch
+                val name = from
+                    .takeIf { it.isNotBlank() }
+                    ?.let { ContactsRepository.nameFor(context, it) }
+                MessageNotifier.notifyMmsWaiting(
+                    context = context,
+                    address = from,
+                    name = name,
+                    subject = notification.subject
+                )
+            } finally {
+                pending.finish()
+            }
+        }
+    }
 }

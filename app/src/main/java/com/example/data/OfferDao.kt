@@ -20,6 +20,13 @@ interface OfferDao {
     @Query("SELECT COUNT(*) FROM offers")
     suspend fun count(): Int
 
+    /**
+     * The plans the user created, read once for the backup. The ones shipped
+     * with the application are not saved: they come back on their own.
+     */
+    @Query("SELECT * FROM offers WHERE isCustom = 1 ORDER BY operatorName ASC, sortOrder ASC")
+    suspend fun getCustomOnce(): List<Offer>
+
     @Query("SELECT * FROM offers WHERE operatorName = :operator COLLATE NOCASE")
     suspend fun getForOperator(operator: String): List<Offer>
 

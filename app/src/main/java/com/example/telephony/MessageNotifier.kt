@@ -177,6 +177,80 @@ object MessageNotifier {
         }
     }
 
+    /**
+     * A multimedia message is waiting at the operator.
+     *
+     * SCAN cannot fetch it yet, and says so plainly rather than letting the
+     * message vanish. The action opens the default applications of the phone,
+     * where the SMS role can be handed to an application that can — the
+     * operator holds the message for days, so nothing is lost by doing it then.
+     */
+    fun notifyMmsWaiting(
+        context: Context,
+        address: String,
+        name: String?,
+        subject: String?
+    ) {
+        createChannel(context)
+        LanguageManager.init(context)
+
+        val who = name?.takeIf { it.isNotBlank() }
+            ?: address.takeIf { it.isNotBlank() }?.let { NumberUtils.formatForDisplay(it) }
+            ?: LanguageManager.getString("unknown_number")
+        val title = LanguageManager.getString("mms_waiting_title", "name" to who)
+        val text = subject?.takeIf { it.isNotBlank() }
+            ?: LanguageManager.getString("mms_waiting_desc")
+
+        val builder = NotificationCompat.Builder(context, channelId(context))
+            .setSmallIcon(R.drawable.ic_notification)
+            .setColor(ContextCompat.getColor(context, R.color.brand_indigo))
+            .setContentTitle(title)
+            .setContentText(text)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(
+                text + "\n\n" + LanguageManager.getString("mms_waiting_hint")
+            ))
+            .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setAutoCancel(true)
+            .setWhen(System.currentTimeMillis())
+            .setShowWhen(true)
+
+        defaultAppsIntent(context)?.let { pending ->
+            builder.setContentIntent(pending)
+            builder.addAction(
+                R.drawable.ic_action_reply,
+                LanguageManager.getString("mms_change_app"),
+                pending
+            )
+        }
+
+        try {
+            NotificationManagerCompat.from(context)
+                .notify(("mms:" + key(address)).hashCode(), builder.build())
+        } catch (e: SecurityException) {
+            // Notifications refused by the user.
+        } catch (e: Exception) {
+            // A notification is never worth taking the receiver down.
+        }
+    }
+
+    /** The page of the phone where the default SMS application is chosen. */
+    private fun defaultAppsIntent(context: Context): PendingIntent? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) return null
+        val intent = Intent(android.provider.Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        return try {
+            PendingIntent.getActivity(
+                context,
+                "mms-default-apps".hashCode(),
+                intent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            )
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     /** The user answered from the notification: keep the thread visible, silently. */
     fun notifyOutgoing(
         context: Context,

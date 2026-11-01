@@ -383,6 +383,17 @@ object LanguageManager {
             "no_result" to "Tsy nisy hita",
             "in_messages" to "Ao anatin'ny hafatra ({count})",
             "fullscreen_off_title" to "Tsy mety miseho ny antso miditra",
+            "mms_waiting_title" to "MMS avy amin'i {name}",
+            "mms_waiting_desc" to "Misy hafatra misy sary na feo miandry",
+            "mms_waiting_hint" to "Mbola tsy mahay mamaky MMS i SCAN. Mitazona azy mandritra ny andro vitsivitsy ny mpanome : atsofoy ny fampiharana Hafatra ho fenitra vonjimaika mba hahazoana azy.",
+            "mms_change_app" to "Hanova ny fampiharana SMS",
+            "section_backup" to "Tahiry",
+            "backup_desc" to "Tehirizo amin'ny rakitra ny mpanome, ny tolotra noforoninao, ny anaran'ny SIM sy ny modely hafatra. Tsy tafiditra ao ny kaody fanidiana resaka.",
+            "backup_export" to "Hitahiry",
+            "backup_import" to "Hamerina",
+            "backup_saved" to "Voatahiry ny rakitra",
+            "backup_restored" to "Naverina : {count} zavatra",
+            "backup_failed" to "Tsy nahomby ny rakitra",
             "fullscreen_off_desc" to "Mila alalana ny fampiharana hampiseho ny antso rehefa voahidy ny efijery. Raha tsy izany dia maneno fotsiny ny finday, tsy misy bokotra hamaliana."
         ),
         "fr" to mapOf(
@@ -728,6 +739,17 @@ object LanguageManager {
             "no_result" to "Aucun résultat",
             "in_messages" to "Dans les messages ({count})",
             "fullscreen_off_title" to "Les appels entrants ne peuvent pas s'afficher",
+            "mms_waiting_title" to "MMS de {name}",
+            "mms_waiting_desc" to "Un message avec image ou son vous attend",
+            "mms_waiting_hint" to "SCAN ne sait pas encore ouvrir les MMS. L'opérateur le garde plusieurs jours : remettez l'application Messages par défaut le temps de le recevoir.",
+            "mms_change_app" to "Changer d'application SMS",
+            "section_backup" to "Sauvegarde",
+            "backup_desc" to "Enregistre dans un fichier vos opérateurs, les plans que vous avez créés, les noms de vos SIM et vos modèles de message. Le code des discussions verrouillées n'y est pas.",
+            "backup_export" to "Sauvegarder",
+            "backup_import" to "Restaurer",
+            "backup_saved" to "Sauvegarde enregistrée",
+            "backup_restored" to "Restauré : {count} éléments",
+            "backup_failed" to "Fichier illisible ou incomplet",
             "fullscreen_off_desc" to "L'application a besoin de l'autorisation plein écran pour afficher un appel quand le téléphone est verrouillé. Sans elle, le téléphone sonne sans bouton pour répondre."
         ),
         "en" to mapOf(
@@ -1073,6 +1095,17 @@ object LanguageManager {
             "no_result" to "No result",
             "in_messages" to "In the messages ({count})",
             "fullscreen_off_title" to "Incoming calls cannot be shown",
+            "mms_waiting_title" to "MMS from {name}",
+            "mms_waiting_desc" to "A message with a picture or a sound is waiting",
+            "mms_waiting_hint" to "SCAN cannot open multimedia messages yet. The operator holds it for several days: hand the SMS role back to the Messages application long enough to receive it.",
+            "mms_change_app" to "Change the SMS application",
+            "section_backup" to "Backup",
+            "backup_desc" to "Writes your operators, the plans you created, your SIM names and your message templates to a file. The lock code of the discussions is not in it.",
+            "backup_export" to "Back up",
+            "backup_import" to "Restore",
+            "backup_saved" to "Backup saved",
+            "backup_restored" to "Restored: {count} items",
+            "backup_failed" to "The file could not be read",
             "fullscreen_off_desc" to "The application needs the full screen permission to show a call while the phone is locked. Without it, the phone rings with no button to answer."
         )
     )
