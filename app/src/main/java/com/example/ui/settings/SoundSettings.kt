@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -39,6 +40,8 @@ import androidx.core.content.IntentCompat
 import com.example.data.AppSettings
 import com.example.telephony.MessageNotifier
 import com.example.ui.util.LanguageManager
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /**
  * Choosing what the phone plays: the ringtone of a call, the sound of a message.
@@ -106,10 +109,32 @@ fun SoundSettingsSection() {
         }
     }
 
+    // Reading the name of a ringtone opens a media file through a provider.
+    // Called straight from the composition it ran again at every recomposition
+    // of the settings, on the thread that draws them; now it runs once per
+    // sound, off that thread.
+    val ringtoneTitle by produceState(
+        initialValue = LanguageManager.getString("sound_default"),
+        key1 = ringtoneUri
+    ) {
+        value = withContext(Dispatchers.IO) { titleOf(context, ringtoneUri) }
+    }
+    val messageTitle by produceState(
+        initialValue = LanguageManager.getString("sound_default"),
+        key1 = messageSound
+    ) {
+        value = withContext(Dispatchers.IO) {
+            messageSound
+                .takeIf { it.isNotBlank() }
+                ?.let { titleOf(context, Uri.parse(it)) }
+                ?: LanguageManager.getString("sound_default")
+        }
+    }
+
     SoundRow(
         icon = Icons.Default.MusicNote,
         title = LanguageManager.getString("call_ringtone"),
-        value = titleOf(context, ringtoneUri),
+        value = ringtoneTitle,
         onClick = {
             if (canWriteSettings(context)) {
                 ringtonePicker.launch(
@@ -143,10 +168,7 @@ fun SoundSettingsSection() {
     SoundRow(
         icon = Icons.Default.Notifications,
         title = LanguageManager.getString("message_sound"),
-        value = messageSound
-            .takeIf { it.isNotBlank() }
-            ?.let { titleOf(context, Uri.parse(it)) }
-            ?: LanguageManager.getString("sound_default"),
+        value = messageTitle,
         onClick = {
             messagePicker.launch(
                 ringtonePickerIntent(

@@ -20,15 +20,15 @@
     </style>
 
     <!--
-        The call screen opens over the lock screen, often at night: its window
-        starts on the dark surface rather than on the light one, or a white
-        flash fills the screen before the first frame is drawn. The status bar
-        icons are light, because what is behind them is not.
+        The call screen opens over the lock screen, and the colour its window
+        starts on matters: it is what fills the screen before the first frame.
+
+        Nothing is declared here on purpose. Theme.Scan is light in this file
+        and dark in values-night, so inheriting already gives a call at night a
+        dark window and a call by day a light one. An earlier version of this
+        style forced the dark surface for everyone, which only moved the flash
+        from the users of one theme to the users of the other.
     -->
-    <style name="Theme.Scan.Call" parent="Theme.Scan">
-        <item name="android:windowBackground">@color/surface_dark</item>
-        <item name="android:windowLightStatusBar">false</item>
-        <item name="android:windowShowWallpaper">false</item>
-    </style>
+    <style name="Theme.Scan.Call" parent="Theme.Scan" />
 
 </resources>
