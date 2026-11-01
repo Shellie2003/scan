@@ -211,8 +211,10 @@ class PhoneCallService : InCallService() {
     private fun resolveContactName(call: Call) {
         val number = call.details?.handle?.schemeSpecificPart ?: return
         scope.launch {
-            val name = ContactsRepository.nameFor(this@PhoneCallService, number)
-            if (!name.isNullOrBlank()) OngoingCallStore.cacheName(number, name)
+            // The name and the face in one lookup: a ringing phone has no time
+            // for two round trips to the contacts provider.
+            val (name, photo) = ContactsRepository.contactFor(this@PhoneCallService, number)
+            OngoingCallStore.cacheContact(number, name, photo)
         }
     }
 

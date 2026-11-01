@@ -19,7 +19,16 @@
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
-    <!-- The call screen opens over the lock screen: no launch screen there. -->
-    <style name="Theme.Scan.Call" parent="Theme.Scan" />
+    <!--
+        The call screen opens over the lock screen, often at night: its window
+        starts on the dark surface rather than on the light one, or a white
+        flash fills the screen before the first frame is drawn. The status bar
+        icons are light, because what is behind them is not.
+    -->
+    <style name="Theme.Scan.Call" parent="Theme.Scan">
+        <item name="android:windowBackground">@color/surface_dark</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowShowWallpaper">false</item>
+    </style>
 
 </resources>

@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.NotificationsOff
+import androidx.compose.material.icons.filled.PhonelinkLock
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -146,6 +147,99 @@ fun NotificationPermissionBanner(modifier: Modifier = Modifier) {
                 }
             }
         }
+    }
+}
+
+/**
+ * The permission that lets a ringing call take a locked screen.
+ *
+ * Until Android 13 it was granted at install. From Android 14 the system keeps
+ * it for applications whose business is calling and alarms — which SCAN is —
+ * but a user, a manufacturer or a cleaning app can take it away, and nothing
+ * then says so: the phone rings behind the lock screen with no way to answer.
+ * So it is checked, and it can be given back in one tap.
+ */
+@Composable
+fun FullScreenCallBanner(modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    var allowed by remember { mutableStateOf(fullScreenCallsAllowed(context)) }
+    var dismissed by remember { mutableStateOf(false) }
+
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        allowed = fullScreenCallsAllowed(context)
+    }
+
+    if (allowed || dismissed) return
+
+    Card(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
+        )
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.PhonelinkLock,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = LanguageManager.getString("fullscreen_off_title"),
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(
+                text = LanguageManager.getString("fullscreen_off_desc"),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.End, modifier = Modifier.fillMaxWidth()) {
+                TextButton(onClick = { dismissed = true }) {
+                    Text(LanguageManager.getString("later"))
+                }
+                TextButton(onClick = { openFullScreenSettings(context) }) {
+                    Text(
+                        text = LanguageManager.getString("enable"),
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
+    }
+}
+
+/** `true` on every version that grants it, and when Android 14+ still holds it. */
+private fun fullScreenCallsAllowed(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) return true
+    val manager = context.getSystemService(Context.NOTIFICATION_SERVICE)
+            as? android.app.NotificationManager ?: return true
+    return try {
+        manager.canUseFullScreenIntent()
+    } catch (e: Exception) {
+        true
+    }
+}
+
+private fun openFullScreenSettings(context: Context) {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        openNotificationSettings(context)
+        return
+    }
+    val intent = Intent(
+        Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+        Uri.fromParts("package", context.packageName, null)
+    ).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    if (runCatching { context.startActivity(intent) }.isFailure) {
+        openNotificationSettings(context)
     }
 }
 

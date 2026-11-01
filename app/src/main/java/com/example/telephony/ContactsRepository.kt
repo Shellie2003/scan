@@ -116,6 +116,41 @@ object ContactsRepository {
         null
     }
 
+    /**
+     * Name and picture of a number, in one question to the provider.
+     *
+     * An incoming call asked for the name, and then the picture would have
+     * asked again: one lookup is what a ringing phone can afford.
+     */
+    @SuppressLint("MissingPermission")
+    suspend fun contactFor(context: Context, number: String): Pair<String?, String?> =
+        withContext(Dispatchers.IO) {
+            if (!hasPermission(context) || number.isBlank()) return@withContext null to null
+            val uri = Uri.withAppendedPath(
+                ContactsContract.PhoneLookup.CONTENT_FILTER_URI,
+                Uri.encode(number)
+            )
+            try {
+                context.contentResolver.query(
+                    uri,
+                    arrayOf(
+                        ContactsContract.PhoneLookup.DISPLAY_NAME,
+                        ContactsContract.PhoneLookup.PHOTO_THUMBNAIL_URI
+                    ),
+                    null,
+                    null,
+                    null
+                )?.use { cursor ->
+                    if (cursor.moveToFirst()) {
+                        return@withContext cursor.getString(0) to cursor.getString(1)
+                    }
+                }
+            } catch (e: Exception) {
+                return@withContext null to null
+            }
+            null to null
+        }
+
     // ------------------------------------------------------------------ writing
 
     /**

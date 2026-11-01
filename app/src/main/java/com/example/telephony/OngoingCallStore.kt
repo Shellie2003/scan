@@ -18,7 +18,9 @@ data class CallSnapshot(
     val creationTimeMillis: Long,
     val isConference: Boolean,
     /** Which card the phone is ringing on, when it is known. */
-    val simLabel: String = ""
+    val simLabel: String = "",
+    /** Picture of the contact calling, when the phone knows their face. */
+    val photoUri: String = ""
 ) {
     val isRinging: Boolean get() = state == Call.STATE_RINGING
     val isActive: Boolean get() = state == Call.STATE_ACTIVE
@@ -57,6 +59,9 @@ object OngoingCallStore {
     /** SIM card of a call, resolved asynchronously, keyed by call id. */
     private val simLabels = HashMap<String, String>()
 
+    /** Contact pictures, keyed by national number like the names. */
+    private val photoCache = HashMap<String, String>()
+
     @Volatile
     private var service: InCallService? = null
 
@@ -86,6 +91,15 @@ object OngoingCallStore {
         callbacks.remove(id)?.let { call.unregisterCallback(it) }
         tracked.remove(id)
         simLabels.remove(id)
+        publish()
+    }
+
+    /** The name and the face of a number, as the contacts gave them. */
+    fun cacheContact(number: String, name: String?, photoUri: String?) {
+        if (number.isBlank()) return
+        val key = NumberUtils.toNational(number)
+        if (!name.isNullOrBlank()) nameCache[key] = name
+        if (!photoUri.isNullOrBlank()) photoCache[key] = photoUri
         publish()
     }
 
@@ -193,7 +207,8 @@ object OngoingCallStore {
                     android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O
                 ) details.creationTimeMillis else 0L,
                 isConference = call.children.isNotEmpty(),
-                simLabel = simLabels[id].orEmpty()
+                simLabel = simLabels[id].orEmpty(),
+                photoUri = photoCache[NumberUtils.toNational(number)].orEmpty()
             )
         }
     }

@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -69,7 +70,7 @@ import com.example.telephony.CallSnapshot
 import com.example.telephony.NumberUtils
 import com.example.telephony.OngoingCallStore
 import com.example.telephony.RespondViaMessageService
-import com.example.ui.components.InitialsAvatar
+import com.example.ui.components.PhotoAvatar
 import com.example.ui.theme.ScanTheme
 import com.example.ui.theme.ThemeController
 import com.example.ui.theme.scanColors
@@ -157,6 +158,11 @@ fun InCallScreen(onFinished: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
+            // The call screen opens over the lock screen, where there is no
+            // scaffold to pay for the status bar: without this the name of the
+            // caller sat under the notch and the hang-up button under the
+            // gesture bar.
+            .systemBarsPadding()
             .padding(24.dp)
     ) {
         if (call == null) {
@@ -175,8 +181,12 @@ fun InCallScreen(onFinished: () -> Unit) {
                 .padding(top = 48.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            InitialsAvatar(
-                text = call.label.take(1).uppercase().ifBlank { "#" },
+            // The face of whoever is calling, when the phone knows it. On a
+            // ringing screen, a photo says in an instant what a name takes a
+            // second to read.
+            PhotoAvatar(
+                photoUri = call.photoUri,
+                initials = call.label.take(1).uppercase().ifBlank { "#" },
                 size = 96.dp
             )
             Spacer(Modifier.height(20.dp))

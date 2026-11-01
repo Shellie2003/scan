@@ -86,12 +86,17 @@
         </activity>
 
         <!-- Full screen UI of an incoming or ongoing call. -->
+        <!-- showOnLockScreen and turnScreenOn are declared here as well as asked
+             for in code: a manufacturer that ignores one often honours the
+             other, and a ringing phone that shows nothing is a call lost. -->
         <activity
             android:name=".ui.call.InCallActivity"
             android:excludeFromRecents="true"
             android:exported="false"
             android:launchMode="singleTop"
             android:showOnLockScreen="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true"
             android:taskAffinity="com.example.call"
             android:theme="@style/Theme.Scan.Call" />
 

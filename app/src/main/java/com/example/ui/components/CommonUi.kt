@@ -352,9 +352,56 @@ fun InitialsAvatar(
     ) {
         Text(
             text = text,
-            style = MaterialTheme.typography.titleSmall,
+            // The letter follows the circle. It used to be the same small size
+            // whatever the avatar, so the 96 dp circle of the call screen held
+            // one tiny initial lost in the middle.
+            style = when {
+                size >= 72.dp -> MaterialTheme.typography.displaySmall
+                size >= 56.dp -> MaterialTheme.typography.headlineSmall
+                else -> MaterialTheme.typography.titleSmall
+            },
             fontWeight = FontWeight.ExtraBold,
             color = color
+        )
+    }
+}
+
+/**
+ * A round face from a photo URI, falling back to the initials.
+ *
+ * The call screen has only a number and a name; the contacts list has a whole
+ * [com.example.telephony.Contact]. Both need the same circle.
+ */
+@Composable
+fun PhotoAvatar(
+    photoUri: String,
+    initials: String,
+    modifier: Modifier = Modifier,
+    size: androidx.compose.ui.unit.Dp = 44.dp,
+    color: Color = MaterialTheme.colorScheme.primary
+) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val picture by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(
+        initialValue = null,
+        key1 = photoUri
+    ) {
+        value = photoUri
+            .takeIf { it.isNotBlank() }
+            ?.let { com.example.telephony.ContactsRepository.thumbnail(context, it) }
+            ?.asImageBitmap()
+    }
+
+    val image = picture
+    if (image == null) {
+        InitialsAvatar(text = initials, modifier = modifier, size = size, color = color)
+    } else {
+        androidx.compose.foundation.Image(
+            bitmap = image,
+            contentDescription = null,
+            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+            modifier = modifier
+                .size(size)
+                .clip(CircleShape)
         )
     }
 }

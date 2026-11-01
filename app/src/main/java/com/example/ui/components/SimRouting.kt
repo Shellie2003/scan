@@ -5,7 +5,6 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -90,7 +89,6 @@ fun WithSimRouting(
     var pendingChoice by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
     var pendingConfirm by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
     var ussdAnswer by remember { mutableStateOf<String?>(null) }
-    var ussdFailed by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
 
     fun toast(key: String) {
         Toast.makeText(context, LanguageManager.getString(key), Toast.LENGTH_SHORT).show()
@@ -101,10 +99,10 @@ fun WithSimRouting(
      * works everywhere. Used on its own, and as the fallback when the in-app
      * USSD channel refuses.
      */
-    fun dialCode(code: String, sim: SimCard?) {
-        if (CallManager.dial(context, code, sim, direct = true) == DialOutcome.FAILED) {
-            toast("action_failed")
-        }
+    fun dialCode(code: String, sim: SimCard?): Boolean {
+        val failed = CallManager.dial(context, code, sim, direct = true) == DialOutcome.FAILED
+        if (failed) toast("action_failed")
+        return !failed
     }
 
     fun execute(request: DialRequest, routing: SimRouting) {
@@ -136,6 +134,11 @@ fun WithSimRouting(
                 val useInApp = AppSettings.inAppUssd(context) &&
                     AppSettings.inAppUssdWorks(context) &&
                     UssdRunner.isAvailable(context, code)
+                // The history is written only for a code that actually went
+                // out. It used to be written whatever happened, so a recharge
+                // the phone had refused was listed as done — and the duplicate
+                // guard then refused to send it again for a day.
+                var sent = true
                 if (useInApp) {
                     UssdRunner.run(context, code, sim) { result ->
                         when (result) {
@@ -155,16 +158,18 @@ fun WithSimRouting(
                         }
                     }
                 } else {
-                    dialCode(code, sim)
+                    sent = dialCode(code, sim)
                 }
-                app.record(
-                    operator = request.operator,
-                    code = request.rawCode.ifBlank { code },
-                    dialedCode = code,
-                    sim = sim,
-                    kind = request.kind,
-                    label = request.label
-                )
+                if (sent) {
+                    app.record(
+                        operator = request.operator,
+                        code = request.rawCode.ifBlank { code },
+                        dialedCode = code,
+                        sim = sim,
+                        kind = request.kind,
+                        label = request.label
+                    )
+                }
             }
         }
     }
@@ -233,28 +238,10 @@ fun WithSimRouting(
         )
     }
 
-    ussdFailed?.let { (request, routing) ->
-        AlertDialog(
-            onDismissRequest = { ussdFailed = null },
-            title = { Text(LanguageManager.getString("warning"), fontWeight = FontWeight.Bold) },
-            text = { Text(LanguageManager.getString("ussd_failed")) },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        ussdFailed = null
-                        if (request is DialRequest.Code) {
-                            CallManager.dial(context, request.code, routing.sim, direct = true)
-                        }
-                    }
-                ) { Text(LanguageManager.getString("retry")) }
-            },
-            dismissButton = {
-                TextButton(onClick = { ussdFailed = null }) {
-                    Text(LanguageManager.getString("cancel"))
-                }
-            }
-        )
-    }
+    // There was a third dialog here, offering to retry a USSD code that failed.
+    // Nothing could open it any more: a failure now dials the code straight
+    // away rather than asking the user to press "retry" on a code that was
+    // never wrong. Dead state and dead UI are worse than no UI.
 }
 
 private fun fallbackWarning(routing: SimRouting): String? = when {

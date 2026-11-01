@@ -100,6 +100,7 @@ import com.example.telephony.DefaultDialerManager
 import com.example.telephony.NumberUtils
 import com.example.ui.components.EmptyState
 import com.example.ui.components.ContactAvatar
+import com.example.ui.components.FullScreenCallBanner
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.NotificationPermissionBanner
 import com.example.ui.components.SimLauncher
@@ -204,6 +205,10 @@ fun PhoneScreen(
             // Without notifications, an incoming call the system refuses to show
             // full screen is simply lost.
             NotificationPermissionBanner()
+
+            // Without the full screen permission, a call that arrives on a
+            // locked screen rings with nothing to answer it on.
+            FullScreenCallBanner()
 
             DefaultDialerBanner()
 

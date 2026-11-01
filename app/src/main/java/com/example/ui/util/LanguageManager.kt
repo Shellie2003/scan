@@ -381,7 +381,9 @@ object LanguageManager {
             "share" to "Hizara",
             "search_conversations" to "Hitady resaka na laharana",
             "no_result" to "Tsy nisy hita",
-            "in_messages" to "Ao anatin'ny hafatra ({count})"
+            "in_messages" to "Ao anatin'ny hafatra ({count})",
+            "fullscreen_off_title" to "Tsy mety miseho ny antso miditra",
+            "fullscreen_off_desc" to "Mila alalana ny fampiharana hampiseho ny antso rehefa voahidy ny efijery. Raha tsy izany dia maneno fotsiny ny finday, tsy misy bokotra hamaliana."
         ),
         "fr" to mapOf(
             "app_title" to "SCAN",
@@ -724,7 +726,9 @@ object LanguageManager {
             "share" to "Partager",
             "search_conversations" to "Chercher une discussion ou un numéro",
             "no_result" to "Aucun résultat",
-            "in_messages" to "Dans les messages ({count})"
+            "in_messages" to "Dans les messages ({count})",
+            "fullscreen_off_title" to "Les appels entrants ne peuvent pas s'afficher",
+            "fullscreen_off_desc" to "L'application a besoin de l'autorisation plein écran pour afficher un appel quand le téléphone est verrouillé. Sans elle, le téléphone sonne sans bouton pour répondre."
         ),
         "en" to mapOf(
             "app_title" to "SCAN",
@@ -1067,7 +1071,9 @@ object LanguageManager {
             "share" to "Share",
             "search_conversations" to "Search a discussion or a number",
             "no_result" to "No result",
-            "in_messages" to "In the messages ({count})"
+            "in_messages" to "In the messages ({count})",
+            "fullscreen_off_title" to "Incoming calls cannot be shown",
+            "fullscreen_off_desc" to "The application needs the full screen permission to show a call while the phone is locked. Without it, the phone rings with no button to answer."
         )
     )
 
