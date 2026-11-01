@@ -130,14 +130,27 @@ class TelephonyLogicTest {
         // into a withdrawal code. Filling it would send a secret code the
         // application promised never to carry, so the screen passes an empty
         // pin for a withdrawal — whatever was typed on the transfer tab.
-        val filled = UssdFormatter.fill(
-            template = "#111*4*{NUMBER}*{AMOUNT}*{PIN}#",
+        val template = "#111*4*{NUMBER}*{AMOUNT}*{PIN}#"
+        val withdrawal = UssdFormatter.fill(
+            template = template,
             number = "0341234567",
             amount = "5000",
             pin = ""
         )
-        assertEquals("#111*4*0341234567*5000*#", filled)
-        assertFalse(filled.contains("1234"))
+        assertEquals("#111*4*0341234567*5000*#", withdrawal)
+
+        // The secret is looked for as a sequence that cannot occur anywhere
+        // else in the code. A first version of this test looked for "1234",
+        // which is part of the number 0341234567 itself — the assertion failed
+        // on a code that was perfectly correct.
+        val transfer = UssdFormatter.fill(
+            template = template,
+            number = "0341234567",
+            amount = "5000",
+            pin = "9876"
+        )
+        assertTrue(transfer.contains("9876"))
+        assertFalse(withdrawal.contains("9876"))
     }
 
     @Test
