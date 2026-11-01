@@ -63,7 +63,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.ConversationLock
@@ -674,6 +678,7 @@ private fun InboxTab(
                 ThreadRow(
                     thread = thread,
                     isSelected = thread.threadId in selected,
+                    query = query,
                     onClick = { onOpen(thread) },
                     onLongClick = { onToggleSelection(thread) }
                 )
@@ -698,6 +703,7 @@ private fun InboxTab(
                     MessageMatchRow(
                         title = thread?.title.orEmpty(),
                         body = message.body,
+                        query = query,
                         date = message.date,
                         onClick = { thread?.let(onOpen) }
                     )
@@ -707,11 +713,34 @@ private fun InboxTab(
     }
 }
 
+/**
+ * What was searched for, marked inside what was found.
+ *
+ * A result that does not show why it is a result makes the reader hunt through
+ * the line for the word they just typed.
+ */
+@Composable
+private fun highlighted(text: String, query: String): AnnotatedString {
+    val needle = query.trim()
+    if (needle.isEmpty()) return AnnotatedString(text)
+    val start = text.indexOf(needle, ignoreCase = true)
+    if (start < 0) return AnnotatedString(text)
+    val background = MaterialTheme.colorScheme.primary.copy(alpha = 0.25f)
+    return buildAnnotatedString {
+        append(text.substring(0, start))
+        withStyle(SpanStyle(background = background, fontWeight = FontWeight.Bold)) {
+            append(text.substring(start, start + needle.length))
+        }
+        append(text.substring(start + needle.length))
+    }
+}
+
 /** One message found by its text, with the conversation it belongs to. */
 @Composable
 private fun MessageMatchRow(
     title: String,
     body: String,
+    query: String,
     date: Long,
     onClick: () -> Unit
 ) {
@@ -737,7 +766,7 @@ private fun MessageMatchRow(
                 maxLines = 1
             )
             Text(
-                text = body,
+                text = highlighted(body, query),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2
@@ -837,6 +866,8 @@ private fun SecureEntryRow(count: Int, onClick: () -> Unit) {
 private fun ThreadRow(
     thread: SmsThread,
     isSelected: Boolean,
+    /** What is being searched for, marked in the title and the last message. */
+    query: String = "",
     onClick: () -> Unit,
     onLongClick: () -> Unit
 ) {
@@ -858,7 +889,7 @@ private fun ThreadRow(
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
-                text = thread.title,
+                text = highlighted(thread.title, query),
                 style = MaterialTheme.typography.titleSmall,
                 fontWeight = if (thread.unreadCount > 0) {
                     FontWeight.ExtraBold
@@ -868,7 +899,7 @@ private fun ThreadRow(
                 maxLines = 1
             )
             Text(
-                text = thread.snippet,
+                text = highlighted(thread.snippet, query),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1

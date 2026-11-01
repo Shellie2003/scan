@@ -29,6 +29,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -799,8 +800,14 @@ private fun RecentsTab(
                 }
             }
         }
-        items(groups) { group ->
+        itemsIndexed(groups) { index, group ->
             val first = group.first()
+            // A date above the calls of that day: the history was one flat run
+            // of lines where yesterday and last week looked alike.
+            val previous = groups.getOrNull(index - 1)?.first()?.date
+            if (previous == null || !sameDay(previous, first.date)) {
+                DayHeader(first.date)
+            }
             CallRow(
                 entry = first,
                 count = group.size,
@@ -1060,6 +1067,38 @@ private fun ContactsTab(
             }
         }
     }
+}
+
+/** The day a run of calls belongs to: today, yesterday, or its date. */
+@Composable
+private fun DayHeader(date: Long) {
+    val label = when {
+        DateUtils.isToday(date) -> LanguageManager.getString("today")
+        DateUtils.isToday(date + DateUtils.DAY_IN_MILLIS) ->
+            LanguageManager.getString("yesterday")
+
+        else -> DateUtils.formatDateTime(
+            LocalContext.current,
+            date,
+            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or
+                DateUtils.FORMAT_SHOW_YEAR
+        )
+    }
+    Text(
+        text = label,
+        style = MaterialTheme.typography.labelSmall,
+        fontWeight = FontWeight.ExtraBold,
+        color = MaterialTheme.colorScheme.primary,
+        modifier = Modifier.padding(start = 16.dp, top = 12.dp, bottom = 2.dp)
+    )
+}
+
+/** Two instants on the same calendar day of the same year. */
+private fun sameDay(first: Long, second: Long): Boolean {
+    val a = java.util.Calendar.getInstance().apply { timeInMillis = first }
+    val b = java.util.Calendar.getInstance().apply { timeInMillis = second }
+    return a.get(java.util.Calendar.YEAR) == b.get(java.util.Calendar.YEAR) &&
+        a.get(java.util.Calendar.DAY_OF_YEAR) == b.get(java.util.Calendar.DAY_OF_YEAR)
 }
 
 /** Copies a number to the clipboard, so it can be pasted anywhere else. */
