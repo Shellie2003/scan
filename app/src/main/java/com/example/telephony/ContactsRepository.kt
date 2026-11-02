@@ -89,8 +89,72 @@ object ContactsRepository {
         } catch (e: Exception) {
             return@withContext emptyList()
         }
-        result
+        mergeDuplicates(result)
     }
+
+    /**
+     * One row per person, when the address book holds several for them.
+     *
+     * The key above — the identifier of the contact and the number — only
+     * catches the same number repeated inside one contact. It cannot catch the
+     * same person held twice: a phone here carries the numbers of the SIM card
+     * and those of a Google account side by side, and Android links the two
+     * only when it is sure. Unlinked, they are two contacts with two
+     * identifiers, the same name and the same number — which is what showed up
+     * twice in the search.
+     *
+     * Two rows are the same person when the number is the same and the names
+     * do not contradict each other. A name absent on one side, the same name,
+     * or one that only adds words to the other — "Rakoto" against "Rakoto
+     * Jean" — is one person. Two names that differ are two people, and a number
+     * shared by a household must not make one of them disappear.
+     */
+    internal fun mergeDuplicates(contacts: List<Contact>): List<Contact> {
+        val kept = mutableListOf<Contact>()
+        val slotsByNumber = HashMap<String, MutableList<Int>>()
+        contacts.forEach { contact ->
+            val slots = slotsByNumber.getOrPut(numberKey(contact.number)) { mutableListOf() }
+            val at = slots.firstOrNull { samePerson(kept[it].name, contact.name) }
+            if (at == null) {
+                slots.add(kept.size)
+                kept.add(contact)
+            } else {
+                kept[at] = merged(kept[at], contact)
+            }
+        }
+        return kept
+    }
+
+    /** The form a number is recognised by, whatever way it was written. */
+    private fun numberKey(number: String): String =
+        NumberUtils.toNational(number).ifBlank { number.filter { !it.isWhitespace() } }
+
+    /** Whether two names found on one number belong to one person. */
+    internal fun samePerson(left: String, right: String): Boolean {
+        val one = normaliseName(left)
+        val other = normaliseName(right)
+        if (one.isBlank() || other.isBlank()) return true
+        if (one == other) return true
+        // A whole word more, not a longer word: "Jean" is not "Jeanne".
+        return one.startsWith("$other ") || other.startsWith("$one ")
+    }
+
+    private fun normaliseName(name: String): String =
+        name.trim().replace(Regex("\\s+"), " ").lowercase()
+
+    /**
+     * What is kept of two rows for one person.
+     *
+     * The fuller name wins: an entry on a SIM card is often an abbreviation of
+     * the one held in an account. A photograph and a star are kept from
+     * whichever side carries them — the star especially, because it is read
+     * from one side and written to the other.
+     */
+    private fun merged(kept: Contact, other: Contact): Contact = kept.copy(
+        name = if (other.name.trim().length > kept.name.trim().length) other.name else kept.name,
+        photoUri = kept.photoUri ?: other.photoUri,
+        isFavorite = kept.isFavorite || other.isFavorite
+    )
 
     /** Display name of a number, or `null` when it is unknown. */
     @SuppressLint("MissingPermission")

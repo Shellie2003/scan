@@ -282,6 +282,90 @@ class TelephonyLogicTest {
         }
     }
 
+    // ------------------------------------------------- the same person twice
+
+    @Test
+    fun `one person held twice in the address book is listed once`() {
+        // What a phone here really holds: the SIM card and a Google account,
+        // unlinked by Android, so two identifiers for one person.
+        val merged = ContactsRepository.mergeDuplicates(
+            listOf(
+                Contact(1, "Rakoto", "0341234567"),
+                Contact(2, "Rakoto", "+261341234567")
+            )
+        )
+        assertEquals(1, merged.size)
+        assertEquals("Rakoto", merged.first().name)
+    }
+
+    @Test
+    fun `the fuller name and the star survive the merge`() {
+        val merged = ContactsRepository.mergeDuplicates(
+            listOf(
+                Contact(1, "Rakoto", "0341234567"),
+                Contact(2, "Rakoto Jean", "0341234567", photoUri = "face", isFavorite = true)
+            )
+        )
+        assertEquals(1, merged.size)
+        assertEquals("Rakoto Jean", merged.first().name)
+        assertEquals("face", merged.first().photoUri)
+        assertTrue(merged.first().isFavorite)
+        // The identifier of the row that was kept, so editing edits something.
+        assertEquals(1L, merged.first().id)
+    }
+
+    @Test
+    fun `two people sharing one number both stay`() {
+        // A household telephone. Losing one of the two would be worse than
+        // showing a number twice.
+        val merged = ContactsRepository.mergeDuplicates(
+            listOf(
+                Contact(1, "Naivo", "0341234567"),
+                Contact(2, "Soa", "0341234567")
+            )
+        )
+        assertEquals(listOf("Naivo", "Soa"), merged.map { it.name })
+    }
+
+    @Test
+    fun `the same contact with two numbers keeps both`() {
+        val merged = ContactsRepository.mergeDuplicates(
+            listOf(
+                Contact(1, "Rakoto", "0341234567"),
+                Contact(1, "Rakoto", "0331112233")
+            )
+        )
+        assertEquals(2, merged.size)
+    }
+
+    @Test
+    fun `a name is not swallowed by one that merely starts the same way`() {
+        assertTrue(ContactsRepository.samePerson("Rakoto", "Rakoto Jean"))
+        assertTrue(ContactsRepository.samePerson("RAKOTO  JEAN", "rakoto jean"))
+        assertTrue(ContactsRepository.samePerson("", "Rakoto"))
+        // A whole word more, not a longer word.
+        assertFalse(ContactsRepository.samePerson("Jean", "Jeanne"))
+        assertFalse(ContactsRepository.samePerson("Naivo", "Soa"))
+    }
+
+    @Test
+    fun `a nameless row is folded into the named one`() {
+        // A number saved in a hurry, and the same number in a real contact.
+        val merged = ContactsRepository.mergeDuplicates(
+            listOf(
+                Contact(1, "", "0341234567"),
+                Contact(2, "Rakoto", "0341234567")
+            )
+        )
+        assertEquals(1, merged.size)
+        assertEquals("Rakoto", merged.first().name)
+    }
+
+    @Test
+    fun `merging an empty list gives an empty list`() {
+        assertTrue(ContactsRepository.mergeDuplicates(emptyList()).isEmpty())
+    }
+
     @Test
     fun `an empty contact list searches without failing`() {
         assertTrue(ContactIndex(emptyList()).search("rako").isEmpty())
