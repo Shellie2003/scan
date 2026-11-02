@@ -24,4 +24,11 @@ object ScanRadius {
     val dialog = 20.dp
     val sheet = 28.dp
     val viewfinder = 32.dp
+
+    /**
+     * Rounded past the half of what it is applied to, so the shape comes out a
+     * circle or a lozenge whatever its size. Used by the mark that confirms a
+     * scan, which pulses and must stay round while it grows.
+     */
+    val capsule = 48.dp
 }
