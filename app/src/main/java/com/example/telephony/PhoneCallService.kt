@@ -317,7 +317,11 @@ class PhoneCallService : InCallService() {
             // as a call. The SCAN colour below is what says which app it is.
             .setSmallIcon(android.R.drawable.stat_sys_phone_call)
             .setColor(androidx.core.content.ContextCompat.getColor(this, com.example.R.color.brand_indigo))
-            .setColorized(true)
+            // Not colorized, deliberately. A colourised notification hands its
+            // whole background to the brand colour, and the system then picks
+            // the colour of the buttons itself to keep them readable against
+            // it — which is exactly the choice we want to make here. Red and
+            // green on the two buttons are worth more than indigo behind them.
             .setContentTitle(
                 if (call.isRinging) {
                     getString(com.example.R.string.incoming_call)
@@ -338,29 +342,46 @@ class PhoneCallService : InCallService() {
         if (call.simLabel.isNotBlank()) builder.setSubText(call.simLabel)
 
         val person = Person.Builder().setName(caller).setKey(call.id).setImportant(true).build()
+        val red = androidx.core.content.ContextCompat.getColor(
+            this,
+            com.example.R.color.call_decline
+        )
+        val green = androidx.core.content.ContextCompat.getColor(
+            this,
+            com.example.R.color.call_answer
+        )
         val styled = runCatching {
-            builder.setStyle(
-                if (call.isRinging) {
-                    NotificationCompat.CallStyle.forIncomingCall(person, decline, answer)
-                } else {
-                    NotificationCompat.CallStyle.forOngoingCall(person, hangUp)
-                }
-            )
+            // Two real buttons, with their icons and their colours — refuse in
+            // red on the left, answer in green on the right. The order is the
+            // order of the arguments, and the colours are asked for by name:
+            // the framework draws the buttons itself, and these are the only
+            // handles it gives on them.
+            val style = if (call.isRinging) {
+                NotificationCompat.CallStyle.forIncomingCall(person, decline, answer)
+                    .setDeclineButtonColorHint(red)
+                    .setAnswerButtonColorHint(green)
+            } else {
+                NotificationCompat.CallStyle.forOngoingCall(person, hangUp)
+                    .setDeclineButtonColorHint(red)
+            }
+            builder.setStyle(style.setIsVideo(false))
         }.isSuccess
 
         if (!styled) {
-            // No call style on this phone: the buttons are added as plain actions,
-            // which is the one thing that must not be lost.
+            // No call style on this phone: the buttons become plain actions,
+            // which is the one thing that must not be lost. Refuse first so
+            // that red is still on the left — the colour of a plain action is
+            // the system's to choose, the side is not.
             if (call.isRinging) {
-                builder.addAction(
-                    com.example.R.drawable.ic_action_call,
-                    LanguageManager.getString("answer"),
-                    answer
-                )
                 builder.addAction(
                     com.example.R.drawable.ic_action_call_end,
                     LanguageManager.getString("decline"),
                     decline
+                )
+                builder.addAction(
+                    com.example.R.drawable.ic_action_call,
+                    LanguageManager.getString("answer"),
+                    answer
                 )
             } else {
                 builder.addAction(

@@ -13,6 +13,13 @@
     <!-- Background of the launch screen, light mode (values-night overrides it). -->
     <color name="brand_launch_background">#26109C</color>
 
+    <!-- The two buttons of a ringing notification. Red refuses on the left,
+         green answers on the right — the order every telephone uses, so the
+         thumb already knows where to go. Same values as HangUpLight and
+         SuccessLight in ui/theme/Color.kt. -->
+    <color name="call_decline">#C62828</color>
+    <color name="call_answer">#1B6B3A</color>
+
     <color name="surface_light">#FBF8FF</color>
     <color name="surface_dark">#131318</color>
 
