@@ -2,6 +2,7 @@ package com.example.ui.messages
 
 import android.Manifest
 import android.content.Intent
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -136,6 +137,8 @@ fun MessagesScreen(
     var secureOpen by remember { mutableStateOf(false) }
     var askPin by remember { mutableStateOf(false) }
     var setupPin by remember { mutableStateOf(false) }
+    var recovering by remember { mutableStateOf(false) }
+    var givingUp by remember { mutableStateOf(false) }
     var pendingLock by remember { mutableStateOf<Set<Long>>(emptySet()) }
 
     val openThreads = remember(threads, lockedKeys) {
@@ -334,6 +337,39 @@ fun MessagesScreen(
             onAccepted = {
                 askPin = false
                 secureOpen = true
+            },
+            onForgotten = {
+                askPin = false
+                recovering = true
+            }
+        )
+    }
+
+    if (recovering) {
+        ForgottenCodeDialog(
+            onDismiss = { recovering = false },
+            onRecovered = {
+                recovering = false
+                secureOpen = true
+            },
+            onGiveUp = {
+                recovering = false
+                givingUp = true
+            }
+        )
+    }
+
+    if (givingUp) {
+        GiveUpLockDialog(
+            onDismiss = { givingUp = false },
+            onDone = { deleted ->
+                givingUp = false
+                hasPin = false
+                Toast.makeText(
+                    context,
+                    LanguageManager.getString("lock_give_up_done") + " (" + deleted + ")",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         )
     }

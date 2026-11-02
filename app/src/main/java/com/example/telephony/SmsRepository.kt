@@ -436,6 +436,21 @@ object SmsRepository {
             }
         }
 
+    /**
+     * Deletes every message exchanged with a number, found by the number itself.
+     *
+     * Used when a locked discussion is given up for good: the lock knows the
+     * number it protects, never a thread id, and a thread id is what the
+     * provider usually wants.
+     */
+    suspend fun deleteConversation(context: Context, address: String): Int =
+        withContext(Dispatchers.IO) {
+            if (address.isBlank()) return@withContext 0
+            val ids = loadMessagesForAddress(context, address).map { it.id }
+            if (ids.isEmpty()) return@withContext 0
+            deleteMessages(context, ids)
+        }
+
     suspend fun deleteThread(context: Context, threadId: Long): Boolean = withContext(Dispatchers.IO) {
         try {
             context.contentResolver.delete(

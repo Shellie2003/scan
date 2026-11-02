@@ -2,6 +2,7 @@ package com.example.data
 
 import android.content.Context
 import com.example.telephony.NumberUtils
+import com.example.telephony.SmsRepository
 import java.security.MessageDigest
 import java.security.SecureRandom
 
@@ -13,21 +14,40 @@ import java.security.SecureRandom
  * word of its content. It is what makes the phone shareable — a phone in
  * Madagascar is often handed to a cousin to make a call.
  *
- * The code is never stored. What is kept is a salted SHA-256 of it, which is
- * enough to check a code and useless to whoever reads the preferences. There is
- * no recovery: forgetting the code means removing it, and every discussion it
- * protected comes back to the inbox — losing nothing, hiding nothing more.
+ * Neither the code nor the phrase is ever stored. What is kept is a salted
+ * SHA-256 of each, which is enough to check one and useless to whoever reads
+ * the preferences.
+ *
+ * The lock is deliberately irreversible. A code forgotten, with the phrase
+ * forgotten too, cannot be worked around: the discussions it protects are
+ * deleted, for good, rather than handed back. A lock that gives way to whoever
+ * presses "I forgot" protects nothing — and the person it would protect
+ * against is often the one holding the phone.
+ *
+ * The phrase is the one way back, and it is the user who writes it. A sentence
+ * is remembered where four digits are not, and it never has to be typed in
+ * front of anybody.
  */
 object ConversationLock {
 
     private const val PREFS = "app_prefs"
     private const val KEY_HASH = "lock_pin_hash"
     private const val KEY_SALT = "lock_pin_salt"
+    private const val KEY_PHRASE_HASH = "lock_phrase_hash"
+    private const val KEY_PHRASE_SALT = "lock_phrase_salt"
     private const val KEY_LOCKED = "locked_conversations"
 
     /** Four digits is what a market seller will accept to type ten times a day. */
     const val MIN_LENGTH = 4
     const val MAX_LENGTH = 8
+
+    /**
+     * A phrase has to be long enough to be a sentence and not a word.
+     *
+     * Short enough to be typed on a cheap keyboard, long enough that guessing
+     * it is not a matter of trying the obvious.
+     */
+    const val PHRASE_MIN_LENGTH = 8
 
     private fun prefs(context: Context) =
         context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -55,18 +75,83 @@ object ConversationLock {
         return constantTimeEquals(stored, hash(pin, salt))
     }
 
+    // ------------------------------------------------------------------- phrase
+
+    fun hasPhrase(context: Context): Boolean =
+        prefs(context).getString(KEY_PHRASE_HASH, "").orEmpty().isNotBlank()
+
     /**
-     * Removes the code, and with it every lock.
+     * Stores the phrase that can give the code back.
      *
-     * Keeping discussions hidden without a code to open them would make them
-     * unreachable, which is a loss the user never asked for.
+     * Compared with its spaces squeezed and its case ignored: somebody writing
+     * their own sentence a year later will not reproduce the capitals, and the
+     * point is to let the owner back in, not to test their typing.
      */
-    fun clearPin(context: Context) {
+    fun setPhrase(context: Context, phrase: String): Boolean {
+        if (!isAcceptablePhrase(phrase)) return false
+        val salt = newSalt()
+        prefs(context).edit()
+            .putString(KEY_PHRASE_SALT, salt)
+            .putString(KEY_PHRASE_HASH, hash(normalise(phrase), salt))
+            .apply()
+        return true
+    }
+
+    fun verifyPhrase(context: Context, phrase: String): Boolean {
+        val stored = prefs(context).getString(KEY_PHRASE_HASH, "").orEmpty()
+        val salt = prefs(context).getString(KEY_PHRASE_SALT, "").orEmpty()
+        if (stored.isBlank() || salt.isBlank()) return false
+        return constantTimeEquals(stored, hash(normalise(phrase), salt))
+    }
+
+    fun isAcceptablePhrase(phrase: String): Boolean =
+        normalise(phrase).length >= PHRASE_MIN_LENGTH
+
+    /** One run of spaces, no capitals, nothing hanging off the ends. */
+    internal fun normalise(phrase: String): String =
+        phrase.trim().replace(Regex("\\s+"), " ").lowercase()
+
+    /**
+     * Removes the lock for somebody who has just given the code.
+     *
+     * Nothing is lost here: the discussions go back to the inbox. Proving the
+     * code is what separates this from [forget] — the owner is taking their own
+     * lock off, not being let past it.
+     */
+    fun removeWithCode(context: Context) {
         prefs(context).edit()
             .remove(KEY_HASH)
             .remove(KEY_SALT)
+            .remove(KEY_PHRASE_HASH)
+            .remove(KEY_PHRASE_SALT)
             .remove(KEY_LOCKED)
             .apply()
+        revokeAccess()
+    }
+
+    /**
+     * Gives the lock up: the discussions behind it are deleted, for good.
+     *
+     * This is the only way out when the code and the phrase are both gone, and
+     * it is deliberately a loss. A lock that opened for whoever pressed "I
+     * forgot" would protect nothing, and the person it protects against is
+     * usually the one holding the phone.
+     *
+     * Returns the number of messages deleted. The preferences are cleared even
+     * when nothing could be deleted — a read permission refused must not leave
+     * a lock nobody can open behind.
+     */
+    suspend fun forget(context: Context): Int {
+        var deleted = 0
+        lockedKeys(context).forEach { key ->
+            deleted += try {
+                SmsRepository.deleteConversation(context, key)
+            } catch (e: Exception) {
+                0
+            }
+        }
+        removeWithCode(context)
+        return deleted
     }
 
     fun isAcceptable(pin: String): Boolean =

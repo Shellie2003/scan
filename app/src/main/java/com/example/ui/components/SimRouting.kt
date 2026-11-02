@@ -37,6 +37,7 @@ import com.example.telephony.DialOutcome
 import com.example.telephony.RoutingStatus
 import com.example.telephony.SimCard
 import com.example.telephony.SimRouting
+import com.example.telephony.UssdFormatter
 import com.example.telephony.UssdResult
 import com.example.telephony.UssdRunner
 import com.example.ui.util.LanguageManager

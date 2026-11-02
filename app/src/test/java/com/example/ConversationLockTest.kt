@@ -57,6 +57,44 @@ class ConversationLockTest {
         assertFalse(ConversationLock.isAcceptable(""))
     }
 
+    // ------------------------------------------------------------------ phrase
+
+    @Test
+    fun `a phrase is read past the capitals and the extra spaces`() {
+        // A year later, nobody reproduces their own capitals. What is compared
+        // is the sentence, not the typing.
+        val reference = ConversationLock.normalise("Ny anaran'ny zaza voalohany")
+        assertEquals(reference, ConversationLock.normalise("ny anaran'ny zaza voalohany"))
+        assertEquals(reference, ConversationLock.normalise("  NY ANARAN'NY   ZAZA  VOALOHANY  "))
+        assertEquals(reference, ConversationLock.normalise("Ny Anaran'ny\tZaza\nVoalohany"))
+    }
+
+    @Test
+    fun `two different phrases stay different`() {
+        assertFalse(
+            ConversationLock.normalise("le nom de mon village") ==
+                ConversationLock.normalise("le nom de mon frere")
+        )
+    }
+
+    @Test
+    fun `a phrase has to be a sentence and not a word`() {
+        assertTrue(ConversationLock.isAcceptablePhrase("mon village natal"))
+        assertTrue(ConversationLock.isAcceptablePhrase("12345678"))
+        assertFalse(ConversationLock.isAcceptablePhrase("court"))
+        assertFalse(ConversationLock.isAcceptablePhrase(""))
+        // Spaces alone do not make a length: squeezed first, measured after.
+        assertFalse(ConversationLock.isAcceptablePhrase("   a    b   "))
+    }
+
+    @Test
+    fun `a phrase fingerprint never carries the phrase`() {
+        val phrase = "ny tanana nahaterahako"
+        val fingerprint = ConversationLock.hash(ConversationLock.normalise(phrase), "a1b2c3")
+        assertFalse(fingerprint.contains("tanana"))
+        assertEquals(64, fingerprint.length)
+    }
+
     @Test
     fun `comparing two fingerprints answers like an equality`() {
         assertTrue(ConversationLock.constantTimeEquals("abc", "abc"))

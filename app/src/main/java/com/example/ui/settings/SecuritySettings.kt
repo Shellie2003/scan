@@ -1,5 +1,6 @@
 package com.example.ui.settings
 
+import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -39,6 +40,9 @@ import com.example.data.BlockedNumbers
 import com.example.data.ConversationLock
 import com.example.telephony.NumberUtils
 import com.example.ui.components.SectionHeader
+import com.example.ui.messages.ForgottenCodeDialog
+import com.example.ui.messages.GiveUpLockDialog
+import com.example.ui.messages.PinPromptDialog
 import com.example.ui.messages.PinSetupDialog
 import com.example.ui.util.LanguageManager
 
@@ -57,6 +61,12 @@ fun SecuritySection() {
     var blocked by remember { mutableStateOf(BlockedNumbers.all(context).toList()) }
     var setupPin by remember { mutableStateOf(false) }
     var confirmRemovePin by remember { mutableStateOf(false) }
+    // Removing the lock now asks for the code: the discussions come back
+    // untouched, and proving the code is what tells the owner apart from
+    // whoever is holding the phone.
+    var askCodeToRemove by remember { mutableStateOf(false) }
+    var recovering by remember { mutableStateOf(false) }
+    var givingUp by remember { mutableStateOf(false) }
 
     SectionHeader(LanguageManager.getString("section_security"))
     Text(
@@ -196,21 +206,68 @@ fun SecuritySection() {
                 Button(
                     onClick = {
                         confirmRemovePin = false
-                        // Removing the code frees the discussions it hid: a
-                        // hidden discussion with no way in would simply be lost.
-                        ConversationLock.clearPin(context)
-                        hasPin = false
-                        lockedCount = 0
+                        askCodeToRemove = true
                     },
                     colors = ButtonDefaults.buttonColors(
                         containerColor = MaterialTheme.colorScheme.error
                     )
-                ) { Text(LanguageManager.getString("delete")) }
+                ) { Text(LanguageManager.getString("continue")) }
             },
             dismissButton = {
                 TextButton(onClick = { confirmRemovePin = false }) {
                     Text(LanguageManager.getString("cancel"))
                 }
+            }
+        )
+    }
+
+    if (askCodeToRemove) {
+        PinPromptDialog(
+            title = LanguageManager.getString("lock_remove"),
+            message = LanguageManager.getString("lock_remove_needs_code"),
+            onDismiss = { askCodeToRemove = false },
+            onAccepted = {
+                askCodeToRemove = false
+                ConversationLock.removeWithCode(context)
+                hasPin = false
+                lockedCount = 0
+            },
+            onForgotten = {
+                askCodeToRemove = false
+                recovering = true
+            }
+        )
+    }
+
+    if (recovering) {
+        ForgottenCodeDialog(
+            onDismiss = { recovering = false },
+            onRecovered = {
+                // A new code was set from the phrase: the lock stands, and the
+                // discussions behind it were never touched.
+                recovering = false
+                hasPin = true
+                lockedCount = ConversationLock.count(context)
+            },
+            onGiveUp = {
+                recovering = false
+                givingUp = true
+            }
+        )
+    }
+
+    if (givingUp) {
+        GiveUpLockDialog(
+            onDismiss = { givingUp = false },
+            onDone = { deleted ->
+                givingUp = false
+                hasPin = false
+                lockedCount = 0
+                Toast.makeText(
+                    context,
+                    LanguageManager.getString("lock_give_up_done") + " (" + deleted + ")",
+                    Toast.LENGTH_LONG
+                ).show()
             }
         )
     }
