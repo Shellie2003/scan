@@ -49,7 +49,11 @@ class PhoneCallService : InCallService() {
         // used to keep reading "incoming call" for the whole conversation, and
         // it showed a raw number even when the contact was known.
         scope.launch {
-            OngoingCallStore.calls.collect { calls ->
+            OngoingCallStore.calls.collect { all ->
+                // A USSD code is not a call to show a band for: it has nobody
+                // on the other end, and the answer of the operator belongs to
+                // the dialog the telephone puts up for it.
+                val calls = all.filter { !it.isServiceCode }
                 // A call that is ringing comes first: during a conversation, a
                 // second call must be the one the band lets you answer.
                 val call = calls.firstOrNull { it.isRinging }
@@ -79,7 +83,21 @@ class PhoneCallService : InCallService() {
         call.details?.handle?.schemeSpecificPart?.takeIf { it.isNotBlank() }?.let { number ->
             MissedCallNotifier.cancel(this, number)
         }
-        if (shouldTakeTheScreen(call)) InCallActivity.start(this)
+        if (!isServiceCode(call) && shouldTakeTheScreen(call)) InCallActivity.start(this)
+    }
+
+    /**
+     * Whether what telecom just handed over is a code and not a correspondent.
+     *
+     * This is the one thing that must not open the call screen. The telephone
+     * answers a USSD code with a dialog carrying the words of the operator, and
+     * a full-screen call over it hides exactly what the user was waiting for —
+     * the recharge arrives, the operator confirms it, and the screen says
+     * nothing at all.
+     */
+    private fun isServiceCode(call: Call): Boolean {
+        val number = call.details?.handle?.schemeSpecificPart.orEmpty()
+        return number.contains('*') || number.contains('#')
     }
 
     /**

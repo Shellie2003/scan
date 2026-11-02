@@ -43,6 +43,20 @@ data class CallSnapshot(
         get() = state == Call.STATE_DISCONNECTED || state == Call.STATE_DISCONNECTING
 
     val label: String get() = displayName.ifBlank { NumberUtils.formatForDisplay(number) }
+
+    /**
+     * A code for the operator, not somebody to talk to.
+     *
+     * Telecom hands a USSD code over as a call for the moment it takes to run,
+     * and the answer of the operator — "votre crédit est de…" — is shown by the
+     * telephone in a dialog of its own. A call screen opened over that dialog
+     * hides it: the recharge went through, the operator confirmed it, and the
+     * user was left in front of a screen that said nothing.
+     *
+     * A star or a hash is what marks such a code. A short number without one is
+     * a real number — customer service — and keeps its call screen.
+     */
+    val isServiceCode: Boolean get() = number.contains('*') || number.contains('#')
 }
 
 /**

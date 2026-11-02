@@ -320,25 +320,57 @@ object ContactsRepository {
                 val values = android.content.ContentValues().apply {
                     put(ContactsContract.Contacts.STARRED, if (favorite) 1 else 0)
                 }
+                // The identifier in the address, for the same reason as the
+                // deletion below: a condition on the whole table is the form
+                // the provider is least willing to accept.
                 context.contentResolver.update(
-                    ContactsContract.Contacts.CONTENT_URI,
+                    android.content.ContentUris.withAppendedId(
+                        ContactsContract.Contacts.CONTENT_URI,
+                        contact.id
+                    ),
                     values,
-                    ContactsContract.Contacts._ID + " = ?",
-                    arrayOf(contact.id.toString())
+                    null,
+                    null
                 ) > 0
             } catch (e: Exception) {
                 false
             }
         }
 
-    /** Removes the contact from the phone, with every number it carried. */
+    /**
+     * Removes the contact from the phone, with every number it carried.
+     *
+     * Two ways, because the first is not accepted everywhere. The identifier
+     * belongs in the address itself: the provider of the contacts refuses a
+     * deletion aimed at the whole table with a condition attached — it raised
+     * an exception, the exception was caught, and the user was told the contact
+     * could not be *saved* while it sat there undeleted.
+     *
+     * When that address deletes nothing, the raw contacts behind it are deleted
+     * instead. A contact is an aggregate of rows from the accounts of the
+     * telephone — the SIM card, a Google account — and on some telephones that
+     * is the only level a deletion is allowed at.
+     */
     suspend fun delete(context: Context, contact: Contact): Boolean =
         withContext(Dispatchers.IO) {
             if (!hasWritePermission(context)) return@withContext false
+            val byId = try {
+                context.contentResolver.delete(
+                    android.content.ContentUris.withAppendedId(
+                        ContactsContract.Contacts.CONTENT_URI,
+                        contact.id
+                    ),
+                    null,
+                    null
+                ) > 0
+            } catch (e: Exception) {
+                false
+            }
+            if (byId) return@withContext true
             try {
                 context.contentResolver.delete(
-                    ContactsContract.Contacts.CONTENT_URI,
-                    ContactsContract.Contacts._ID + " = ?",
+                    ContactsContract.RawContacts.CONTENT_URI,
+                    ContactsContract.RawContacts.CONTACT_ID + " = ?",
                     arrayOf(contact.id.toString())
                 ) > 0
             } catch (e: Exception) {

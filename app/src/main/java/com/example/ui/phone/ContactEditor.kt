@@ -324,8 +324,11 @@ fun DeleteContactDialog(
                         val done = ContactsRepository.delete(context, contact)
                         Toast.makeText(
                             context,
+                            // Its own sentence. A failed deletion used to be
+                            // reported as a contact that could not be saved,
+                            // which says nothing about what just happened.
                             LanguageManager.getString(
-                                if (done) "contact_deleted" else "contact_save_failed"
+                                if (done) "contact_deleted" else "contact_delete_failed"
                             ),
                             Toast.LENGTH_SHORT
                         ).show()

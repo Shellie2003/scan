@@ -142,19 +142,25 @@ fun InCallScreen(onFinished: () -> Unit) {
     /** Id of the call a written answer is being chosen for, `null` when none is. */
     var quickReplyFor by remember { mutableStateOf<String?>(null) }
 
-    LaunchedEffect(calls) {
-        if (calls.isEmpty()) {
+    // A ringing call takes the screen over an ongoing one: a second call must be
+    // answerable, and telecom puts the first one on hold by itself.
+    // A USSD code never belongs here: the telephone answers it in a dialog of
+    // its own, and this screen would cover it.
+    val real = calls.filter { !it.isServiceCode }
+    val call = real.firstOrNull { it.isRinging }
+        ?: real.firstOrNull { it.isActive }
+        ?: real.firstOrNull { !it.isDisconnected }
+        ?: real.firstOrNull()
+
+    // Closed on the absence of a real call, not on an empty list: a USSD code
+    // left in the list would otherwise keep this screen up, which is the very
+    // thing being fixed.
+    LaunchedEffect(call == null) {
+        if (call == null) {
             delay(600)
             onFinished()
         }
     }
-
-    // A ringing call takes the screen over an ongoing one: a second call must be
-    // answerable, and telecom puts the first one on hold by itself.
-    val call = calls.firstOrNull { it.isRinging }
-        ?: calls.firstOrNull { it.isActive }
-        ?: calls.firstOrNull { !it.isDisconnected }
-        ?: calls.firstOrNull()
 
     Box(
         modifier = Modifier
