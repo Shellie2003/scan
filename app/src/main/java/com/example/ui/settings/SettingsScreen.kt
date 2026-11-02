@@ -540,6 +540,7 @@ fun SettingsScreen(app: AppViewModel) {
 
 private fun historyKindLabel(kind: String): String = when (kind) {
     com.example.data.model.ScanHistory.KIND_OFFER -> LanguageManager.getString("history_offer")
+    com.example.data.model.ScanHistory.KIND_INFO -> LanguageManager.getString("history_info")
     com.example.data.model.ScanHistory.KIND_TRANSFER -> LanguageManager.getString("history_transfer")
     com.example.data.model.ScanHistory.KIND_SMS -> LanguageManager.getString("history_sms")
     else -> LanguageManager.getString("history_recharge")
@@ -723,6 +724,8 @@ private fun OperatorEditorDialog(
     var transfer by remember { mutableStateOf(operator.transferTemplate) }
     var share by remember { mutableStateOf(operator.shareTemplate) }
     var withdraw by remember { mutableStateOf(operator.withdrawTemplate) }
+    var offerService by remember { mutableStateOf(operator.offerServiceCode) }
+    var offerInfo by remember { mutableStateOf(operator.offerInfoCode) }
     var service by remember { mutableStateOf(operator.serviceNumber) }
     var prefixes by remember { mutableStateOf(operator.prefixes) }
     var keywords by remember { mutableStateOf(operator.keywords) }
@@ -766,6 +769,19 @@ private fun OperatorEditorDialog(
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                // The pair that turns a plan code into the code that says what
+                // is left of it: with Yas, 322 buys and 359 reads.
+                Text(
+                    text = LanguageManager.getString("offer_info_hint"),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Field(offerService, LanguageManager.getString("offer_service_code")) {
+                    offerService = it.filter { c -> c.isDigit() }.take(6)
+                }
+                Field(offerInfo, LanguageManager.getString("offer_info_code")) {
+                    offerInfo = it.filter { c -> c.isDigit() }.take(6)
+                }
                 Field(service, LanguageManager.getString("service_number")) { service = it }
                 Field(prefixes, LanguageManager.getString("prefixes")) { prefixes = it }
                 Field(keywords, LanguageManager.getString("keywords")) { keywords = it }
@@ -809,6 +825,8 @@ private fun OperatorEditorDialog(
                             transferTemplate = transfer.trim(),
                             shareTemplate = share.trim(),
                             withdrawTemplate = withdraw.trim(),
+                            offerServiceCode = offerService.trim(),
+                            offerInfoCode = offerInfo.trim(),
                             serviceNumber = service.trim(),
                             prefixes = prefixes.trim(),
                             keywords = keywords.trim(),

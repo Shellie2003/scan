@@ -21,6 +21,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Call
+import androidx.compose.material.icons.filled.DataUsage
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.LocalOffer
@@ -288,7 +289,19 @@ fun TolotraScreen(
                             onShare = { sharing = offer },
                             onEdit = { editing = offer },
                             onDelete = { deleting = offer },
-                            onToggleFavorite = { app.toggleFavorite(offer) }
+                            onToggleFavorite = { app.toggleFavorite(offer) },
+                            onCheckRemaining = { infoCode ->
+                                launcher.runCode(
+                                    code = UssdFormatter.format(infoCode, operator),
+                                    operator = operator,
+                                    // Reading a balance is not buying: it must
+                                    // not push this plan up the most-bought list.
+                                    kind = ScanHistory.KIND_INFO,
+                                    label = LanguageManager.getString("check_remaining") +
+                                        " " + offer.title,
+                                    rawCode = infoCode
+                                )
+                            }
                         )
                     }
                 }
@@ -389,7 +402,9 @@ private fun OfferCard(
     onShare: () -> Unit,
     onEdit: () -> Unit,
     onDelete: () -> Unit,
-    onToggleFavorite: () -> Unit
+    onToggleFavorite: () -> Unit,
+    /** Dials the code that says what is left of this plan. */
+    onCheckRemaining: (String) -> Unit
 ) {
     val theme = OperatorColorUtils.themeOf(operator)
     Card(
@@ -514,6 +529,32 @@ private fun OfferCard(
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = LanguageManager.getString("offer_to_someone"),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
+            }
+
+            // What is left of the plan, read with the code that bought it: the
+            // plan number does not move, only the service in front of it. The
+            // button only exists for an operator whose information code is
+            // known — nothing here is guessed.
+            val infoCode = remember(offer.ussdCode, operator) {
+                UssdFormatter.infoCodeOf(offer.ussdCode, operator)
+            }
+            if (infoCode.isNotBlank()) {
+                Spacer(Modifier.height(6.dp))
+                TextButton(
+                    onClick = { onCheckRemaining(infoCode) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.DataUsage,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = LanguageManager.getString("check_remaining"),
                         style = MaterialTheme.typography.labelMedium
                     )
                 }

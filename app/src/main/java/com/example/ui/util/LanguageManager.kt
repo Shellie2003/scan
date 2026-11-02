@@ -399,6 +399,14 @@ object LanguageManager {
             "send_failed_radio_off" to "Mijanona ny tambajotra (mode fiaramanidina?)",
             "send_failed_generic" to "Nolavin'ny mpanome ny hafatra. Jereo ny fahana.",
             "send_refused_late" to "Nolavina avy eo : hafatra {count}",
+            "check_remaining" to "Ny sisa amiko",
+            "buy_again" to "Hividy indray",
+            "dial_directly" to "Alefa mivantana ny kaody",
+            "ussd_answer_empty" to "Tsy nahavita na inona na inona ny mpanome : nisokatra sy nikatona fotsiny ny fifandraisana. Alefaso mivantana ny kaody.",
+            "history_info" to "Fanamarinana",
+            "offer_service_code" to "Kaody fividianana tolotra (ohatra 322)",
+            "offer_info_code" to "Kaody fanamarinana sisa (ohatra 359)",
+            "offer_info_hint" to "Amin'i Yas, 322 no mividy tolotra ary 359 no milaza ny sisa : #322*64# mividy, #359*64# mijery. Avelao foana raha tsy fantatra ny kaody — tsy mamorona kaody mandeha ity fampiharana ity.",
             "fullscreen_off_desc" to "Mila alalana ny fampiharana hampiseho ny antso rehefa voahidy ny efijery. Raha tsy izany dia maneno fotsiny ny finday, tsy misy bokotra hamaliana."
         ),
         "fr" to mapOf(
@@ -760,6 +768,14 @@ object LanguageManager {
             "send_failed_radio_off" to "Réseau coupé (mode avion ?)",
             "send_failed_generic" to "L'opérateur a refusé le message. Vérifiez le crédit.",
             "send_refused_late" to "Refusés après coup : {count} message(s)",
+            "check_remaining" to "Mon reste",
+            "buy_again" to "Reprendre la même offre",
+            "dial_directly" to "Composer le code directement",
+            "ussd_answer_empty" to "L'opérateur n'a rien fait : la session s'est ouverte et refermée. Composez le code directement.",
+            "history_info" to "Consultation",
+            "offer_service_code" to "Code d'achat d'offre (ex. 322)",
+            "offer_info_code" to "Code d'info conso (ex. 359)",
+            "offer_info_hint" to "Chez Yas, 322 achète une offre et 359 dit ce qu'il en reste : #322*64# achète, #359*64# consulte. Laissez vide si le code est inconnu — l'application n'invente jamais un code qui appelle un vrai service.",
             "fullscreen_off_desc" to "L'application a besoin de l'autorisation plein écran pour afficher un appel quand le téléphone est verrouillé. Sans elle, le téléphone sonne sans bouton pour répondre."
         ),
         "en" to mapOf(
@@ -1121,6 +1137,14 @@ object LanguageManager {
             "send_failed_radio_off" to "The radio is off (flight mode?)",
             "send_failed_generic" to "The operator refused the message. Check the credit.",
             "send_refused_late" to "Refused afterwards: {count} message(s)",
+            "check_remaining" to "What is left",
+            "buy_again" to "Buy the same again",
+            "dial_directly" to "Dial the code directly",
+            "ussd_answer_empty" to "The operator did nothing: the session opened and closed. Dial the code directly.",
+            "history_info" to "Balance check",
+            "offer_service_code" to "Plan purchase code (e.g. 322)",
+            "offer_info_code" to "Plan balance code (e.g. 359)",
+            "offer_info_hint" to "With Yas, 322 buys a plan and 359 says what is left of it: #322*64# buys, #359*64# reads. Leave empty when the code is unknown — this application never invents a code that calls a real service.",
             "fullscreen_off_desc" to "The application needs the full screen permission to show a call while the phone is locked. Without it, the phone rings with no button to answer."
         )
     )

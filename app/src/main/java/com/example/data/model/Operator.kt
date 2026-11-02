@@ -39,6 +39,20 @@ data class Operator(
      * never to a string this application builds.
      */
     val withdrawTemplate: String = "",
+    /**
+     * The service number a plan is bought through, and the one its remaining
+     * balance is read through.
+     *
+     * With Yas, buying the Ye'low One plan is `#322*64#` and asking what is
+     * left of it is `#359*64#`: the plan number does not move, only the
+     * service in front of it. That is all this pair holds, so the question
+     * "what is left of my plan?" can be built from the code that bought it.
+     *
+     * Empty for an operator whose information code is unknown: a code that
+     * dials a real service is never guessed here.
+     */
+    val offerServiceCode: String = "",
+    val offerInfoCode: String = "",
     /** Customer service number, dialled from the operator sheet. */
     val serviceNumber: String = "",
     /** Comma separated national prefixes, e.g. `034,038`. Used to guess the operator of a number. */

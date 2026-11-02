@@ -100,6 +100,40 @@ class TelephonyLogicTest {
         )
     }
 
+    // -------------------------------------------------------- what is left of it
+
+    @Test
+    fun `the balance code of a plan keeps the plan number`() {
+        // With Yas, 322 buys and 359 reads: the plan number does not move.
+        val yas = operator("Yas")
+        assertEquals("#359*64#", UssdFormatter.infoCodeOf("#322*64#", yas))
+        assertEquals("#359*8#", UssdFormatter.infoCodeOf("#322*8#", yas))
+        assertEquals("#359*13#", UssdFormatter.infoCodeOf("#322*13#", yas))
+    }
+
+    @Test
+    fun `an operator without a balance code is not guessed at`() {
+        // Airtel and Orange ship without the pair: a code that dials a real
+        // service is never invented, so there is simply nothing to offer.
+        assertEquals("", UssdFormatter.infoCodeOf("*888*1#", operator("Airtel")))
+        assertEquals("", UssdFormatter.infoCodeOf("222*1", operator("Orange")))
+        assertEquals("", UssdFormatter.infoCodeOf("#322*64#", null))
+    }
+
+    @Test
+    fun `only the service in front of the plan is replaced`() {
+        // A plan whose own number contains the service digits keeps it: only
+        // the first occurrence is the service.
+        val yas = operator("Yas")
+        assertEquals("#359*322#", UssdFormatter.infoCodeOf("#322*322#", yas))
+    }
+
+    @Test
+    fun `a code that does not carry the service code is left alone`() {
+        assertEquals("", UssdFormatter.infoCodeOf("#321*12345678901234#", operator("Yas")))
+        assertEquals("", UssdFormatter.infoCodeOf("", operator("Yas")))
+    }
+
     @Test
     fun `a placeholder written twice is filled twice`() {
         // Orange repeats the number of the cashpoint inside its withdrawal code.

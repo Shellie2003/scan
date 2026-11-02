@@ -235,7 +235,29 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch { historyDao.clear() }
     }
 
+    /**
+     * The two plans this phone buys most often, ready to be offered again.
+     *
+     * Shown right after a recharge: the credit has just landed, and what
+     * follows for most people is the same plan as last time. Looking at the
+     * last three months only, so a habit left behind stops being proposed.
+     */
+    suspend fun mostBoughtOffers(limit: Int = 2): List<Offer> {
+        val since = System.currentTimeMillis() - HABIT_WINDOW_MS
+        val codes = runCatching { historyDao.mostBoughtOfferCodes(since, limit) }
+            .getOrDefault(emptyList())
+        if (codes.isEmpty()) return emptyList()
+        val known = offers.value
+        // The order of the codes is the order of the habit: kept as it is.
+        return codes.mapNotNull { code -> known.firstOrNull { it.ussdCode == code } }
+    }
+
     /** `true` when the same recharge code was already sent in the last 24 hours. */
     suspend fun wasUsedRecently(code: String): Boolean =
         historyDao.countRecentUses(code, System.currentTimeMillis() - 24 * 60 * 60 * 1000L) > 0
+
+    private companion object {
+        /** Three months: long enough to be a habit, short enough to be current. */
+        const val HABIT_WINDOW_MS = 90L * 24 * 60 * 60 * 1000
+    }
 }

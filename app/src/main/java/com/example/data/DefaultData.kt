@@ -28,6 +28,10 @@ object DefaultData {
             balanceTemplate = "#321#",
             transferTemplate = "#321*{NUMBER}*{AMOUNT}#",
             shareTemplate = "#322*{NUMBER}*{AMOUNT}#",
+            // 322 buys a plan, 359 says what is left of it: #322*64# buys
+            // Ye'low One, #359*64# reads what remains of it.
+            offerServiceCode = "322",
+            offerInfoCode = "359",
             serviceNumber = "321",
             prefixes = "034,038",
             keywords = "yas,telma,ye'low,yelow,yellow,mora,m'ora,first",

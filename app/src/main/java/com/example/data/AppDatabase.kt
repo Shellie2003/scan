@@ -18,7 +18,7 @@ import com.example.data.model.SimProfile
         SimProfile::class,
         MessageTemplate::class
     ],
-    version = 3,
+    version = 4,
     // The schema is exported to `app/schemas`: a version bump without a written
     // migration is then caught at build time, instead of wiping the operators,
     // plans and templates the user configured.
@@ -30,6 +30,27 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun offerDao(): OfferDao
     abstract fun simProfileDao(): SimProfileDao
     abstract fun messageTemplateDao(): MessageTemplateDao
+}
+
+/**
+ * v4 adds the pair of service codes a plan is bought and read through.
+ *
+ * The Yas pair is written in as part of the migration: it is not a guess but
+ * the mapping the operator uses — 322 buys a plan, 359 says what is left of
+ * it — and a user who already had Yas configured would otherwise have to type
+ * it themselves to get the feature at all. The other operators stay empty
+ * until their own codes are known: a code that dials a real service is never
+ * invented here.
+ */
+val MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE operators ADD COLUMN offerServiceCode TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE operators ADD COLUMN offerInfoCode TEXT NOT NULL DEFAULT ''")
+        db.execSQL(
+            "UPDATE operators SET offerServiceCode = '322', offerInfoCode = '359' " +
+                "WHERE LOWER(name) = 'yas' OR LOWER(name) = 'telma'"
+        )
+    }
 }
 
 /**

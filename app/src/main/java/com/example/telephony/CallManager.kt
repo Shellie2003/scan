@@ -63,6 +63,27 @@ object UssdFormatter {
         .replace("{AMOUNT}", amount)
         .replace("{PIN}", pin)
 
+    /**
+     * The code that says what is left of a plan, built from the code that
+     * bought it.
+     *
+     * The plan number does not move; the service in front of it does. With
+     * Yas, `#322*64#` buys the Ye'low One plan and `#359*64#` reads what
+     * remains of it. Only the first occurrence is replaced, so a plan number
+     * that happens to contain the service digits is left alone.
+     *
+     * An empty string when the operator has no information code: a code that
+     * dials a real service is never invented.
+     */
+    fun infoCodeOf(offerCode: String, operator: Operator?): String {
+        val buy = operator?.offerServiceCode?.trim().orEmpty()
+        val info = operator?.offerInfoCode?.trim().orEmpty()
+        if (buy.isBlank() || info.isBlank()) return ""
+        val code = offerCode.trim()
+        if (code.isBlank() || !code.contains(buy)) return ""
+        return code.replaceFirst(buy, info)
+    }
+
     /** `true` when the string can be sent through the in-app USSD channel. */
     fun isUssd(code: String): Boolean =
         (code.startsWith("*") || code.startsWith("#")) && code.endsWith("#")

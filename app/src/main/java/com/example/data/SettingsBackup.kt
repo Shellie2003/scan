@@ -185,6 +185,8 @@ object SettingsBackup {
         put("transferTemplate", transferTemplate)
         put("shareTemplate", shareTemplate)
         put("withdrawTemplate", withdrawTemplate)
+        put("offerServiceCode", offerServiceCode)
+        put("offerInfoCode", offerInfoCode)
         put("serviceNumber", serviceNumber)
         put("prefixes", prefixes)
         put("keywords", keywords)
@@ -208,6 +210,8 @@ object SettingsBackup {
             transferTemplate = optString("transferTemplate").orEmpty(),
             shareTemplate = optString("shareTemplate").orEmpty(),
             withdrawTemplate = optString("withdrawTemplate").orEmpty(),
+            offerServiceCode = optString("offerServiceCode").orEmpty(),
+            offerInfoCode = optString("offerInfoCode").orEmpty(),
             serviceNumber = optString("serviceNumber").orEmpty(),
             prefixes = optString("prefixes").orEmpty(),
             keywords = optString("keywords").orEmpty(),

@@ -1,9 +1,20 @@
 package com.example.ui.components
 
 import android.widget.Toast
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Dialpad
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -12,8 +23,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import com.example.data.AppSettings
 import com.example.data.model.Operator
 import com.example.data.model.ScanHistory
@@ -90,6 +103,18 @@ fun WithSimRouting(
     var pendingConfirm by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
     var ussdAnswer by remember { mutableStateOf<String?>(null) }
 
+    /** The code the answer being shown came from, and what it was doing. */
+    var answeredRequest by remember { mutableStateOf<DialRequest?>(null) }
+
+    /**
+     * The plans this phone buys most often, loaded when a recharge succeeds.
+     *
+     * The credit has just arrived and what usually follows is the same plan as
+     * last time: offering it here saves crossing two screens with a customer
+     * waiting at the counter.
+     */
+    var habits by remember { mutableStateOf<List<com.example.data.model.Offer>>(emptyList()) }
+
     fun toast(key: String) {
         Toast.makeText(context, LanguageManager.getString(key), Toast.LENGTH_SHORT).show()
     }
@@ -145,6 +170,13 @@ fun WithSimRouting(
                             is UssdResult.Success -> {
                                 AppSettings.recordInAppUssdSuccess(context)
                                 ussdAnswer = result.response
+                                answeredRequest = request
+                                // After a recharge, what follows is usually a
+                                // plan: the two most often bought are fetched
+                                // while the user reads the answer.
+                                if (request.kind == ScanHistory.KIND_RECHARGE) {
+                                    scope.launch { habits = app.mostBoughtOffers(2) }
+                                }
                             }
                             // The operator answer could not be read in the app.
                             // The code itself is good: it is dialled straight
@@ -226,14 +258,94 @@ fun WithSimRouting(
     }
 
     ussdAnswer?.let { answer ->
+        val request = answeredRequest
+        fun close() {
+            ussdAnswer = null
+            answeredRequest = null
+            habits = emptyList()
+        }
         AlertDialog(
-            onDismissRequest = { ussdAnswer = null },
+            onDismissRequest = { close() },
             title = {
                 Text(LanguageManager.getString("ussd_response"), fontWeight = FontWeight.Bold)
             },
-            text = { Text(answer, style = MaterialTheme.typography.bodyMedium) },
+            text = {
+                Column {
+                    Text(answer, style = MaterialTheme.typography.bodyMedium)
+
+                    // An operator sometimes answers with nothing but its
+                    // goodbye — "merci d'avoir utilisé le service" — although
+                    // the code was right: the session it opened was closed
+                    // before doing anything. Dialling the same code the
+                    // ordinary way goes through, so it is offered here instead
+                    // of leaving the user to start over.
+                    if (request is DialRequest.Code && looksLikeNothingHappened(answer)) {
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = LanguageManager.getString("ussd_answer_empty"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        OutlinedButton(
+                            onClick = {
+                                val code = request.code
+                                val sim = routeOf(request).sim
+                                close()
+                                dialCode(code, sim)
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Dialpad,
+                                contentDescription = null,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(LanguageManager.getString("dial_directly"))
+                        }
+                    }
+
+                    // The habit of this phone, right where the credit landed.
+                    if (habits.isNotEmpty()) {
+                        Spacer(Modifier.height(16.dp))
+                        Text(
+                            text = LanguageManager.getString("buy_again"),
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        habits.forEach { offer ->
+                            val operator = app.operatorNamed(offer.operatorName)
+                            Button(
+                                onClick = {
+                                    close()
+                                    start(
+                                        DialRequest.Code(
+                                            code = UssdFormatter.format(offer.ussdCode, operator),
+                                            operator = operator,
+                                            kind = ScanHistory.KIND_OFFER,
+                                            label = offer.title,
+                                            rawCode = offer.ussdCode
+                                        )
+                                    )
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = offer.title + " · " + offer.price,
+                                    maxLines = 1
+                                )
+                            }
+                        }
+                    }
+                }
+            },
             confirmButton = {
-                Button(onClick = { ussdAnswer = null }) { Text(LanguageManager.getString("ok")) }
+                Button(onClick = { close() }) { Text(LanguageManager.getString("ok")) }
             }
         )
     }
@@ -242,6 +354,23 @@ fun WithSimRouting(
     // Nothing could open it any more: a failure now dials the code straight
     // away rather than asking the user to press "retry" on a code that was
     // never wrong. Dead state and dead UI are worse than no UI.
+}
+
+/**
+ * `true` when the answer of the operator says nothing but goodbye.
+ *
+ * "Merci d'avoir utilisé le service Yas", "Misaotra", "Thank you for using" —
+ * the session was opened and closed without doing the thing that was asked.
+ * It happens with the in-app channel while the very same code, dialled the
+ * ordinary way, goes through. An answer that also carries digits is left
+ * alone: a balance or a confirmation is a real answer.
+ */
+private fun looksLikeNothingHappened(answer: String): Boolean {
+    val text = answer.lowercase()
+    val goodbye = listOf("merci", "misaotra", "thank")
+    if (goodbye.none { text.contains(it) }) return false
+    // A confirmation says how much, or until when. A goodbye says nothing.
+    return answer.count { it.isDigit() } < 3
 }
 
 private fun fallbackWarning(routing: SimRouting): String? = when {
