@@ -7,6 +7,7 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Build
 import android.os.PowerManager
 import android.telecom.Call
@@ -16,6 +17,7 @@ import android.telecom.InCallService
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
+import androidx.core.app.ServiceCompat
 import com.example.data.BlockedNumbers
 import com.example.data.DatabaseProvider
 import com.example.ui.call.InCallActivity
@@ -38,6 +40,9 @@ class PhoneCallService : InCallService() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
+    /** Whether the band is currently carried by the service itself. */
+    private var foreground = false
+
     override fun onCreate() {
         super.onCreate()
         // The notification follows the call instead of being written once: it
@@ -56,6 +61,9 @@ class PhoneCallService : InCallService() {
     }
 
     override fun onDestroy() {
+        // Before the scope dies: a band left behind would stay on the screen
+        // with no call behind it and no way to dismiss it.
+        cancelNotification()
         super.onDestroy()
         scope.cancel()
     }
@@ -157,11 +165,61 @@ class PhoneCallService : InCallService() {
     }
 
     private fun cancelNotification() {
+        if (foreground) {
+            foreground = false
+            try {
+                ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
+            } catch (e: Exception) {
+                // Already down.
+            }
+        }
         try {
             NotificationManagerCompat.from(this).cancel(NOTIFICATION_ID)
         } catch (e: Exception) {
             // Nothing was posted.
         }
+    }
+
+    /**
+     * Posts the band so that its buttons survive.
+     *
+     * The call style of the system is kept only for a notification that belongs
+     * to a foreground service or carries a full-screen intent. An incoming call
+     * has the second; a conversation in progress has neither, and the button to
+     * hang up was being dropped on the way to the status bar — which is exactly
+     * the button the user was asking for.
+     *
+     * The promotion is tried and never relied upon: if the system refuses it,
+     * the same notification goes out the ordinary way rather than not at all.
+     */
+    private fun post(notification: Notification) {
+        if (promote(notification)) return
+        try {
+            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, notification)
+        } catch (e: SecurityException) {
+            // Notification permission refused: the call screen is started directly.
+        } catch (e: Exception) {
+            // A notification is never worth taking the call process down.
+        }
+    }
+
+    private fun promote(notification: Notification): Boolean = try {
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notification,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+            } else {
+                0
+            }
+        )
+        foreground = true
+        true
+    } catch (e: Exception) {
+        // A phone that refuses the promotion — or an Android that wants a
+        // permission this one was not given — must not lose the call for it.
+        false
     }
 
     // Replaced by onCallEndpointChanged on Android 14, which does not exist on
@@ -314,13 +372,7 @@ class PhoneCallService : InCallService() {
         }
 
         if (call.isRinging) builder.setFullScreenIntent(fullScreenIntent, true)
-        try {
-            NotificationManagerCompat.from(this).notify(NOTIFICATION_ID, builder.build())
-        } catch (e: SecurityException) {
-            // Notification permission refused: the call screen is still started directly.
-        } catch (e: Exception) {
-            // A notification is never worth taking the call process down.
-        }
+        post(builder.build())
     }
 
     companion object {

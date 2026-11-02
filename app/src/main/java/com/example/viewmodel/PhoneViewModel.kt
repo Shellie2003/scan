@@ -7,6 +7,7 @@ import com.example.telephony.CallEntry
 import com.example.telephony.CallLogRepository
 import com.example.telephony.Contact
 import com.example.telephony.ContactsRepository
+import com.example.ui.util.UserFeedback
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -41,18 +42,26 @@ class PhoneViewModel(application: Application) : AndroidViewModel(application) {
 
     fun favorites(): List<Contact> = _contacts.value.filter { it.isFavorite }
 
-    /** Removes calls from the history of the phone and shows the list without them. */
+    /**
+     * Removes calls from the history of the phone and shows the list without them.
+     *
+     * The repository answers whether the provider accepted it. It used to be
+     * ignored, and a refused permission looked exactly like a deletion: the
+     * list was read again, the lines were still there, and nothing said why.
+     */
     fun deleteCalls(ids: List<Long>) {
         if (ids.isEmpty()) return
         viewModelScope.launch {
-            CallLogRepository.delete(getApplication<Application>(), ids)
+            val done = CallLogRepository.delete(getApplication<Application>(), ids)
+            if (!done) UserFeedback.failed("delete_failed")
             _callLog.value = CallLogRepository.load(getApplication<Application>())
         }
     }
 
     fun clearCallLog() {
         viewModelScope.launch {
-            CallLogRepository.clear(getApplication<Application>())
+            val done = CallLogRepository.clear(getApplication<Application>())
+            if (!done) UserFeedback.failed("delete_failed")
             _callLog.value = CallLogRepository.load(getApplication<Application>())
         }
     }
@@ -60,7 +69,12 @@ class PhoneViewModel(application: Application) : AndroidViewModel(application) {
     /** Stars a contact, or takes the star away; the favourites tab reads it back. */
     fun setFavorite(contact: Contact, favorite: Boolean) {
         viewModelScope.launch {
-            ContactsRepository.setFavorite(getApplication<Application>(), contact, favorite)
+            val done = ContactsRepository.setFavorite(
+                getApplication<Application>(),
+                contact,
+                favorite
+            )
+            if (!done) UserFeedback.failed("save_failed")
             _contacts.value = ContactsRepository.load(getApplication<Application>())
         }
     }

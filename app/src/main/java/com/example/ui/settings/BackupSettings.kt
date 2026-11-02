@@ -11,8 +11,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.Upload
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -117,7 +117,7 @@ fun BackupSection() {
             enabled = !busy,
             onClick = { exportLauncher.launch(SettingsBackup.suggestedFileName()) }
         ) {
-            Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.Download, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text(LanguageManager.getString("backup_export"))
         }
@@ -127,7 +127,7 @@ fun BackupSection() {
                 importLauncher.launch(arrayOf("application/json", "text/plain", "*/*"))
             }
         ) {
-            Icon(Icons.Default.Upload, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.Upload, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text(LanguageManager.getString("backup_import"))
         }

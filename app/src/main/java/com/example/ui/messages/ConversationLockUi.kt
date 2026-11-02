@@ -14,8 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -63,7 +63,7 @@ fun PinPromptDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                imageVector = Icons.Default.Lock,
+                imageVector = Icons.Rounded.Lock,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -158,7 +158,7 @@ fun PinSetupDialog(onDismiss: () -> Unit, onDone: () -> Unit) {
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                imageVector = Icons.Default.Lock,
+                imageVector = Icons.Rounded.Lock,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -316,7 +316,7 @@ fun ForgottenCodeDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                imageVector = Icons.Default.Lock,
+                imageVector = Icons.Rounded.Lock,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -452,7 +452,7 @@ fun GiveUpLockDialog(onDismiss: () -> Unit, onDone: (Int) -> Unit) {
         onDismissRequest = { if (!working) onDismiss() },
         icon = {
             Icon(
-                imageVector = Icons.Default.Warning,
+                imageVector = Icons.Rounded.Warning,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error
             )
@@ -523,7 +523,7 @@ fun LockedConversationGate(onBack: () -> Unit, onUnlocked: () -> Unit) {
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Icon(
-                imageVector = Icons.Default.Lock,
+                imageVector = Icons.Rounded.Lock,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(56.dp)

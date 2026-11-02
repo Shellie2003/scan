@@ -26,19 +26,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.automirrored.filled.VolumeUp
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.CallEnd
-import androidx.compose.material.icons.filled.Dialpad
-import androidx.compose.material.icons.filled.Mic
-import androidx.compose.material.icons.filled.MicOff
-import androidx.compose.material.icons.filled.Pause
-import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.SimCard
+import androidx.compose.material.icons.automirrored.rounded.Message
+import androidx.compose.material.icons.automirrored.rounded.VolumeUp
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.CallEnd
+import androidx.compose.material.icons.rounded.Dialpad
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.MicOff
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.SimCard
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
@@ -174,137 +176,142 @@ fun InCallScreen(onFinished: () -> Unit) {
             return@Box
         }
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.TopCenter)
-                .padding(top = 48.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // The face of whoever is calling, when the phone knows it. On a
-            // ringing screen, a photo says in an instant what a name takes a
-            // second to read.
-            PhotoAvatar(
-                photoUri = call.photoUri,
-                initials = call.label.take(1).uppercase().ifBlank { "#" },
-                size = 96.dp
-            )
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = call.label.ifBlank { LanguageManager.getString("unknown_number") },
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Bold,
-                textAlign = TextAlign.Center
-            )
-            Spacer(Modifier.height(6.dp))
-            CallStatusLine(call)
-            // Which line is ringing, on a phone that holds three of them.
-            if (call.simLabel.isNotBlank()) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.SimCard,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.size(14.dp)
-                    )
-                    Spacer(Modifier.width(4.dp))
+        // A column of two parts rather than two things pinned to two edges: on
+        // a short screen the keypad used to be drawn straight over the name of
+        // the caller. What gives way now is the room around the name, and the
+        // buttons keep theirs.
+        Column(modifier = Modifier.fillMaxSize()) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.Center,
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // The face of whoever is calling, when the phone knows it. On a
+                // ringing screen, a photo says in an instant what a name takes a
+                // second to read.
+                PhotoAvatar(
+                    photoUri = call.photoUri,
+                    initials = call.label.take(1).uppercase().ifBlank { "#" },
+                    size = 96.dp
+                )
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = call.label.ifBlank { LanguageManager.getString("unknown_number") },
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(Modifier.height(6.dp))
+                CallStatusLine(call)
+                // Which line is ringing, on a phone that holds three of them.
+                if (call.simLabel.isNotBlank()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(
+                            imageVector = Icons.Rounded.SimCard,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Spacer(Modifier.width(4.dp))
+                        Text(
+                            text = call.simLabel,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(Modifier.height(2.dp))
+                }
+                if (call.displayName.isNotBlank() && call.number.isNotBlank()) {
                     Text(
-                        text = call.simLabel,
-                        style = MaterialTheme.typography.labelMedium,
+                        text = NumberUtils.formatForDisplay(call.number),
+                        style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                Spacer(Modifier.height(2.dp))
-            }
-            if (call.displayName.isNotBlank() && call.number.isNotBlank()) {
-                Text(
-                    text = NumberUtils.formatForDisplay(call.number),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .align(Alignment.BottomCenter),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            if (showKeypad && !call.isRinging) {
-                DtmfPad(onDigit = { OngoingCallStore.playDtmf(call.id, it) })
-                Spacer(Modifier.height(16.dp))
             }
 
-            if (!call.isRinging) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    CallToggle(
-                        icon = if (muted) Icons.Default.MicOff else Icons.Default.Mic,
-                        label = LanguageManager.getString("mute"),
-                        active = muted,
-                        onClick = { OngoingCallStore.setMuted(!muted) }
-                    )
-                    CallToggle(
-                        icon = Icons.AutoMirrored.Filled.VolumeUp,
-                        label = LanguageManager.getString("speaker"),
-                        active = speakerOn,
-                        onClick = { OngoingCallStore.setSpeaker(!speakerOn) }
-                    )
-                    CallToggle(
-                        icon = if (call.isHeld) Icons.Default.PlayArrow else Icons.Default.Pause,
-                        label = LanguageManager.getString("hold"),
-                        active = call.isHeld,
-                        onClick = { OngoingCallStore.toggleHold(call.id) }
-                    )
-                    CallToggle(
-                        icon = Icons.Default.Dialpad,
-                        label = LanguageManager.getString("keypad"),
-                        active = showKeypad,
-                        onClick = { showKeypad = !showKeypad }
-                    )
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                if (showKeypad && !call.isRinging) {
+                    DtmfPad(onDigit = { OngoingCallStore.playDtmf(call.id, it) })
+                    Spacer(Modifier.height(16.dp))
                 }
-                Spacer(Modifier.height(28.dp))
-            }
 
-            if (call.isRinging) {
-                SwipeToAnswer(
-                    onAnswer = { OngoingCallStore.answer(call.id) },
-                    onDecline = { OngoingCallStore.reject(call.id) },
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-                // Refusing without leaving the caller with nothing: the call is
-                // declined and the message goes out on its own.
-                TextButton(
-                    onClick = { quickReplyFor = call.id },
-                    modifier = Modifier.padding(bottom = 24.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Message,
-                        contentDescription = null,
-                        modifier = Modifier.size(18.dp)
-                    )
-                    Spacer(Modifier.width(6.dp))
-                    Text(
-                        text = LanguageManager.getString("reply_by_message"),
-                        style = MaterialTheme.typography.labelLarge
-                    )
+                if (!call.isRinging) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        CallToggle(
+                            icon = if (muted) Icons.Rounded.MicOff else Icons.Rounded.Mic,
+                            label = LanguageManager.getString("mute"),
+                            active = muted,
+                            onClick = { OngoingCallStore.setMuted(!muted) }
+                        )
+                        CallToggle(
+                            icon = Icons.AutoMirrored.Rounded.VolumeUp,
+                            label = LanguageManager.getString("speaker"),
+                            active = speakerOn,
+                            onClick = { OngoingCallStore.setSpeaker(!speakerOn) }
+                        )
+                        CallToggle(
+                            icon = if (call.isHeld) Icons.Rounded.PlayArrow else Icons.Rounded.Pause,
+                            label = LanguageManager.getString("hold"),
+                            active = call.isHeld,
+                            onClick = { OngoingCallStore.toggleHold(call.id) }
+                        )
+                        CallToggle(
+                            icon = Icons.Rounded.Dialpad,
+                            label = LanguageManager.getString("keypad"),
+                            active = showKeypad,
+                            onClick = { showKeypad = !showKeypad }
+                        )
+                    }
+                    Spacer(Modifier.height(28.dp))
                 }
-            } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 40.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    BigCallButton(
-                        icon = Icons.Default.CallEnd,
-                        color = MaterialTheme.scanColors.hangUp,
-                        description = LanguageManager.getString("hang_up"),
-                        onClick = { OngoingCallStore.hangUp(call.id) }
+
+                if (call.isRinging) {
+                    SwipeToAnswer(
+                        onAnswer = { OngoingCallStore.answer(call.id) },
+                        onDecline = { OngoingCallStore.reject(call.id) },
+                        modifier = Modifier.padding(bottom = 8.dp)
                     )
+                    // Refusing without leaving the caller with nothing: the call is
+                    // declined and the message goes out on its own.
+                    TextButton(
+                        onClick = { quickReplyFor = call.id },
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.Message,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = LanguageManager.getString("reply_by_message"),
+                            style = MaterialTheme.typography.labelLarge
+                        )
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 24.dp),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        BigCallButton(
+                            icon = Icons.Rounded.CallEnd,
+                            color = MaterialTheme.scanColors.hangUp,
+                            description = LanguageManager.getString("hang_up"),
+                            onClick = { OngoingCallStore.hangUp(call.id) }
+                        )
+                    }
                 }
             }
         }
@@ -417,7 +424,7 @@ private fun SwipeToAnswer(
         contentAlignment = Alignment.Center
     ) {
         SwipeEnd(
-            icon = Icons.Default.CallEnd,
+            icon = Icons.Rounded.CallEnd,
             color = MaterialTheme.scanColors.hangUp,
             description = LanguageManager.getString("decline"),
             alpha = 0.4f + 0.6f * (-progress).coerceAtLeast(0f),
@@ -425,7 +432,7 @@ private fun SwipeToAnswer(
             modifier = Modifier.align(Alignment.CenterStart)
         )
         SwipeEnd(
-            icon = Icons.Default.Call,
+            icon = Icons.Rounded.Call,
             color = MaterialTheme.scanColors.success,
             description = LanguageManager.getString("answer"),
             alpha = 0.4f + 0.6f * progress.coerceAtLeast(0f),
@@ -475,7 +482,7 @@ private fun SwipeToAnswer(
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Call,
+                imageVector = Icons.Rounded.Call,
                 contentDescription = LanguageManager.getString("answer"),
                 tint = Color.White,
                 modifier = Modifier.size(32.dp)

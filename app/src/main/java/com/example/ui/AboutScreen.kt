@@ -12,9 +12,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.OpenInNew
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
+import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -52,7 +52,7 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
         if (onBack != null) {
             TextButton(onClick = onBack, modifier = Modifier.padding(start = 8.dp, top = 8.dp)) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = null,
                     modifier = Modifier.size(18.dp)
                 )
@@ -159,7 +159,7 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
                         horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Build,
+                            imageVector = Icons.Rounded.Build,
                             contentDescription = null,
                             tint = brandColor,
                             modifier = Modifier.size(20.dp)
@@ -197,7 +197,7 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
             ContactItem(
                 title = "AinaDigit Phone",
                 value = "034 77 205 85",
-                icon = Icons.Default.Phone,
+                icon = Icons.Rounded.Phone,
                 onActionClick = {
                     try {
                         val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:0347720585"))
@@ -217,7 +217,7 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
             ContactItem(
                 title = "AinaDigit Email",
                 value = "shellinopierre@gmail.com",
-                icon = Icons.Default.Email,
+                icon = Icons.Rounded.Email,
                 onActionClick = {
                     try {
                         val intent = Intent(Intent.ACTION_SENDTO).apply {
@@ -248,7 +248,7 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Security,
+                        imageVector = Icons.Rounded.Security,
                         contentDescription = "Secure",
                         tint = MaterialTheme.scanColors.success,
                         modifier = Modifier.size(14.dp)
@@ -327,7 +327,7 @@ fun ContactItem(
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 IconButton(onClick = onCopyClick) {
                     Icon(
-                        imageVector = Icons.Default.ContentCopy,
+                        imageVector = Icons.Rounded.ContentCopy,
                         contentDescription = "Copy",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
@@ -335,7 +335,7 @@ fun ContactItem(
                 }
                 IconButton(onClick = onActionClick) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.OpenInNew,
+                        imageVector = Icons.AutoMirrored.Rounded.OpenInNew,
                         contentDescription = "Open",
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(20.dp)

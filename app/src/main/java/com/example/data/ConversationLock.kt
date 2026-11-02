@@ -5,6 +5,8 @@ import com.example.telephony.NumberUtils
 import com.example.telephony.SmsRepository
 import java.security.MessageDigest
 import java.security.SecureRandom
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 
 /**
  * The lock on a discussion.
@@ -141,7 +143,10 @@ object ConversationLock {
      * when nothing could be deleted — a read permission refused must not leave
      * a lock nobody can open behind.
      */
-    suspend fun forget(context: Context): Int {
+    suspend fun forget(context: Context): Int = withContext(NonCancellable) {
+        // Not cancellable once begun: the screen that asked for this can be
+        // left, and half a lock given up — the code gone with the discussions
+        // still hidden, or the reverse — is a state nothing can get out of.
         var deleted = 0
         lockedKeys(context).forEach { key ->
             deleted += try {
@@ -151,7 +156,7 @@ object ConversationLock {
             }
         }
         removeWithCode(context)
-        return deleted
+        deleted
     }
 
     fun isAcceptable(pin: String): Boolean =

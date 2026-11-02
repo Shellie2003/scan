@@ -41,13 +41,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Clear
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.FlashOff
-import androidx.compose.material.icons.filled.FlashOn
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.CheckCircle
+import androidx.compose.material.icons.rounded.Clear
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FlashOff
+import androidx.compose.material.icons.rounded.FlashOn
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -507,7 +507,7 @@ fun CameraContent(
                     modifier = Modifier.weight(1f)
                 ) {
                     Icon(
-                        imageVector = if (autoValidation) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                        imageVector = if (autoValidation) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
                         contentDescription = null,
                         tint = if (autoValidation) brandColor else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(24.dp)
@@ -572,7 +572,7 @@ fun CameraContent(
                 )
             ) {
                 Icon(
-                    imageVector = if (torchEnabled) Icons.Default.FlashOn else Icons.Default.FlashOff,
+                    imageVector = if (torchEnabled) Icons.Rounded.FlashOn else Icons.Rounded.FlashOff,
                     contentDescription = LanguageManager.getString("flash"),
                     tint = if (torchEnabled) accentColor else MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -711,7 +711,7 @@ fun CameraContent(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.CheckCircle,
+                                imageVector = Icons.Rounded.CheckCircle,
                                 contentDescription = null,
                                 tint = cameraSuccess,
                                 modifier = Modifier.size(64.dp)
@@ -772,7 +772,7 @@ fun CameraContent(
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.ContentCopy,
+                            imageVector = Icons.Rounded.ContentCopy,
                             contentDescription = LanguageManager.getString("copy"),
                             tint = brandColor,
                             modifier = Modifier.size(18.dp)
@@ -780,7 +780,7 @@ fun CameraContent(
                     }
                     IconButton(onClick = { isEditing = !isEditing }, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
+                            imageVector = Icons.Rounded.Edit,
                             contentDescription = LanguageManager.getString("edit"),
                             tint = brandColor,
                             modifier = Modifier.size(18.dp)
@@ -794,7 +794,7 @@ fun CameraContent(
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Clear,
+                            imageVector = Icons.Rounded.Clear,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
@@ -821,7 +821,7 @@ fun CameraContent(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Warning,
+                        imageVector = Icons.Rounded.Warning,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(20.dp)

@@ -130,16 +130,30 @@ object OngoingCallStore {
 
     // ------------------------------------------------------------------ actions
 
-    fun answer(id: String) {
-        resolve(id)?.answer(VideoProfile.STATE_AUDIO_ONLY)
-    }
+    /**
+     * Answers, refuses, hangs up — and says whether it went through.
+     *
+     * Each of these three reaches the telecom framework, which can refuse: the
+     * call has just ended, the permission to answer was never granted, the
+     * framework has already let go of it. Thrown from a notification button,
+     * that exception used to take the whole application down while the phone
+     * was ringing. It is caught here, and what the caller gets back is enough
+     * to tell the user that nothing happened.
+     */
+    fun answer(id: String): Boolean = act(id) { it.answer(VideoProfile.STATE_AUDIO_ONLY) }
 
-    fun reject(id: String) {
-        resolve(id)?.reject(false, null)
-    }
+    fun reject(id: String): Boolean = act(id) { it.reject(false, null) }
 
-    fun hangUp(id: String) {
-        resolve(id)?.disconnect()
+    fun hangUp(id: String): Boolean = act(id) { it.disconnect() }
+
+    private inline fun act(id: String, action: (Call) -> Unit): Boolean {
+        val call = resolve(id) ?: return false
+        return try {
+            action(call)
+            true
+        } catch (e: Exception) {
+            false
+        }
     }
 
     /** The number of a call, to answer it by message instead of by voice. */
@@ -160,31 +174,53 @@ object OngoingCallStore {
         ?: tracked.values.lastOrNull()
 
     fun hangUpAll() {
-        tracked.values.toList().forEach { it.disconnect() }
+        tracked.values.toList().forEach { call ->
+            try {
+                call.disconnect()
+            } catch (e: Exception) {
+                // One call that will not let go must not keep the others up.
+            }
+        }
     }
 
     fun toggleHold(id: String) {
         val call = tracked[id] ?: return
-        @Suppress("DEPRECATION")
-        if (call.state == Call.STATE_HOLDING) call.unhold() else call.hold()
+        try {
+            @Suppress("DEPRECATION")
+            if (call.state == Call.STATE_HOLDING) call.unhold() else call.hold()
+        } catch (e: Exception) {
+            // A line that refuses to be held stays as it is.
+        }
     }
 
     fun setMuted(muted: Boolean) {
-        service?.setMuted(muted)
+        try {
+            service?.setMuted(muted)
+        } catch (e: Exception) {
+            // The audio route is the framework's to give.
+        }
         _muted.value = muted
     }
 
     fun setSpeaker(on: Boolean) {
-        service?.setAudioRoute(
-            if (on) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_EARPIECE
-        )
+        try {
+            service?.setAudioRoute(
+                if (on) CallAudioState.ROUTE_SPEAKER else CallAudioState.ROUTE_EARPIECE
+            )
+        } catch (e: Exception) {
+            // Same: the button goes back to what the framework reports.
+        }
         _speakerOn.value = on
     }
 
     fun playDtmf(id: String, digit: Char) {
         val call = tracked[id] ?: return
-        call.playDtmfTone(digit)
-        call.stopDtmfTone()
+        try {
+            call.playDtmfTone(digit)
+            call.stopDtmfTone()
+        } catch (e: Exception) {
+            // A tone the line will not play is not worth a crash.
+        }
     }
 
     // ------------------------------------------------------------------ helpers

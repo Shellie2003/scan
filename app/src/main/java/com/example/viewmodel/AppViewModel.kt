@@ -15,6 +15,7 @@ import com.example.telephony.SimCard
 import com.example.telephony.SimManager
 import com.example.telephony.SimRouting
 import com.example.telephony.SimRouter
+import com.example.ui.util.UserFeedback
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -148,11 +149,17 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun deleteOffer(offer: Offer) {
-        viewModelScope.launch { offerDao.delete(offer) }
+        viewModelScope.launch {
+            UserFeedback.attempt("delete_failed") { offerDao.delete(offer) }
+        }
     }
 
     fun toggleFavorite(offer: Offer) {
-        viewModelScope.launch { offerDao.update(offer.copy(isFavorite = !offer.isFavorite)) }
+        viewModelScope.launch {
+            UserFeedback.attempt("save_failed") {
+                offerDao.update(offer.copy(isFavorite = !offer.isFavorite))
+            }
+        }
     }
 
     /** Puts back the plans shipped with the app, keeping the ones created by the user. */
@@ -228,11 +235,15 @@ class AppViewModel(application: Application) : AndroidViewModel(application) {
 
     /** Removes one line of the history — the user decides what is kept. */
     fun deleteHistory(entry: ScanHistory) {
-        viewModelScope.launch { historyDao.deleteById(entry.id) }
+        viewModelScope.launch {
+            UserFeedback.attempt("delete_failed") { historyDao.deleteById(entry.id) }
+        }
     }
 
     fun clearHistory() {
-        viewModelScope.launch { historyDao.clear() }
+        viewModelScope.launch {
+            UserFeedback.attempt("delete_failed") { historyDao.clear() }
+        }
     }
 
     /**

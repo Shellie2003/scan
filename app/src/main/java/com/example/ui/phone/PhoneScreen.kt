@@ -33,25 +33,25 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Backspace
-import androidx.compose.material.icons.automirrored.filled.CallMade
-import androidx.compose.material.icons.automirrored.filled.CallMissed
-import androidx.compose.material.icons.automirrored.filled.CallReceived
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ContentPaste
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Contacts
-import androidx.compose.material.icons.filled.Dialpad
-import androidx.compose.material.icons.filled.History
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.PersonAdd
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.automirrored.rounded.Backspace
+import androidx.compose.material.icons.automirrored.rounded.CallMade
+import androidx.compose.material.icons.automirrored.rounded.CallMissed
+import androidx.compose.material.icons.automirrored.rounded.CallReceived
+import androidx.compose.material.icons.automirrored.rounded.Message
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Contacts
+import androidx.compose.material.icons.rounded.Dialpad
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -228,9 +228,9 @@ fun PhoneScreen(
                         icon = {
                             Icon(
                                 imageVector = when (entry) {
-                                    PhoneTab.RECENTS -> Icons.Default.History
-                                    PhoneTab.CONTACTS -> Icons.Default.Contacts
-                                    PhoneTab.FAVORITES -> Icons.Default.Star
+                                    PhoneTab.RECENTS -> Icons.Rounded.History
+                                    PhoneTab.CONTACTS -> Icons.Rounded.Contacts
+                                    PhoneTab.FAVORITES -> Icons.Rounded.Star
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
@@ -321,7 +321,7 @@ fun PhoneScreen(
                 .padding(16.dp)
         ) {
             Icon(
-                imageVector = Icons.Default.Dialpad,
+                imageVector = Icons.Rounded.Dialpad,
                 contentDescription = LanguageManager.getString("open_keypad")
             )
         }
@@ -591,7 +591,7 @@ private fun KeypadSheet(
                 }
             ) {
                 Icon(
-                    imageVector = Icons.Default.ContentPaste,
+                    imageVector = Icons.Rounded.ContentPaste,
                     contentDescription = null,
                     modifier = Modifier.size(16.dp)
                 )
@@ -606,7 +606,7 @@ private fun KeypadSheet(
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ContentCopy,
+                        imageVector = Icons.Rounded.ContentCopy,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -618,7 +618,7 @@ private fun KeypadSheet(
                 }
                 TextButton(onClick = { onMessage(input) }) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Message,
+                        imageVector = Icons.AutoMirrored.Rounded.Message,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -684,7 +684,7 @@ private fun KeypadSheet(
                 )
             ) {
                 Icon(
-                    imageVector = Icons.Default.Call,
+                    imageVector = Icons.Rounded.Call,
                     contentDescription = LanguageManager.getString("call"),
                     modifier = Modifier.size(28.dp)
                 )
@@ -702,7 +702,7 @@ private fun KeypadSheet(
             ) {
                 if (input.isNotEmpty()) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Backspace,
+                        imageVector = Icons.AutoMirrored.Rounded.Backspace,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -760,7 +760,7 @@ private fun RecentsTab(
 ) {
     if (!hasPermission) {
         EmptyState(
-            icon = Icons.Default.History,
+            icon = Icons.Rounded.History,
             title = LanguageManager.getString("permission_calllog"),
             description = LanguageManager.getString("permission_calllog_desc"),
             actionLabel = LanguageManager.getString("grant_permission"),
@@ -770,7 +770,7 @@ private fun RecentsTab(
     }
     if (entries.isEmpty()) {
         EmptyState(
-            icon = Icons.Default.History,
+            icon = Icons.Rounded.History,
             title = LanguageManager.getString("no_recent_calls")
         )
         return
@@ -788,7 +788,7 @@ private fun RecentsTab(
             ) {
                 TextButton(onClick = onClear) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = Icons.Rounded.Delete,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )
@@ -872,9 +872,9 @@ private fun CallRow(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     imageVector = when {
-                        entry.isMissed -> Icons.AutoMirrored.Filled.CallMissed
-                        entry.isIncoming -> Icons.AutoMirrored.Filled.CallReceived
-                        else -> Icons.AutoMirrored.Filled.CallMade
+                        entry.isMissed -> Icons.AutoMirrored.Rounded.CallMissed
+                        entry.isIncoming -> Icons.AutoMirrored.Rounded.CallReceived
+                        else -> Icons.AutoMirrored.Rounded.CallMade
                     },
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -901,7 +901,7 @@ private fun CallRow(
         }
         IconButton(onClick = onMessage) {
             Icon(
-                imageVector = Icons.AutoMirrored.Filled.Message,
+                imageVector = Icons.AutoMirrored.Rounded.Message,
                 contentDescription = LanguageManager.getString("send_message"),
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
@@ -909,7 +909,7 @@ private fun CallRow(
         }
         IconButton(onClick = onCall) {
             Icon(
-                imageVector = Icons.Default.Call,
+                imageVector = Icons.Rounded.Call,
                 contentDescription = LanguageManager.getString("call"),
                 tint = MaterialTheme.scanColors.success
             )
@@ -918,7 +918,7 @@ private fun CallRow(
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
                 text = { Text(LanguageManager.getString("copy")) },
-                leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
                 onClick = {
                     menuOpen = false
                     copy()
@@ -926,7 +926,7 @@ private fun CallRow(
             )
             DropdownMenuItem(
                 text = { Text(LanguageManager.getString("send_message")) },
-                leadingIcon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
+                leadingIcon = { Icon(Icons.AutoMirrored.Rounded.Message, contentDescription = null) },
                 onClick = {
                     menuOpen = false
                     onMessage()
@@ -936,7 +936,7 @@ private fun CallRow(
             if (entry.name.isBlank()) {
                 DropdownMenuItem(
                     text = { Text(LanguageManager.getString("new_contact")) },
-                    leadingIcon = { Icon(Icons.Default.PersonAdd, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Rounded.PersonAdd, contentDescription = null) },
                     onClick = {
                         menuOpen = false
                         onAddContact()
@@ -945,7 +945,7 @@ private fun CallRow(
             }
             DropdownMenuItem(
                 text = { Text(LanguageManager.getString("block_number")) },
-                leadingIcon = { Icon(Icons.Default.Block, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.Block, contentDescription = null) },
                 onClick = {
                     menuOpen = false
                     onBlock()
@@ -960,7 +960,7 @@ private fun CallRow(
                 },
                 leadingIcon = {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = Icons.Rounded.Delete,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.error
                     )
@@ -988,7 +988,7 @@ private fun ContactsTab(
 ) {
     if (!hasPermission) {
         EmptyState(
-            icon = Icons.Default.Contacts,
+            icon = Icons.Rounded.Contacts,
             title = LanguageManager.getString("permission_contacts"),
             description = LanguageManager.getString("permission_contacts_desc"),
             actionLabel = LanguageManager.getString("grant_permission"),
@@ -1004,7 +1004,7 @@ private fun ContactsTab(
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             placeholder = { Text(LanguageManager.getString("search_contacts")) },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
@@ -1030,7 +1030,7 @@ private fun ContactsTab(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Default.PersonAdd,
+                            imageVector = Icons.Rounded.PersonAdd,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(22.dp)
@@ -1049,7 +1049,7 @@ private fun ContactsTab(
             if (filtered.isEmpty()) {
                 item {
                     EmptyState(
-                        icon = Icons.Default.Person,
+                        icon = Icons.Rounded.Person,
                         title = LanguageManager.getString("no_contacts")
                     )
                 }
@@ -1162,7 +1162,7 @@ private fun ContactRow(
             }
             IconButton(onClick = onMessage) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Message,
+                    imageVector = Icons.AutoMirrored.Rounded.Message,
                     contentDescription = LanguageManager.getString("send_message"),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(20.dp)
@@ -1170,7 +1170,7 @@ private fun ContactRow(
             }
             IconButton(onClick = onCall) {
                 Icon(
-                    imageVector = Icons.Default.Call,
+                    imageVector = Icons.Rounded.Call,
                     contentDescription = LanguageManager.getString("call"),
                     tint = MaterialTheme.scanColors.success
                 )
@@ -1178,7 +1178,7 @@ private fun ContactRow(
             if (hasMenu) {
                 IconButton(onClick = { menuOpen = true }) {
                     Icon(
-                        imageVector = Icons.Default.MoreVert,
+                        imageVector = Icons.Rounded.MoreVert,
                         contentDescription = LanguageManager.getString("details"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(20.dp)
@@ -1190,7 +1190,7 @@ private fun ContactRow(
         DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
             DropdownMenuItem(
                 text = { Text(LanguageManager.getString("copy")) },
-                leadingIcon = { Icon(Icons.Default.ContentCopy, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.ContentCopy, contentDescription = null) },
                 onClick = {
                     menuOpen = false
                     copy()
@@ -1199,7 +1199,7 @@ private fun ContactRow(
             onEdit?.let { edit ->
                 DropdownMenuItem(
                     text = { Text(LanguageManager.getString("edit_contact")) },
-                    leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                    leadingIcon = { Icon(Icons.Rounded.Edit, contentDescription = null) },
                     onClick = {
                         menuOpen = false
                         edit()
@@ -1216,7 +1216,7 @@ private fun ContactRow(
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            imageVector = Icons.Rounded.Delete,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error
                         )
@@ -1236,7 +1236,7 @@ private fun ContactRow(
 private fun FavoritesTab(contacts: List<Contact>, onCall: (String) -> Unit) {
     if (contacts.isEmpty()) {
         EmptyState(
-            icon = Icons.Default.Star,
+            icon = Icons.Rounded.Star,
             title = LanguageManager.getString("no_favorites")
         )
         return

@@ -5,7 +5,9 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.widget.Toast
 import com.example.ui.call.InCallActivity
+import com.example.ui.util.LanguageManager
 
 /**
  * Answering and refusing a call from the band at the top of the screen.
@@ -19,16 +21,35 @@ class CallActionReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
         val id = intent.getStringExtra(EXTRA_CALL_ID).orEmpty()
-        when (intent.action) {
+        val done = when (intent.action) {
             ACTION_ANSWER -> {
-                OngoingCallStore.answer(id)
+                val answered = OngoingCallStore.answer(id)
                 // The conversation now belongs on the screen; a refused start is
                 // swallowed by the activity itself, and the notification remains.
-                InCallActivity.start(context)
+                if (answered) InCallActivity.start(context)
+                answered
             }
 
             ACTION_DECLINE -> OngoingCallStore.reject(id)
             ACTION_HANG_UP -> OngoingCallStore.hangUp(id)
+            // Not ours: nothing to report.
+            else -> true
+        }
+        if (!done) {
+            // A button that does nothing is the worst answer of all: the user
+            // presses it again, and again, while the phone keeps ringing. One
+            // line is enough to send them to the call screen instead.
+            LanguageManager.init(context)
+            try {
+                Toast.makeText(
+                    context,
+                    LanguageManager.getString("call_action_failed"),
+                    Toast.LENGTH_SHORT
+                ).show()
+            } catch (e: Exception) {
+                // No window to show it in; the call screen below still opens.
+            }
+            InCallActivity.start(context)
         }
     }
 

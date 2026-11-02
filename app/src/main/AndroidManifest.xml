@@ -25,6 +25,14 @@
          leaving the application does not cut the campaign in half. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- The band of an ongoing call keeps its buttons only while the service
+         that posted it runs in the foreground: the system drops the call style
+         of a notification that belongs to nothing. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
+    <!-- Declared for the phone-call foreground service above, which the system
+         accepts from an app that manages calls. Granted at installation, never
+         asked of the user. -->
+    <uses-permission android:name="android.permission.MANAGE_OWN_CALLS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.VIBRATE" />
     <!-- Only to set the ringtone the user picks as the ringtone of the phone.
@@ -165,6 +173,7 @@
         <service
             android:name=".telephony.PhoneCallService"
             android:exported="true"
+            android:foregroundServiceType="phoneCall"
             android:permission="android.permission.BIND_INCALL_SERVICE">
             <meta-data
                 android:name="android.telecom.IN_CALL_SERVICE_UI"

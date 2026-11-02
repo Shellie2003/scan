@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Dialpad
+import androidx.compose.material.icons.rounded.Dialpad
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -298,7 +298,7 @@ fun WithSimRouting(
                             modifier = Modifier.fillMaxWidth()
                         ) {
                             Icon(
-                                imageVector = Icons.Default.Dialpad,
+                                imageVector = Icons.Rounded.Dialpad,
                                 contentDescription = null,
                                 modifier = Modifier.size(16.dp)
                             )

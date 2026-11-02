@@ -19,11 +19,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Contacts
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.Contacts
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -258,7 +258,7 @@ fun ShareScreen(
             Spacer(Modifier.width(8.dp))
             IconButton(onClick = { showContacts = true }) {
                 Icon(
-                    imageVector = Icons.Default.Contacts,
+                    imageVector = Icons.Rounded.Contacts,
                     contentDescription = LanguageManager.getString("tab_contacts"),
                     tint = theme.mainColor
                 )
@@ -385,7 +385,7 @@ fun ShareScreen(
                     contentColor = theme.mainColor
                 )
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(LanguageManager.getString("queue_share"), style = MaterialTheme.typography.labelMedium)
             }
@@ -399,7 +399,7 @@ fun ShareScreen(
                     contentColor = theme.accentColor
                 )
             ) {
-                Icon(Icons.AutoMirrored.Filled.Send, contentDescription = null, modifier = Modifier.size(16.dp))
+                Icon(Icons.AutoMirrored.Rounded.Send, contentDescription = null, modifier = Modifier.size(16.dp))
                 Spacer(Modifier.width(6.dp))
                 Text(LanguageManager.getString("execute"), style = MaterialTheme.typography.labelMedium)
             }
@@ -448,7 +448,7 @@ fun ShareScreen(
                         }
                         if (item.done) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary
                             )
@@ -463,7 +463,7 @@ fun ShareScreen(
                                 }
                             ) {
                                 Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Send,
+                                    imageVector = Icons.AutoMirrored.Rounded.Send,
                                     contentDescription = LanguageManager.getString("execute"),
                                     tint = theme.mainColor
                                 )
@@ -471,7 +471,7 @@ fun ShareScreen(
                         }
                         IconButton(onClick = { queue = queue - item }) {
                             Icon(
-                                imageVector = Icons.Default.Delete,
+                                imageVector = Icons.Rounded.Delete,
                                 contentDescription = LanguageManager.getString("delete"),
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(18.dp)

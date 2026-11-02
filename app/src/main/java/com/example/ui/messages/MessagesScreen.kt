@@ -29,16 +29,16 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Contacts
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Inbox
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.rounded.Message
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Contacts
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.Inbox
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -249,9 +249,9 @@ fun MessagesScreen(
                         icon = {
                             Icon(
                                 imageVector = when (entry) {
-                                    MessagesTab.INBOX -> Icons.Default.Inbox
-                                    MessagesTab.BULK -> Icons.Default.Group
-                                    MessagesTab.CONTACTS -> Icons.Default.Contacts
+                                    MessagesTab.INBOX -> Icons.Rounded.Inbox
+                                    MessagesTab.BULK -> Icons.Rounded.Group
+                                    MessagesTab.CONTACTS -> Icons.Rounded.Contacts
                                 },
                                 contentDescription = null,
                                 modifier = Modifier.size(18.dp)
@@ -307,7 +307,7 @@ fun MessagesScreen(
         if (tab != MessagesTab.BULK && selectedThreads.isEmpty()) {
             ExtendedFloatingActionButton(
                 onClick = { showNewMessage = true },
-                icon = { Icon(Icons.AutoMirrored.Filled.Message, contentDescription = null) },
+                icon = { Icon(Icons.AutoMirrored.Rounded.Message, contentDescription = null) },
                 text = { Text(LanguageManager.getString("new_message")) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
@@ -413,7 +413,7 @@ private fun ThreadSelectionBar(
         ) {
             IconButton(onClick = onClose) {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = Icons.Rounded.Close,
                     contentDescription = LanguageManager.getString("close"),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -427,7 +427,7 @@ private fun ThreadSelectionBar(
             )
             IconButton(onClick = onLock) {
                 Icon(
-                    imageVector = if (locked) Icons.Default.LockOpen else Icons.Default.Lock,
+                    imageVector = if (locked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
                     contentDescription = LanguageManager.getString(
                         if (locked) "unlock_conversation" else "lock_conversation"
                     ),
@@ -436,7 +436,7 @@ private fun ThreadSelectionBar(
             }
             IconButton(onClick = onDelete) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = LanguageManager.getString("delete"),
                     tint = MaterialTheme.colorScheme.error
                 )
@@ -483,7 +483,7 @@ private fun NewMessageSheet(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(LanguageManager.getString("search_contacts")) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
@@ -515,7 +515,7 @@ private fun NewMessageSheet(
                         )
                     }
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Message,
+                        imageVector = Icons.AutoMirrored.Rounded.Message,
                         contentDescription = null,
                         tint = MaterialTheme.colorScheme.primary
                     )
@@ -524,7 +524,7 @@ private fun NewMessageSheet(
 
             if (filtered.isEmpty() && !canUseTyped) {
                 EmptyState(
-                    icon = Icons.Default.Contacts,
+                    icon = Icons.Rounded.Contacts,
                     title = LanguageManager.getString("no_contacts")
                 )
             } else {
@@ -616,7 +616,7 @@ private fun InboxTab(
 ) {
     if (!hasPermission) {
         EmptyState(
-            icon = Icons.Default.Inbox,
+            icon = Icons.Rounded.Inbox,
             title = LanguageManager.getString("permission_sms_read"),
             description = LanguageManager.getString("permission_sms_read_desc"),
             actionLabel = LanguageManager.getString("grant_permission"),
@@ -670,7 +670,7 @@ private fun InboxTab(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(LanguageManager.getString("search_conversations")) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
@@ -685,7 +685,7 @@ private fun InboxTab(
                 SecureEntryRow(count = secureCount, onClick = onOpenSecure)
             }
             EmptyState(
-                icon = if (secureOpen) Icons.Default.Lock else Icons.AutoMirrored.Filled.Message,
+                icon = if (secureOpen) Icons.Rounded.Lock else Icons.AutoMirrored.Rounded.Message,
                 title = LanguageManager.getString(
                     if (secureOpen) "no_locked_conversations" else "no_conversations"
                 ),
@@ -788,7 +788,7 @@ private fun MessageMatchRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Icon(
-            imageVector = Icons.Default.Search,
+            imageVector = Icons.Rounded.Search,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(16.dp)
@@ -833,7 +833,7 @@ private fun SecureHeader(count: Int, onBack: () -> Unit) {
         ) {
             IconButton(onClick = onBack) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = LanguageManager.getString("back")
                 )
             }
@@ -873,7 +873,7 @@ private fun SecureEntryRow(count: Int, onClick: () -> Unit) {
             contentAlignment = Alignment.Center
         ) {
             Icon(
-                imageVector = Icons.Default.Lock,
+                imageVector = Icons.Rounded.Lock,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
@@ -985,7 +985,7 @@ private fun MessageContactsTab(
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+            leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             placeholder = { Text(LanguageManager.getString("search_contacts")) },
             singleLine = true,
             shape = RoundedCornerShape(14.dp),
@@ -994,7 +994,7 @@ private fun MessageContactsTab(
                 .padding(horizontal = 16.dp, vertical = 8.dp)
         )
         if (filtered.isEmpty()) {
-            EmptyState(icon = Icons.Default.Contacts, title = LanguageManager.getString("no_contacts"))
+            EmptyState(icon = Icons.Rounded.Contacts, title = LanguageManager.getString("no_contacts"))
         } else {
             LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
                 items(filtered) { contact ->
@@ -1030,7 +1030,7 @@ private fun ContactLine(contact: Contact, onClick: () -> Unit) {
             )
         }
         Icon(
-            imageVector = Icons.AutoMirrored.Filled.Message,
+            imageVector = Icons.AutoMirrored.Rounded.Message,
             contentDescription = LanguageManager.getString("send_message"),
             tint = MaterialTheme.colorScheme.primary,
             modifier = Modifier.size(20.dp)

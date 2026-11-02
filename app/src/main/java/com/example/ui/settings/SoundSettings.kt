@@ -19,8 +19,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MusicNote
-import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -132,7 +132,7 @@ fun SoundSettingsSection() {
     }
 
     SoundRow(
-        icon = Icons.Default.MusicNote,
+        icon = Icons.Rounded.MusicNote,
         title = LanguageManager.getString("call_ringtone"),
         value = ringtoneTitle,
         onClick = {
@@ -166,7 +166,7 @@ fun SoundSettingsSection() {
     )
 
     SoundRow(
-        icon = Icons.Default.Notifications,
+        icon = Icons.Rounded.Notifications,
         title = LanguageManager.getString("message_sound"),
         value = messageTitle,
         onClick = {

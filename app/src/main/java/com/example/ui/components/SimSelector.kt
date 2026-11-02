@@ -8,9 +8,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.SimCard
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.SimCard
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
@@ -68,9 +68,9 @@ fun SimSelector(
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     imageVector = if (routing.status == RoutingStatus.NO_SIM) {
-                        Icons.Default.Warning
+                        Icons.Rounded.Warning
                     } else {
-                        Icons.Default.SimCard
+                        Icons.Rounded.SimCard
                     },
                     contentDescription = LanguageManager.getString("choose_sim"),
                     tint = color,
@@ -132,7 +132,7 @@ fun SimSelector(
                         },
                         leadingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Warning,
+                                imageVector = Icons.Rounded.Warning,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error
                             )
@@ -174,7 +174,7 @@ fun SimSelector(
                     },
                     leadingIcon = {
                         Icon(
-                            imageVector = Icons.Default.SimCard,
+                            imageVector = Icons.Rounded.SimCard,
                             contentDescription = null,
                             tint = if (selected) tint else MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -182,7 +182,7 @@ fun SimSelector(
                     trailingIcon = {
                         if (selected) {
                             Icon(
-                                imageVector = Icons.Default.Check,
+                                imageVector = Icons.Rounded.Check,
                                 contentDescription = null,
                                 tint = tint
                             )

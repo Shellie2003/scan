@@ -22,15 +22,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.AddAPhoto
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.automirrored.rounded.Message
+import androidx.compose.material.icons.rounded.AddAPhoto
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -62,8 +62,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.ui.graphics.Color
@@ -206,7 +206,7 @@ fun ContactEditorSheet(
                             contact != null -> ContactAvatar(contact = contact, size = 88.dp)
 
                             else -> Icon(
-                                imageVector = Icons.Default.AddAPhoto,
+                                imageVector = Icons.Rounded.AddAPhoto,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.primary,
                                 modifier = Modifier.size(28.dp)
@@ -236,7 +236,7 @@ fun ContactEditorSheet(
                 value = name,
                 onValueChange = { name = it },
                 label = { Text(LanguageManager.getString("contact_name")) },
-                leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.Person, contentDescription = null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words
@@ -250,7 +250,7 @@ fun ContactEditorSheet(
                 value = number,
                 onValueChange = { number = it },
                 label = { Text(LanguageManager.getString("contact_number")) },
-                leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.Phone, contentDescription = null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 shape = RoundedCornerShape(14.dp),
@@ -293,7 +293,7 @@ fun DeleteContactDialog(
         onDismissRequest = onDismiss,
         icon = {
             Icon(
-                imageVector = Icons.Default.Delete,
+                imageVector = Icons.Rounded.Delete,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.error,
                 modifier = Modifier.size(24.dp)
@@ -390,7 +390,7 @@ fun ContactDetailsDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
-                                imageVector = Icons.Default.AddAPhoto,
+                                imageVector = Icons.Rounded.AddAPhoto,
                                 contentDescription = LanguageManager.getString("contact_photo"),
                                 tint = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier.size(15.dp)
@@ -434,25 +434,25 @@ fun ContactDetailsDialog(
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     ContactAction(
-                        icon = Icons.Default.Call,
+                        icon = Icons.Rounded.Call,
                         label = LanguageManager.getString("call"),
                         tint = MaterialTheme.scanColors.success,
                         onClick = onCall
                     )
                     ContactAction(
-                        icon = Icons.AutoMirrored.Filled.Message,
+                        icon = Icons.AutoMirrored.Rounded.Message,
                         label = LanguageManager.getString("send_message"),
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = onMessage
                     )
                     ContactAction(
-                        icon = Icons.Default.Edit,
+                        icon = Icons.Rounded.Edit,
                         label = LanguageManager.getString("edit"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         onClick = onEdit
                     )
                     ContactAction(
-                        icon = Icons.Default.Delete,
+                        icon = Icons.Rounded.Delete,
                         label = LanguageManager.getString("delete"),
                         tint = MaterialTheme.colorScheme.error,
                         onClick = onDelete
@@ -467,7 +467,7 @@ fun ContactDetailsDialog(
                     // The star of the phone itself, which is what fills the
                     // favourites tab — until now nothing could put anyone in it.
                     ContactAction(
-                        icon = if (favorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        icon = if (favorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                         label = LanguageManager.getString("favorite"),
                         tint = MaterialTheme.scanColors.warning,
                         onClick = {
@@ -476,7 +476,7 @@ fun ContactDetailsDialog(
                         }
                     )
                     ContactAction(
-                        icon = if (blocked) Icons.Default.Person else Icons.Default.Block,
+                        icon = if (blocked) Icons.Rounded.Person else Icons.Rounded.Block,
                         label = LanguageManager.getString(
                             if (blocked) "unblock_number" else "block_number"
                         ),
@@ -502,7 +502,7 @@ fun ContactDetailsDialog(
                         }
                     )
                     ContactAction(
-                        icon = Icons.Default.Share,
+                        icon = Icons.Rounded.Share,
                         label = LanguageManager.getString("share"),
                         tint = MaterialTheme.colorScheme.primary,
                         onClick = { shareContact(context, contact) }

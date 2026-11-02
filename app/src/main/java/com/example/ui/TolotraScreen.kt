@@ -19,16 +19,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.DataUsage
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material.icons.filled.Search
-import androidx.compose.material.icons.filled.Share
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.DataUsage
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.LocalOffer
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -143,7 +143,7 @@ fun TolotraScreen(
                 contentColor = theme.accentColor,
                 shape = RoundedCornerShape(16.dp)
             ) {
-                Icon(Icons.Default.Add, contentDescription = LanguageManager.getString("add_offer"))
+                Icon(Icons.Rounded.Add, contentDescription = LanguageManager.getString("add_offer"))
             }
         }
     ) { padding ->
@@ -169,7 +169,7 @@ fun TolotraScreen(
                 )
                 TextButton(onClick = onOpenShare) {
                     Icon(
-                        imageVector = Icons.Default.Share,
+                        imageVector = Icons.Rounded.Share,
                         contentDescription = null,
                         tint = theme.mainColor,
                         modifier = Modifier.size(16.dp)
@@ -186,7 +186,7 @@ fun TolotraScreen(
 
             if (operators.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Default.LocalOffer,
+                    icon = Icons.Rounded.LocalOffer,
                     title = LanguageManager.getString("no_operators_configured"),
                     description = LanguageManager.getString("add_operator_desc")
                 )
@@ -235,7 +235,7 @@ fun TolotraScreen(
                 Tab(
                     selected = showFavoritesOnly,
                     onClick = { showFavoritesOnly = true },
-                    text = { Icon(Icons.Default.Star, contentDescription = LanguageManager.getString("favorites")) },
+                    text = { Icon(Icons.Rounded.Star, contentDescription = LanguageManager.getString("favorites")) },
                     selectedContentColor = theme.accentColor,
                     unselectedContentColor = theme.unselectedColor
                 )
@@ -253,7 +253,7 @@ fun TolotraScreen(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(LanguageManager.getString("search_offer")) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
@@ -264,7 +264,7 @@ fun TolotraScreen(
 
             if (visibleOffers.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Default.LocalOffer,
+                    icon = Icons.Rounded.LocalOffer,
                     title = LanguageManager.getString("no_offers")
                 )
             } else {
@@ -429,7 +429,7 @@ private fun OfferCard(
                 )
                 IconButton(onClick = onToggleFavorite, modifier = Modifier.size(32.dp)) {
                     Icon(
-                        imageVector = if (offer.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                        imageVector = if (offer.isFavorite) Icons.Rounded.Star else Icons.Rounded.StarBorder,
                         contentDescription = LanguageManager.getString("favorites"),
                         tint = theme.mainColor,
                         modifier = Modifier.size(18.dp)
@@ -482,7 +482,7 @@ private fun OfferCard(
                 )
                 IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        imageVector = Icons.Rounded.Edit,
                         contentDescription = LanguageManager.getString("edit"),
                         tint = theme.mainColor,
                         modifier = Modifier.size(18.dp)
@@ -491,7 +491,7 @@ private fun OfferCard(
                 if (offer.isCustom) {
                     IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            imageVector = Icons.Rounded.Delete,
                             contentDescription = LanguageManager.getString("delete"),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
@@ -512,7 +512,7 @@ private fun OfferCard(
                         contentColor = theme.accentColor
                     )
                 ) {
-                    Icon(Icons.Default.Call, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Call, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(LanguageManager.getString("buy_for_me"), style = MaterialTheme.typography.labelMedium)
                 }
@@ -525,7 +525,7 @@ private fun OfferCard(
                         contentColor = theme.mainColor
                     )
                 ) {
-                    Icon(Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Icon(Icons.Rounded.Share, contentDescription = null, modifier = Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
                     Text(
                         text = LanguageManager.getString("offer_to_someone"),
@@ -548,7 +548,7 @@ private fun OfferCard(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(
-                        imageVector = Icons.Default.DataUsage,
+                        imageVector = Icons.Rounded.DataUsage,
                         contentDescription = null,
                         modifier = Modifier.size(16.dp)
                     )

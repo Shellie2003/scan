@@ -27,18 +27,18 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Call
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.DoneAll
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
-import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.DoneAll
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -197,7 +197,7 @@ fun ConversationScreen(
             ) {
                 IconButton(onClick = onBack) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                         contentDescription = LanguageManager.getString("back")
                     )
                 }
@@ -218,7 +218,7 @@ fun ConversationScreen(
                 }
                 IconButton(onClick = { onCall(thread.address) }) {
                     Icon(
-                        imageVector = Icons.Default.Call,
+                        imageVector = Icons.Rounded.Call,
                         contentDescription = LanguageManager.getString("call"),
                         tint = MaterialTheme.scanColors.success
                     )
@@ -226,7 +226,7 @@ fun ConversationScreen(
                 Box {
                     IconButton(onClick = { menuOpen = true }) {
                         Icon(
-                            imageVector = Icons.Default.MoreVert,
+                            imageVector = Icons.Rounded.MoreVert,
                             contentDescription = LanguageManager.getString("details")
                         )
                     }
@@ -242,9 +242,9 @@ fun ConversationScreen(
                             leadingIcon = {
                                 Icon(
                                     imageVector = if (locked) {
-                                        Icons.Default.LockOpen
+                                        Icons.Rounded.LockOpen
                                     } else {
-                                        Icons.Default.Lock
+                                        Icons.Rounded.Lock
                                     },
                                     contentDescription = null
                                 )
@@ -279,9 +279,9 @@ fun ConversationScreen(
                             leadingIcon = {
                                 Icon(
                                     imageVector = if (blocked) {
-                                        Icons.Default.Person
+                                        Icons.Rounded.Person
                                     } else {
-                                        Icons.Default.Block
+                                        Icons.Rounded.Block
                                     },
                                     contentDescription = null
                                 )
@@ -311,7 +311,7 @@ fun ConversationScreen(
                                 },
                                 leadingIcon = {
                                     Icon(
-                                        imageVector = Icons.Default.Delete,
+                                        imageVector = Icons.Rounded.Delete,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.error
                                     )
@@ -387,7 +387,7 @@ fun ConversationScreen(
                     modifier = Modifier.size(52.dp)
                 ) {
                     Icon(
-                        imageVector = Icons.AutoMirrored.Filled.Send,
+                        imageVector = Icons.AutoMirrored.Rounded.Send,
                         contentDescription = LanguageManager.getString("send")
                     )
                 }
@@ -484,7 +484,7 @@ private fun SelectionBar(
         ) {
             IconButton(onClick = onClose) {
                 Icon(
-                    imageVector = Icons.Default.Close,
+                    imageVector = Icons.Rounded.Close,
                     contentDescription = LanguageManager.getString("close"),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
@@ -498,21 +498,21 @@ private fun SelectionBar(
             )
             IconButton(onClick = onSelectAll) {
                 Icon(
-                    imageVector = Icons.Default.DoneAll,
+                    imageVector = Icons.Rounded.DoneAll,
                     contentDescription = LanguageManager.getString("select_all"),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
             IconButton(onClick = onCopy) {
                 Icon(
-                    imageVector = Icons.Default.ContentCopy,
+                    imageVector = Icons.Rounded.ContentCopy,
                     contentDescription = LanguageManager.getString("copy"),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             }
             IconButton(onClick = onDelete) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = LanguageManager.getString("delete"),
                     tint = MaterialTheme.colorScheme.error
                 )

@@ -17,9 +17,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.SimCard
-import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.rounded.Check
+import androidx.compose.material.icons.rounded.SimCard
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
@@ -89,7 +89,7 @@ fun SimIndicator(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = if (warning) Icons.Default.Warning else Icons.Default.SimCard,
+                imageVector = if (warning) Icons.Rounded.Warning else Icons.Rounded.SimCard,
                 contentDescription = null,
                 tint = if (warning) MaterialTheme.colorScheme.error else color,
                 modifier = Modifier.size(18.dp)
@@ -225,7 +225,7 @@ fun SimPickerDialog(
                             }
                             if (isSelected) {
                                 Icon(
-                                    imageVector = Icons.Default.Check,
+                                    imageVector = Icons.Rounded.Check,
                                     contentDescription = null,
                                     tint = MaterialTheme.colorScheme.primary
                                 )
@@ -309,7 +309,7 @@ fun ConfirmCodeDialog(
                     ) {
                         Row(modifier = Modifier.padding(10.dp)) {
                             Icon(
-                                imageVector = Icons.Default.Warning,
+                                imageVector = Icons.Rounded.Warning,
                                 contentDescription = null,
                                 tint = MaterialTheme.colorScheme.error,
                                 modifier = Modifier.size(18.dp)

@@ -23,12 +23,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material.icons.filled.SimCard
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Refresh
+import androidx.compose.material.icons.rounded.SimCard
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -159,12 +159,12 @@ fun SettingsScreen(app: AppViewModel) {
                     editingOperator = Operator(name = "", template = "", codeLength = 14)
                 }
             ) {
-                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(LanguageManager.getString("new_operator"))
             }
             TextButton(onClick = { app.restoreDefaultOperators() }) {
-                Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(4.dp))
                 Text(LanguageManager.getString("restore_defaults"))
             }
@@ -211,7 +211,7 @@ fun SettingsScreen(app: AppViewModel) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
-                        imageVector = Icons.Default.SimCard,
+                        imageVector = Icons.Rounded.SimCard,
                         contentDescription = null,
                         tint = OperatorColorUtils.colorOf(operator)
                     )
@@ -237,7 +237,7 @@ fun SettingsScreen(app: AppViewModel) {
                         }
                     }
                     Icon(
-                        imageVector = Icons.Default.Edit,
+                        imageVector = Icons.Rounded.Edit,
                         contentDescription = LanguageManager.getString("edit_sim"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
@@ -246,7 +246,7 @@ fun SettingsScreen(app: AppViewModel) {
             }
         }
         TextButton(onClick = { app.refreshSims() }) {
-            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text(LanguageManager.getString("retry"))
         }
@@ -322,7 +322,7 @@ fun SettingsScreen(app: AppViewModel) {
         // ----------------------------------------------------------------- plans
         SectionHeader(LanguageManager.getString("section_offers"))
         TextButton(onClick = { confirmRestoreOffers = true }) {
-            Icon(Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text(LanguageManager.getString("restore_defaults"))
         }
@@ -361,7 +361,7 @@ fun SettingsScreen(app: AppViewModel) {
                     }
                     IconButton(onClick = { app.deleteTemplate(template) }) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            imageVector = Icons.Rounded.Delete,
                             contentDescription = LanguageManager.getString("delete"),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(18.dp)
@@ -371,7 +371,7 @@ fun SettingsScreen(app: AppViewModel) {
             }
         }
         TextButton(onClick = { editingTemplate = MessageTemplate(title = "", body = "") }) {
-            Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.Add, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text(LanguageManager.getString("new_template"))
         }
@@ -422,7 +422,7 @@ fun SettingsScreen(app: AppViewModel) {
                         modifier = Modifier.size(32.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Delete,
+                            imageVector = Icons.Rounded.Delete,
                             contentDescription = LanguageManager.getString("delete"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(16.dp)
@@ -440,7 +440,7 @@ fun SettingsScreen(app: AppViewModel) {
 
         SectionHeader(LanguageManager.getString("about_title"))
         TextButton(onClick = { showAbout = true }) {
-            Icon(Icons.Default.Info, contentDescription = null, modifier = Modifier.size(18.dp))
+            Icon(Icons.Rounded.Info, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(4.dp))
             Text(LanguageManager.getString("about_title"))
         }
@@ -693,14 +693,14 @@ private fun OperatorRow(
             }
             IconButton(onClick = onEdit) {
                 Icon(
-                    imageVector = Icons.Default.Edit,
+                    imageVector = Icons.Rounded.Edit,
                     contentDescription = LanguageManager.getString("edit"),
                     modifier = Modifier.size(18.dp)
                 )
             }
             IconButton(onClick = onDelete) {
                 Icon(
-                    imageVector = Icons.Default.Delete,
+                    imageVector = Icons.Rounded.Delete,
                     contentDescription = LanguageManager.getString("delete"),
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(18.dp)

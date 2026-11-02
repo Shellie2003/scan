@@ -8,17 +8,19 @@ import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.consumeWindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.filled.LocalOffer
-import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.automirrored.rounded.Message
+import androidx.compose.material.icons.rounded.LocalOffer
+import androidx.compose.material.icons.rounded.Phone
+import androidx.compose.material.icons.rounded.QrCodeScanner
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
@@ -65,6 +67,7 @@ import com.example.ui.share.ShareScreen
 import com.example.ui.theme.ScanTheme
 import com.example.ui.theme.ThemeController
 import com.example.ui.util.LanguageManager
+import com.example.ui.util.UserFeedbackHost
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
 import com.example.viewmodel.PhoneViewModel
@@ -110,6 +113,8 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             ScanTheme {
+                // One place where every failure reported from far away surfaces.
+                UserFeedbackHost()
                 MainScreen(target = target, onTargetConsumed = { target = null })
             }
         }
@@ -163,11 +168,11 @@ private data class NavigationItem(
 )
 
 private val navigationItems = listOf(
-    NavigationItem(Routes.PHONE, "nav_phone", Icons.Default.Phone),
-    NavigationItem(Routes.MESSAGES, "nav_messages", Icons.AutoMirrored.Filled.Message),
-    NavigationItem(Routes.SCAN, "nav_scan", Icons.Default.QrCodeScanner),
-    NavigationItem(Routes.OFFERS, "nav_offers", Icons.Default.LocalOffer),
-    NavigationItem(Routes.SETTINGS, "nav_settings", Icons.Default.Settings)
+    NavigationItem(Routes.PHONE, "nav_phone", Icons.Rounded.Phone),
+    NavigationItem(Routes.MESSAGES, "nav_messages", Icons.AutoMirrored.Rounded.Message),
+    NavigationItem(Routes.SCAN, "nav_scan", Icons.Rounded.QrCodeScanner),
+    NavigationItem(Routes.OFFERS, "nav_offers", Icons.Rounded.LocalOffer),
+    NavigationItem(Routes.SETTINGS, "nav_settings", Icons.Rounded.Settings)
 )
 
 @Composable
@@ -224,69 +229,81 @@ fun MainScreen(
         }
     ) { innerPadding ->
         WithSimRouting(app) { launcher ->
-            NavHost(
-                navController = navController,
-                startDestination = Routes.PHONE,
+            // One column, and never wider than a column can be read.
+            //
+            // The application is one list after another, and a list stretched
+            // across a tablet or an unfolded phone is a line the eye loses
+            // halfway. On a telephone — which is where this runs — the limit is
+            // never reached and nothing moves.
+            Box(
                 modifier = Modifier
+                    .fillMaxSize()
                     .padding(innerPadding)
                     // What the scaffold already paid for is consumed here, so the
                     // keyboard padding of the message composer stays exact.
-                    .consumeWindowInsets(innerPadding)
+                    .consumeWindowInsets(innerPadding),
+                contentAlignment = Alignment.TopCenter
             ) {
-                composable(Routes.PHONE) {
-                    PhoneScreen(
-                        app = app,
-                        phone = phone,
-                        launcher = launcher,
-                        dialNumber = dialNumber,
-                        dialTicket = dialTicket,
-                        onMessage = { number -> openConversation(number) }
-                    )
-                }
-                composable(Routes.MESSAGES) {
-                    MessagesScreen(
-                        app = app,
-                        phone = phone,
-                        messages = messages,
-                        onOpenConversation = { address, name -> openConversation(address, name) },
-                        onOpenThread = { thread ->
-                            messages.open(thread)
-                            navController.navigate(Routes.CONVERSATION) { launchSingleTop = true }
-                        }
-                    )
-                }
-                composable(Routes.CONVERSATION) {
-                    val thread by messages.openThread.collectAsState()
-                    val current = thread
-                    // Closing the conversation — from the back arrow, a deletion or
-                    // the system back — is what leaves the screen.
-                    LaunchedEffect(current) {
-                        if (current == null) {
-                            navController.popBackStack(Routes.CONVERSATION, inclusive = true)
-                        }
-                    }
-                    if (current != null) {
-                        ConversationScreen(
+                NavHost(
+                    navController = navController,
+                    startDestination = Routes.PHONE,
+                    modifier = Modifier.widthIn(max = CONTENT_MAX_WIDTH)
+                ) {
+                    composable(Routes.PHONE) {
+                        PhoneScreen(
                             app = app,
-                            messages = messages,
-                            thread = current,
-                            onBack = { messages.close() },
-                            onCall = { number -> launcher.call(number) }
+                            phone = phone,
+                            launcher = launcher,
+                            dialNumber = dialNumber,
+                            dialTicket = dialTicket,
+                            onMessage = { number -> openConversation(number) }
                         )
                     }
-                }
-                composable(Routes.SCAN) { ScanScreen(app = app, launcher = launcher) }
-                composable(Routes.OFFERS) {
-                    TolotraScreen(
-                        app = app,
-                        launcher = launcher,
-                        onOpenShare = {
-                            navController.navigate(Routes.SHARE) { launchSingleTop = true }
+                    composable(Routes.MESSAGES) {
+                        MessagesScreen(
+                            app = app,
+                            phone = phone,
+                            messages = messages,
+                            onOpenConversation = { address, name -> openConversation(address, name) },
+                            onOpenThread = { thread ->
+                                messages.open(thread)
+                                navController.navigate(Routes.CONVERSATION) { launchSingleTop = true }
+                            }
+                        )
+                    }
+                    composable(Routes.CONVERSATION) {
+                        val thread by messages.openThread.collectAsState()
+                        val current = thread
+                        // Closing the conversation — from the back arrow, a deletion or
+                        // the system back — is what leaves the screen.
+                        LaunchedEffect(current) {
+                            if (current == null) {
+                                navController.popBackStack(Routes.CONVERSATION, inclusive = true)
+                            }
                         }
-                    )
+                        if (current != null) {
+                            ConversationScreen(
+                                app = app,
+                                messages = messages,
+                                thread = current,
+                                onBack = { messages.close() },
+                                onCall = { number -> launcher.call(number) }
+                            )
+                        }
+                    }
+                    composable(Routes.SCAN) { ScanScreen(app = app, launcher = launcher) }
+                    composable(Routes.OFFERS) {
+                        TolotraScreen(
+                            app = app,
+                            launcher = launcher,
+                            onOpenShare = {
+                                navController.navigate(Routes.SHARE) { launchSingleTop = true }
+                            }
+                        )
+                    }
+                    composable(Routes.SHARE) { ShareScreen(app = app, phone = phone, launcher = launcher) }
+                    composable(Routes.SETTINGS) { SettingsScreen(app = app) }
                 }
-                composable(Routes.SHARE) { ShareScreen(app = app, phone = phone, launcher = launcher) }
-                composable(Routes.SETTINGS) { SettingsScreen(app = app) }
             }
         }
     }
@@ -315,6 +332,15 @@ fun MainScreen(
         }
     }
 }
+
+/**
+ * How wide one column of content is allowed to get.
+ *
+ * Chosen so that a telephone held in one hand is never affected: no phone is
+ * this wide. It is a tablet, a foldable opened out or a window on a desktop
+ * that gets the margins.
+ */
+private val CONTENT_MAX_WIDTH = 640.dp
 
 /** The floating bar of the five main sections. */
 @Composable

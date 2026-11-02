@@ -21,13 +21,13 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Message
-import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Dialpad
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Group
-import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.automirrored.rounded.Message
+import androidx.compose.material.icons.automirrored.rounded.Send
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.Dialpad
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.Group
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -165,7 +165,7 @@ fun BulkMessagesTab(
     ) {
         if (!SmsSender.hasPermission(context)) {
             EmptyState(
-                icon = Icons.AutoMirrored.Filled.Message,
+                icon = Icons.AutoMirrored.Rounded.Message,
                 title = LanguageManager.getString("permission_sms_desc"),
                 actionLabel = LanguageManager.getString("grant_permission"),
                 onAction = { permissions.launchMultiplePermissionRequest() }
@@ -181,7 +181,7 @@ fun BulkMessagesTab(
             OutlinedTextField(
                 value = query,
                 onValueChange = { query = it },
-                leadingIcon = { Icon(Icons.Default.Search, contentDescription = null) },
+                leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(LanguageManager.getString("search_contacts")) },
                 singleLine = true,
                 shape = RoundedCornerShape(14.dp),
@@ -189,7 +189,7 @@ fun BulkMessagesTab(
             )
             IconButton(onClick = { showManualDialog = true }) {
                 Icon(
-                    imageVector = Icons.Default.Dialpad,
+                    imageVector = Icons.Rounded.Dialpad,
                     contentDescription = LanguageManager.getString("add_numbers"),
                     tint = MaterialTheme.colorScheme.primary
                 )
@@ -217,7 +217,7 @@ fun BulkMessagesTab(
                         },
                         trailingIcon = {
                             Icon(
-                                imageVector = Icons.Default.Close,
+                                imageVector = Icons.Rounded.Close,
                                 contentDescription = null,
                                 modifier = Modifier.size(14.dp)
                             )
@@ -260,7 +260,7 @@ fun BulkMessagesTab(
         Box(modifier = Modifier.weight(1f)) {
             if (filtered.isEmpty()) {
                 EmptyState(
-                    icon = Icons.Default.Group,
+                    icon = Icons.Rounded.Group,
                     title = LanguageManager.getString("no_contacts")
                 )
             } else {
@@ -336,7 +336,7 @@ fun BulkMessagesTab(
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(
-                            imageVector = Icons.Default.Edit,
+                            imageVector = Icons.Rounded.Edit,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp)
                         )
@@ -354,7 +354,7 @@ fun BulkMessagesTab(
                         shape = RoundedCornerShape(14.dp)
                     ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.Send,
+                            imageVector = Icons.AutoMirrored.Rounded.Send,
                             contentDescription = LanguageManager.getString("send"),
                             modifier = Modifier.size(16.dp)
                         )

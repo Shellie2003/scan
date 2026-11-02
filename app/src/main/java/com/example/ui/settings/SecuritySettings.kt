@@ -12,10 +12,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Block
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.rounded.Block
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -90,7 +90,7 @@ fun SecuritySection() {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
-                imageVector = if (hasPin) Icons.Default.Lock else Icons.Default.LockOpen,
+                imageVector = if (hasPin) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                 contentDescription = null,
                 tint = MaterialTheme.colorScheme.primary
             )
@@ -156,7 +156,7 @@ fun SecuritySection() {
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.Block,
+                    imageVector = Icons.Rounded.Block,
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.error,
                     modifier = Modifier.size(18.dp)
@@ -174,7 +174,7 @@ fun SecuritySection() {
                     }
                 ) {
                     Icon(
-                        imageVector = Icons.Default.Delete,
+                        imageVector = Icons.Rounded.Delete,
                         contentDescription = LanguageManager.getString("unblock_number"),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(18.dp)
