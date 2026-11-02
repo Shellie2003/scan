@@ -12,12 +12,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Dialpad
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -104,6 +106,7 @@ fun WithSimRouting(
 
     var pendingChoice by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
     var pendingConfirm by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
+    var pendingNoLine by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
     var ussdAnswer by remember { mutableStateOf<String?>(null) }
 
     /** The code the answer being shown came from, and what it was doing. */
@@ -219,6 +222,10 @@ fun WithSimRouting(
         val needsConfirm = request is DialRequest.Code &&
             (request.requireConfirm || AppSettings.confirmBeforeDial(context))
         when {
+            // Nothing to run it on. Said before the call screen opens, not
+            // after: a call placed with no line reaches the telephone and dies
+            // there, and what the user sees is a screen that never moves.
+            routing.hasNoLine -> pendingNoLine = request to routing
             routing.status == RoutingStatus.NEEDS_CHOICE -> pendingChoice = request to routing
             needsConfirm -> pendingConfirm = request to routing
             else -> execute(request, routing)
@@ -226,6 +233,60 @@ fun WithSimRouting(
     }
 
     content(SimLauncher(::start))
+
+    pendingNoLine?.let { (request, routing) ->
+        val missingPermission = routing.status == RoutingStatus.NO_PERMISSION
+        AlertDialog(
+            onDismissRequest = { pendingNoLine = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Rounded.Warning,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            title = {
+                Text(
+                    text = LanguageManager.getString("no_line_title"),
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = LanguageManager.getString(
+                        if (missingPermission) "no_permission_desc" else "no_line_desc"
+                    ),
+                    style = MaterialTheme.typography.bodySmall
+                )
+            },
+            confirmButton = {
+                if (missingPermission) {
+                    Button(onClick = {
+                        pendingNoLine = null
+                        openAppSettings(context)
+                    }) {
+                        Text(LanguageManager.getString("grant_permission"))
+                    }
+                } else {
+                    // Refused outright would be wrong: a telephone can place a
+                    // call through its own dialer on a line this application
+                    // cannot see. The attempt belongs to the user, warned.
+                    Button(onClick = {
+                        val request1 = request
+                        pendingNoLine = null
+                        execute(request1, routing)
+                    }) {
+                        Text(LanguageManager.getString("continue_anyway"))
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingNoLine = null }) {
+                    Text(LanguageManager.getString("cancel"))
+                }
+            }
+        )
+    }
 
     pendingChoice?.let { (request, routing) ->
         SimPickerDialog(
@@ -380,6 +441,8 @@ private fun looksLikeNothingHappened(answer: String): Boolean {
 }
 
 private fun fallbackWarning(routing: SimRouting): String? = when {
+    routing.status == RoutingStatus.NO_PERMISSION ->
+        LanguageManager.getString("sim_permission_missing")
     routing.status == RoutingStatus.NO_SIM -> LanguageManager.getString("no_sim_detected")
     routing.isFallback && routing.operator != null && routing.sim != null ->
         LanguageManager.getString(
@@ -392,6 +455,29 @@ private fun fallbackWarning(routing: SimRouting): String? = when {
 
 /** How long a call is given to appear before it is placed again. */
 private const val CALL_WATCHDOG_MS = 3_000L
+
+/**
+ * The page of the telephone where the permissions of this application live.
+ *
+ * Asking again from here is not possible: a permission refused twice is never
+ * asked again by Android, and the only way back is that page.
+ */
+private fun openAppSettings(context: android.content.Context) {
+    try {
+        context.startActivity(
+            android.content.Intent(
+                android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                android.net.Uri.fromParts("package", context.packageName, null)
+            ).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        )
+    } catch (e: Exception) {
+        Toast.makeText(
+            context,
+            LanguageManager.getString("action_failed"),
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
 
 /** Convenience used by the screens that only need the resolved SIM of an operator. */
 fun SimRouting.simOrFirst(sims: List<SimCard>): SimCard? = sim ?: sims.firstOrNull()

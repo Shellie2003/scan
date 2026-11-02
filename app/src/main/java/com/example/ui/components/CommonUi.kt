@@ -67,7 +67,7 @@ fun SimIndicator(
     onClick: () -> Unit
 ) {
     val hasChoice = routing.candidates.size > 1
-    val warning = routing.status == RoutingStatus.NO_SIM ||
+    val warning = routing.hasNoLine ||
         routing.status == RoutingStatus.NO_SIM_FOR_OPERATOR ||
         routing.isFallback
     val container = if (warning) {
@@ -104,6 +104,8 @@ fun SimIndicator(
                 Text(
                     text = when (routing.status) {
                         RoutingStatus.NO_SIM -> LanguageManager.getString("no_sim_detected")
+                        RoutingStatus.NO_PERMISSION ->
+                            LanguageManager.getString("sim_permission_missing")
                         RoutingStatus.NO_SIM_FOR_OPERATOR -> LanguageManager.getString(
                             "no_sim",
                             "operator" to (routing.operator?.name ?: "")

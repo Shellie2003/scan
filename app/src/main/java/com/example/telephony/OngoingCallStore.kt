@@ -2,6 +2,7 @@ package com.example.telephony
 
 import android.telecom.Call
 import android.telecom.CallAudioState
+import android.telecom.DisconnectCause
 import android.telecom.InCallService
 import android.telecom.VideoProfile
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,7 +21,19 @@ data class CallSnapshot(
     /** Which card the phone is ringing on, when it is known. */
     val simLabel: String = "",
     /** Picture of the contact calling, when the phone knows their face. */
-    val photoUri: String = ""
+    val photoUri: String = "",
+    /**
+     * Why the call ended, in the words of the telephone itself.
+     *
+     * A call that goes nowhere — no card, no network, a number the operator
+     * refuses — used to end under a plain "call ended", and the user was left
+     * looking at a dead screen with nothing to act on. The framework knows the
+     * reason and words it in the language of the telephone; it was simply never
+     * asked for it.
+     */
+    val endedBecause: String = "",
+    /** Whether that ending was a failure rather than a conversation finishing. */
+    val endedBadly: Boolean = false
 ) {
     val isRinging: Boolean get() = state == Call.STATE_RINGING
     val isActive: Boolean get() = state == Call.STATE_ACTIVE
@@ -228,6 +241,25 @@ object OngoingCallStore {
     private fun idOf(call: Call): String = System.identityHashCode(call).toString()
 
     @Suppress("DEPRECATION")
+    /**
+     * What the telephone says about the end of a call, when it says anything.
+     *
+     * The label comes first: the framework writes it for the user, already in
+     * their language, and it is where "no service" or "no SIM card" appears.
+     * The description is the longer form some manufacturers fill instead. Both
+     * empty means an ordinary hang-up, which needs no explanation.
+     */
+    private fun reasonOf(details: Call.Details?): String {
+        val cause = details?.disconnectCause ?: return ""
+        return try {
+            cause.label?.toString()?.takeIf { it.isNotBlank() }
+                ?: cause.description?.toString()?.takeIf { it.isNotBlank() }
+                ?: ""
+        } catch (e: Exception) {
+            ""
+        }
+    }
+
     private fun publish() {
         _calls.value = tracked.map { (id, call) ->
             val details = call.details
@@ -244,7 +276,9 @@ object OngoingCallStore {
                 ) details.creationTimeMillis else 0L,
                 isConference = call.children.isNotEmpty(),
                 simLabel = simLabels[id].orEmpty(),
-                photoUri = photoCache[NumberUtils.toNational(number)].orEmpty()
+                photoUri = photoCache[NumberUtils.toNational(number)].orEmpty(),
+                endedBecause = reasonOf(details),
+                endedBadly = details?.disconnectCause?.code == DisconnectCause.ERROR
             )
         }
     }

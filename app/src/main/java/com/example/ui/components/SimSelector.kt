@@ -57,7 +57,7 @@ fun SimSelector(
     val context = LocalContext.current
     var expanded by remember { mutableStateOf(false) }
     val choices = routing.candidates.ifEmpty { sims }
-    val warning = routing.status == RoutingStatus.NO_SIM ||
+    val warning = routing.hasNoLine ||
         routing.status == RoutingStatus.NO_SIM_FOR_OPERATOR ||
         routing.isFallback
     val color = if (warning) MaterialTheme.colorScheme.error else tint
@@ -67,7 +67,7 @@ fun SimSelector(
         IconButton(onClick = { expanded = true }) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    imageVector = if (routing.status == RoutingStatus.NO_SIM) {
+                    imageVector = if (routing.hasNoLine) {
                         Icons.Rounded.Warning
                     } else {
                         Icons.Rounded.SimCard
@@ -77,7 +77,7 @@ fun SimSelector(
                     modifier = Modifier.size(24.dp)
                 )
                 val badge = when {
-                    routing.status == RoutingStatus.NO_SIM -> ""
+                    routing.hasNoLine -> ""
                     warning -> "!"
                     current != null -> (current.slotIndex + 1).toString()
                     else -> "?"

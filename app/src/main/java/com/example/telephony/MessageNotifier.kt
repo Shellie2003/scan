@@ -74,10 +74,47 @@ object MessageNotifier {
      * of the phone would fill up with dead entries.
      */
     fun channelId(context: Context): String {
-        val sound = AppSettings.messageSound(context)
+        val sound = playableSound(context)
         if (sound.isBlank()) return CHANNEL_ID
         return CHANNEL_ID + "_" + Integer.toHexString(sound.hashCode())
     }
+
+    /**
+     * The chosen sound, but only if it can still be played.
+     *
+     * A sound chosen once is kept as the address of a file on the telephone.
+     * Reinstall the system — a telephone that has been flashed — and that file
+     * is gone, while the setting comes back with the backup Android makes of
+     * the application. The channel is then created around a sound that does not
+     * exist, Android freezes it for good, and messages arrive in silence with
+     * nothing anywhere to say why.
+     *
+     * Asking the file whether it opens costs one local read and is the only way
+     * to know. An address that answers nothing goes back to the sound of the
+     * telephone, which always exists.
+     */
+    internal fun playableSound(context: Context): String {
+        val sound = AppSettings.messageSound(context)
+        if (sound.isBlank()) return ""
+        verified[sound]?.let { return if (it) sound else "" }
+        val plays = try {
+            context.contentResolver.openAssetFileDescriptor(Uri.parse(sound), "r")
+                ?.use { true }
+                ?: false
+        } catch (e: Exception) {
+            false
+        }
+        verified[sound] = plays
+        return if (plays) sound else ""
+    }
+
+    /**
+     * What has already been asked of the file system, kept for the session.
+     *
+     * The answer is read on every notification, and a message arriving is not
+     * the moment to go and open a file again.
+     */
+    private val verified = java.util.concurrent.ConcurrentHashMap<String, Boolean>()
 
     fun createChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
@@ -98,7 +135,10 @@ object MessageNotifier {
                 description = context.getString(R.string.sms_channel_desc)
                 enableVibration(true)
                 setShowBadge(true)
-                val sound = AppSettings.messageSound(context)
+                // Left unset, a channel takes the notification sound of the
+                // telephone, which is what is wanted when nothing was chosen —
+                // or when what was chosen is no longer there.
+                val sound = playableSound(context)
                 if (sound.isNotBlank()) {
                     setSound(
                         Uri.parse(sound),

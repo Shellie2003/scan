@@ -533,15 +533,25 @@ private fun CallStatusLine(call: CallSnapshot) {
         call.isRinging -> LanguageManager.getString("incoming_call_label")
         call.isDialing -> LanguageManager.getString("calling")
         call.isHeld -> LanguageManager.getString("call_on_hold")
-        call.isDisconnected -> LanguageManager.getString("call_ended")
+        // The reason the telephone gives, when it gives one: "no service",
+        // "no SIM card". An ended call that explains nothing leaves the user
+        // pressing the same button again.
+        call.isDisconnected -> call.endedBecause.ifBlank {
+            LanguageManager.getString("call_ended")
+        }
         call.isActive && call.connectTimeMillis > 0 -> formatElapsed(elapsed)
         else -> ""
     }
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
-        color = MaterialTheme.colorScheme.primary,
-        fontWeight = FontWeight.Bold
+        color = if (call.endedBadly) {
+            MaterialTheme.scanColors.hangUp
+        } else {
+            MaterialTheme.colorScheme.primary
+        },
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center
     )
 }
 

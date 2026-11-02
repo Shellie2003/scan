@@ -14,8 +14,19 @@ enum class RoutingStatus {
     /** Cards are present but none belongs to the operator of the operation. */
     NO_SIM_FOR_OPERATOR,
 
-    /** No SIM at all, or the phone state permission is missing. */
-    NO_SIM
+    /** No SIM at all: the telephone reports no card on any slot. */
+    NO_SIM,
+
+    /**
+     * The permission to read the state of the telephone was never granted.
+     *
+     * Kept apart from [NO_SIM] on purpose. Both end with an empty list of
+     * cards, and both used to be reported as "no SIM card detected" — which
+     * sends the user looking for a hardware fault when the answer is one
+     * switch in the settings of the telephone. The two look identical from
+     * here; they are not the same problem at all.
+     */
+    NO_PERMISSION
 }
 
 /**
@@ -30,6 +41,16 @@ data class SimRouting(
     val isFallback: Boolean = false
 ) {
     val isReady: Boolean get() = status == RoutingStatus.READY && sim != null
+
+    /**
+     * No line to run anything on, for either of the two reasons.
+     *
+     * An operation started in this state reaches the telephone and stops there
+     * without a word: the call screen opens on a call that never connects, and
+     * a recharge waits on an operator that was never reached.
+     */
+    val hasNoLine: Boolean
+        get() = status == RoutingStatus.NO_SIM || status == RoutingStatus.NO_PERMISSION
 }
 
 /**
@@ -65,7 +86,12 @@ object SimRouter {
         }
 
         if (usable.isEmpty()) {
-            return SimRouting(operator, null, emptyList(), RoutingStatus.NO_SIM)
+            val status = if (SimManager.hasPhoneStatePermission(context)) {
+                RoutingStatus.NO_SIM
+            } else {
+                RoutingStatus.NO_PERMISSION
+            }
+            return SimRouting(operator, null, emptyList(), status)
         }
 
         if (operator == null) {
