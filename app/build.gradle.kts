@@ -11,7 +11,11 @@ android {
   compileSdk { version = release(36) { minorApiLevel = 1 } }
 
   defaultConfig {
-    applicationId = "com.aistudio.scan.xyzabc"
+    // The name the telephone and the store know this application by. It is
+    // final: once an application is published under an identifier, that
+    // identifier is the application, and a new one is a different application
+    // with nothing of the first — no update path, no reviews, no users.
+    applicationId = "com.ainadigit.scan"
     minSdk = 24
     targetSdk = 36
     // A fixed version code cannot be updated: the store refuses an APK whose
