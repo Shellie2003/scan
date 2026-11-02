@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.ui.theme.ScanRadius
 import androidx.compose.ui.unit.sp
 
 object LanguageManager {
@@ -1265,11 +1266,11 @@ object LanguageManager {
                 val isSelected = current == code
                 Surface(
                     onClick = { setLanguage(context, code) },
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(ScanRadius.chip),
                     color = if (isSelected) {
                         MaterialTheme.colorScheme.primaryContainer
                     } else {
-                        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                        MaterialTheme.colorScheme.surfaceContainer
                     },
                     contentColor = if (isSelected) {
                         MaterialTheme.colorScheme.onPrimaryContainer

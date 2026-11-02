@@ -48,6 +48,7 @@ import com.example.data.model.Operator
 import com.example.telephony.RoutingStatus
 import com.example.telephony.SimCard
 import com.example.telephony.SimRouting
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.ScanTextStyles
 import com.example.ui.util.LanguageManager
 
@@ -71,18 +72,25 @@ fun SimIndicator(
         routing.status == RoutingStatus.NO_SIM_FOR_OPERATOR ||
         routing.isFallback
     val container = if (warning) {
-        MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.55f)
+        MaterialTheme.colorScheme.errorContainer
     } else {
-        color.copy(alpha = 0.10f)
+        MaterialTheme.colorScheme.surfaceContainerHigh
     }
-    val border = if (warning) MaterialTheme.colorScheme.error.copy(alpha = 0.5f) else color.copy(alpha = 0.35f)
+    // A line around a surface that already stands out by its own tone is one
+    // decoration too many. The outline is kept for the warning, where it is not
+    // decoration but the thing that catches the eye.
+    val border = if (warning) {
+        BorderStroke(1.dp, MaterialTheme.colorScheme.error.copy(alpha = 0.5f))
+    } else {
+        null
+    }
 
     Surface(
         onClick = onClick,
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ScanRadius.chip),
         color = container,
-        border = BorderStroke(1.dp, border)
+        border = border
     ) {
         Row(
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
@@ -155,7 +163,7 @@ fun SimPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(ScanRadius.dialog),
         title = {
             Text(LanguageManager.getString("choose_sim"), fontWeight = FontWeight.Bold)
         },
@@ -181,12 +189,12 @@ fun SimPickerDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(ScanRadius.card),
                         colors = CardDefaults.cardColors(
                             containerColor = if (isSelected) {
                                 MaterialTheme.colorScheme.primaryContainer
                             } else {
-                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                                MaterialTheme.colorScheme.surfaceContainer
                             }
                         ),
                         onClick = { onPick(sim, rememberChoice) }
@@ -271,7 +279,7 @@ fun ConfirmCodeDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(ScanRadius.dialog),
         title = { Text(title, fontWeight = FontWeight.Bold) },
         text = {
             Column {
@@ -282,8 +290,8 @@ fun ConfirmCodeDialog(
                 )
                 Spacer(Modifier.height(6.dp))
                 Surface(
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    shape = RoundedCornerShape(ScanRadius.chip),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
@@ -307,7 +315,7 @@ fun ConfirmCodeDialog(
                     Spacer(Modifier.height(12.dp))
                     Surface(
                         color = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(ScanRadius.chip)
                     ) {
                         Row(modifier = Modifier.padding(10.dp)) {
                             Icon(
@@ -328,7 +336,7 @@ fun ConfirmCodeDialog(
             }
         },
         confirmButton = {
-            Button(onClick = onConfirm, shape = RoundedCornerShape(12.dp)) {
+            Button(onClick = onConfirm, shape = RoundedCornerShape(ScanRadius.chip)) {
                 Text(LanguageManager.getString("execute"))
             }
         },
@@ -424,13 +432,24 @@ fun EmptyState(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = icon,
-            contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f),
-            modifier = Modifier.size(48.dp)
-        )
-        Spacer(Modifier.height(12.dp))
+        // The icon in a tonal disc rather than greyed out on the background: a
+        // faded glyph reads as something that failed to load. A shape says the
+        // emptiness was expected.
+        Box(
+            modifier = Modifier
+                .size(72.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(32.dp)
+            )
+        }
+        Spacer(Modifier.height(16.dp))
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
@@ -448,19 +467,23 @@ fun EmptyState(
         }
         if (actionLabel != null && onAction != null) {
             Spacer(Modifier.height(16.dp))
-            Button(onClick = onAction, shape = RoundedCornerShape(12.dp)) { Text(actionLabel) }
+            Button(onClick = onAction, shape = RoundedCornerShape(ScanRadius.chip)) { Text(actionLabel) }
         }
     }
 }
 
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier) {
+    // Written as it is written, not shouted in capitals and painted in the
+    // brand colour. A heading is there to be stepped over on the way to the
+    // thing below it; the colour belongs to what can be acted on, and capitals
+    // are read letter by letter.
     Text(
-        text = title.uppercase(),
-        style = MaterialTheme.typography.labelSmall,
-        fontWeight = FontWeight.ExtraBold,
-        color = MaterialTheme.colorScheme.primary,
-        modifier = modifier.padding(start = 4.dp, top = 16.dp, bottom = 8.dp)
+        text = title,
+        style = MaterialTheme.typography.titleSmall,
+        fontWeight = FontWeight.Bold,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = modifier.padding(start = 4.dp, top = 24.dp, bottom = 8.dp)
     )
 }
 

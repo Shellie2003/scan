@@ -72,6 +72,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.style.TextAlign
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.scanColors
 import com.example.data.BlockedNumbers
 import com.example.telephony.Contact
@@ -246,7 +247,7 @@ fun ContactEditorSheet(
                 keyboardOptions = KeyboardOptions(
                     capitalization = KeyboardCapitalization.Words
                 ),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 modifier = Modifier.fillMaxWidth()
             )
             Spacer(Modifier.height(12.dp))
@@ -258,7 +259,7 @@ fun ContactEditorSheet(
                 leadingIcon = { Icon(Icons.Rounded.Phone, contentDescription = null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 modifier = Modifier.fillMaxWidth()
             )
 
@@ -275,7 +276,7 @@ fun ContactEditorSheet(
                 Button(
                     onClick = { save() },
                     enabled = !saving && NumberUtils.sanitize(number).length >= 3,
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(ScanRadius.card)
                 ) {
                     Text(LanguageManager.getString("save"), fontWeight = FontWeight.Bold)
                 }

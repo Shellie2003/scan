@@ -66,6 +66,7 @@ import com.example.telephony.SimCard
 import com.example.telephony.SimManager
 import com.example.ui.AboutScreen
 import com.example.ui.components.SectionHeader
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.ThemeController
 import com.example.ui.theme.ThemeMode
 import com.example.ui.util.LanguageManager
@@ -199,9 +200,9 @@ fun SettingsScreen(app: AppViewModel) {
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
                     .clickable { editingSim = sim },
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             ) {
                 Row(
@@ -335,9 +336,9 @@ fun SettingsScreen(app: AppViewModel) {
                     .fillMaxWidth()
                     .padding(vertical = 4.dp)
                     .clickable { editingTemplate = template },
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 )
             ) {
                 Row(
@@ -581,7 +582,7 @@ private fun AppearanceSection() {
                 color = if (selected) {
                     MaterialTheme.colorScheme.primaryContainer
                 } else {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    MaterialTheme.colorScheme.surfaceContainer
                 },
                 border = if (selected) {
                     BorderStroke(1.dp, MaterialTheme.colorScheme.primary)
@@ -654,9 +655,9 @@ private fun OperatorRow(
             .fillMaxWidth()
             .padding(vertical = 4.dp)
             .clickable { onEdit() },
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(ScanRadius.card),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
         Row(
@@ -734,7 +735,7 @@ private fun OperatorEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(ScanRadius.dialog),
         title = {
             Text(
                 text = if (operator.id == 0) {
@@ -860,7 +861,7 @@ private fun SimProfileDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(ScanRadius.dialog),
         title = { Text(LanguageManager.getString("edit_sim"), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -935,7 +936,7 @@ private fun TemplateDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(ScanRadius.dialog),
         title = { Text(LanguageManager.getString("templates"), fontWeight = FontWeight.Bold) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -973,7 +974,7 @@ private fun Field(value: String, label: String, onValueChange: (String) -> Unit)
         onValueChange = onValueChange,
         label = { Text(label) },
         singleLine = true,
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(ScanRadius.chip),
         modifier = Modifier.fillMaxWidth()
     )
 }

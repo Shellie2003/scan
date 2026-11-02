@@ -44,6 +44,7 @@ import com.example.ui.messages.ForgottenCodeDialog
 import com.example.ui.messages.GiveUpLockDialog
 import com.example.ui.messages.PinPromptDialog
 import com.example.ui.messages.PinSetupDialog
+import com.example.ui.theme.ScanRadius
 import com.example.ui.util.LanguageManager
 
 /**
@@ -78,9 +79,9 @@ fun SecuritySection() {
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(ScanRadius.card),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
         Row(
@@ -144,9 +145,9 @@ fun SecuritySection() {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 4.dp),
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(ScanRadius.card),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             )
         ) {
             Row(

@@ -106,6 +106,7 @@ import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.NotificationPermissionBanner
 import com.example.ui.components.SimLauncher
 import com.example.ui.components.SimSelector
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
@@ -460,7 +461,7 @@ private fun DefaultDialerBanner() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(ScanRadius.card),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         )
@@ -1007,7 +1008,7 @@ private fun ContactsTab(
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             placeholder = { Text(LanguageManager.getString("search_contacts")) },
             singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(ScanRadius.card),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -1251,8 +1252,8 @@ private fun FavoritesTab(contacts: List<Contact>, onCall: (String) -> Unit) {
             val contact = contacts[index]
             Surface(
                 onClick = { onCall(contact.number) },
-                shape = RoundedCornerShape(16.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                shape = RoundedCornerShape(ScanRadius.card),
+                color = MaterialTheme.colorScheme.surfaceContainer
             ) {
                 Column(
                     modifier = Modifier

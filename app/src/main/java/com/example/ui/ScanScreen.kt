@@ -98,6 +98,7 @@ import com.example.telephony.UssdFormatter
 import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimLauncher
 import com.example.ui.components.SimPickerDialog
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.scanColors
 import com.example.ui.theme.ScanTextStyles
 import com.example.ui.util.LanguageManager
@@ -441,8 +442,8 @@ fun CameraContent(
                         selectedOperator = operator
                         haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                     },
-                    shape = RoundedCornerShape(12.dp),
-                    color = if (isSelected) operatorColor else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    shape = RoundedCornerShape(ScanRadius.chip),
+                    color = if (isSelected) operatorColor else MaterialTheme.colorScheme.surfaceContainerHigh,
                     contentColor = if (isSelected) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
                     border = BorderStroke(
                         width = if (isSelected) 2.dp else 1.dp,
@@ -479,12 +480,12 @@ fun CameraContent(
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 12.dp),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(ScanRadius.card),
             colors = CardDefaults.cardColors(
                 containerColor = if (autoValidation) {
                     brandColor.copy(alpha = 0.06f)
                 } else {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                    MaterialTheme.colorScheme.surfaceContainer
                 }
             ),
             border = BorderStroke(
@@ -599,9 +600,9 @@ fun CameraContent(
             modifier = Modifier
                 .height(previewHeight)
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(24.dp))
+                .clip(RoundedCornerShape(ScanRadius.dialog))
                 .background(Color.Black)
-                .border(2.dp, previewBorderColor, RoundedCornerShape(24.dp))
+                .border(2.dp, previewBorderColor, RoundedCornerShape(ScanRadius.dialog))
         ) {
             AndroidView(
                 factory = { ctx -> PreviewView(ctx).apply { controller = cameraController } },
@@ -619,7 +620,7 @@ fun CameraContent(
                 val detectedOperatorName = detected.name
                 Surface(
                     color = brandColor,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(ScanRadius.chip),
                     modifier = Modifier
                         .align(Alignment.TopCenter)
                         .padding(top = 16.dp)
@@ -645,8 +646,8 @@ fun CameraContent(
                     // a 320 dp screen a 280 dp frame touched both borders.
                     .fillMaxWidth(0.86f)
                     .height(120.dp)
-                    .background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(16.dp))
-                    .border(2.dp, viewfinderBorderColor, RoundedCornerShape(16.dp))
+                    .background(Color.Black.copy(alpha = 0.1f), RoundedCornerShape(ScanRadius.card))
+                    .border(2.dp, viewfinderBorderColor, RoundedCornerShape(ScanRadius.card))
             ) {
                 val heightPx = maxHeight
 
@@ -715,8 +716,8 @@ fun CameraContent(
                                     scaleX = pulseScale
                                     scaleY = pulseScale
                                 }
-                                .background(cameraSuccess.copy(alpha = 0.15f), RoundedCornerShape(48.dp))
-                                .border(3.dp, cameraSuccess, RoundedCornerShape(48.dp)),
+                                .background(cameraSuccess.copy(alpha = 0.15f), RoundedCornerShape(ScanRadius.capsule))
+                                .border(3.dp, cameraSuccess, RoundedCornerShape(ScanRadius.capsule)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -819,7 +820,7 @@ fun CameraContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                shape = RoundedCornerShape(12.dp),
+                shape = RoundedCornerShape(ScanRadius.chip),
                 colors = CardDefaults.cardColors(
                     containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
                 ),
@@ -872,7 +873,7 @@ fun CameraContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 12.dp),
-                shape = RoundedCornerShape(16.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 color = if (showScanSuccessState) {
                     MaterialTheme.scanColors.successContainer.copy(alpha = 0.45f)
                 } else {
@@ -926,11 +927,11 @@ fun CameraContent(
                 .height(56.dp)
                 .shadow(
                     elevation = if (canRecharge) 8.dp else 0.dp,
-                    shape = RoundedCornerShape(16.dp),
+                    shape = RoundedCornerShape(ScanRadius.card),
                     ambientColor = brandColor,
                     spotColor = brandColor
                 ),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(ScanRadius.card),
             colors = ButtonDefaults.buttonColors(
                 containerColor = brandColor,
                 contentColor = accentColor,

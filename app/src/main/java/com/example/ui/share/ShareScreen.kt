@@ -58,6 +58,7 @@ import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimLauncher
 import com.example.ui.components.SimPickerDialog
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.ScanTextStyles
 import com.example.ui.util.LanguageManager
 import com.example.ui.util.OperatorColorUtils
@@ -223,7 +224,7 @@ fun ShareScreen(
         if (mode == ShareMode.WITHDRAW) {
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 colors = CardDefaults.cardColors(
                     containerColor = theme.mainColor.copy(alpha = 0.10f)
                 )
@@ -252,7 +253,7 @@ fun ShareScreen(
                 onValueChange = { number = it },
                 label = { Text(LanguageManager.getString(mode.numberLabelKey)) },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 modifier = Modifier.weight(1f)
             )
             Spacer(Modifier.width(8.dp))
@@ -288,7 +289,7 @@ fun ShareScreen(
             onValueChange = { amount = it },
             label = { Text(LanguageManager.getString("amount")) },
             singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(ScanRadius.card),
             modifier = Modifier.fillMaxWidth()
         )
 
@@ -301,7 +302,7 @@ fun ShareScreen(
                 onValueChange = { pin = it },
                 label = { Text(LanguageManager.getString("pin_code")) },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -319,9 +320,9 @@ fun ShareScreen(
 
         Card(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
+            shape = RoundedCornerShape(ScanRadius.card),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                containerColor = MaterialTheme.colorScheme.surfaceContainer
             )
         ) {
             Column(modifier = Modifier.padding(14.dp)) {
@@ -379,7 +380,7 @@ fun ShareScreen(
                 },
                 enabled = ready,
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.mainColor.copy(alpha = 0.15f),
                     contentColor = theme.mainColor
@@ -393,7 +394,7 @@ fun ShareScreen(
                 onClick = { send(number, amount, formattedCode, sendingOperator) },
                 enabled = ready,
                 modifier = Modifier.weight(1f),
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = theme.mainColor,
                     contentColor = theme.accentColor
@@ -418,12 +419,12 @@ fun ShareScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(vertical = 4.dp),
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(ScanRadius.card),
                     colors = CardDefaults.cardColors(
                         containerColor = if (item.done) {
                             MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f)
                         } else {
-                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                            MaterialTheme.colorScheme.surfaceContainer
                         }
                     )
                 ) {

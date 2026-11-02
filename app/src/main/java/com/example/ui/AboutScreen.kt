@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.ui.theme.ScanLogo
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.ScanTextStyles
 import com.example.ui.theme.ScanWordmark
 import com.example.ui.theme.scanColors
@@ -99,9 +100,9 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
         ) {
             // App Branding Card
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(ScanRadius.dialog),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f)),
                 modifier = Modifier.fillMaxWidth()
@@ -141,9 +142,9 @@ fun AboutScreen(onBack: (() -> Unit)? = null) {
 
             // Developer Info Card
             Card(
-                shape = RoundedCornerShape(24.dp),
+                shape = RoundedCornerShape(ScanRadius.dialog),
                 colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.2f)
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
                 ),
                 border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.08f)),
                 modifier = Modifier.fillMaxWidth()
@@ -273,7 +274,7 @@ fun ContactItem(
     onCopyClick: () -> Unit
 ) {
     Card(
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(ScanRadius.card),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),

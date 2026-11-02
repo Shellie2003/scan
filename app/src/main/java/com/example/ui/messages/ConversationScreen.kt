@@ -75,6 +75,7 @@ import com.example.telephony.SmsSender
 import com.example.telephony.SmsThread
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.SimSelector
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
@@ -367,7 +368,7 @@ fun ConversationScreen(
                     onValueChange = { draft = it },
                     placeholder = { Text(LanguageManager.getString("write_message")) },
                     maxLines = 4,
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(ScanRadius.dialog),
                     modifier = Modifier.weight(1f)
                 )
                 Spacer(Modifier.width(8.dp))

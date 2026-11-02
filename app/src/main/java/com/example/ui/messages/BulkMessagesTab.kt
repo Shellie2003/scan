@@ -67,6 +67,7 @@ import com.example.telephony.SmsSender
 import com.example.ui.components.EmptyState
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.SimSelector
+import com.example.ui.theme.ScanRadius
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
@@ -184,7 +185,7 @@ fun BulkMessagesTab(
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(LanguageManager.getString("search_contacts")) },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 modifier = Modifier.weight(1f)
             )
             IconButton(onClick = { showManualDialog = true }) {
@@ -332,7 +333,7 @@ fun BulkMessagesTab(
                     )
                     OutlinedButton(
                         onClick = { showComposer = true },
-                        shape = RoundedCornerShape(14.dp),
+                        shape = RoundedCornerShape(ScanRadius.card),
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(
@@ -351,7 +352,7 @@ fun BulkMessagesTab(
                     Button(
                         onClick = { if (body.isBlank()) showComposer = true else send() },
                         enabled = selected.isNotEmpty() && progress == null,
-                        shape = RoundedCornerShape(14.dp)
+                        shape = RoundedCornerShape(ScanRadius.card)
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Rounded.Send,
@@ -410,7 +411,7 @@ fun BulkMessagesTab(
                     placeholder = { Text(LanguageManager.getString("message_hint")) },
                     minLines = 3,
                     maxLines = 6,
-                    shape = RoundedCornerShape(14.dp),
+                    shape = RoundedCornerShape(ScanRadius.card),
                     modifier = Modifier.fillMaxWidth()
                 )
 
@@ -469,7 +470,7 @@ fun BulkMessagesTab(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(48.dp),
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(ScanRadius.card)
                 ) {
                     Text(LanguageManager.getString("done"), fontWeight = FontWeight.Bold)
                 }

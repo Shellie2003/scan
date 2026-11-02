@@ -83,6 +83,7 @@ import com.example.ui.components.EmptyState
 import com.example.ui.components.ContactAvatar
 import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.NotificationPermissionBanner
+import com.example.ui.theme.ScanRadius
 import com.example.ui.util.LanguageManager
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
@@ -486,7 +487,7 @@ private fun NewMessageSheet(
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(LanguageManager.getString("search_contacts")) },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 8.dp)
@@ -562,7 +563,7 @@ private fun DefaultSmsBanner() {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 6.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(ScanRadius.card),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f)
         )
@@ -673,7 +674,7 @@ private fun InboxTab(
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(LanguageManager.getString("search_conversations")) },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp, vertical = 6.dp)
@@ -988,7 +989,7 @@ private fun MessageContactsTab(
             leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
             placeholder = { Text(LanguageManager.getString("search_contacts")) },
             singleLine = true,
-            shape = RoundedCornerShape(14.dp),
+            shape = RoundedCornerShape(ScanRadius.card),
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 8.dp)

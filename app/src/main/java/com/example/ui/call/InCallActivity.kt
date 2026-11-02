@@ -73,6 +73,7 @@ import com.example.telephony.NumberUtils
 import com.example.telephony.OngoingCallStore
 import com.example.telephony.RespondViaMessageService
 import com.example.ui.components.PhotoAvatar
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.ScanTheme
 import com.example.ui.theme.ThemeController
 import com.example.ui.theme.scanColors
@@ -358,8 +359,8 @@ private fun QuickReplyDialog(onDismiss: () -> Unit, onPick: (String) -> Unit) {
                 replies.forEach { reply ->
                     Surface(
                         onClick = { onPick(reply) },
-                        shape = RoundedCornerShape(14.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(ScanRadius.card),
+                        color = MaterialTheme.colorScheme.surfaceContainer,
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp)
@@ -620,8 +621,8 @@ private fun BigCallButton(
 private fun DtmfPad(onDigit: (Char) -> Unit) {
     val keys = listOf("1", "2", "3", "4", "5", "6", "7", "8", "9", "*", "0", "#")
     Surface(
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+        shape = RoundedCornerShape(ScanRadius.dialog),
+        color = MaterialTheme.colorScheme.surfaceContainer
     ) {
         Column(modifier = Modifier.padding(12.dp)) {
             keys.chunked(3).forEach { row ->

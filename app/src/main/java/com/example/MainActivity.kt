@@ -64,6 +64,7 @@ import com.example.ui.messages.MessagesScreen
 import com.example.ui.phone.PhoneScreen
 import com.example.ui.settings.SettingsScreen
 import com.example.ui.share.ShareScreen
+import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.ScanTheme
 import com.example.ui.theme.ThemeController
 import com.example.ui.util.LanguageManager
@@ -353,16 +354,18 @@ private fun ScanBottomBar(
             .padding(horizontal = 12.dp)
             .padding(bottom = 12.dp)
             .navigationBarsPadding()
+            // A plain shadow, and an opaque bar. The coloured glow underneath
+            // and the 3% of transparency were both decoration: the glow dates
+            // the bar, and a bar you can almost see through reads as a bar that
+            // has not finished loading.
             .shadow(
-                elevation = 12.dp,
-                shape = RoundedCornerShape(24.dp),
-                clip = false,
-                ambientColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
-                spotColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                elevation = 8.dp,
+                shape = RoundedCornerShape(ScanRadius.dialog),
+                clip = false
             )
-            .clip(RoundedCornerShape(24.dp)),
-        containerColor = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.97f),
-        tonalElevation = 8.dp
+            .clip(RoundedCornerShape(ScanRadius.dialog)),
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+        tonalElevation = 0.dp
     ) {
         navigationItems.forEach { item ->
             val selected = isSelected(item.route)
@@ -376,12 +379,10 @@ private fun ScanBottomBar(
                         Box(
                             modifier = Modifier
                                 .size(46.dp)
-                                .shadow(
-                                    elevation = 8.dp,
-                                    shape = CircleShape,
-                                    ambientColor = MaterialTheme.colorScheme.primary,
-                                    spotColor = MaterialTheme.colorScheme.primary
-                                )
+                                // The disc is already the brand colour on a
+                                // neutral bar; a glow of the same colour around
+                                // it adds nothing but weight.
+                                .shadow(elevation = 4.dp, shape = CircleShape)
                                 .clip(CircleShape)
                                 .background(MaterialTheme.colorScheme.primary),
                             contentAlignment = Alignment.Center

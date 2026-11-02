@@ -38,6 +38,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.data.ConversationLock
+import com.example.ui.theme.ScanRadius
 import com.example.ui.util.LanguageManager
 import kotlinx.coroutines.launch
 
@@ -122,7 +123,7 @@ fun PinPromptDialog(
                     }
                 },
                 enabled = pin.length >= ConversationLock.MIN_LENGTH,
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(ScanRadius.card)
             ) {
                 Text(LanguageManager.getString("unlock"), fontWeight = FontWeight.Bold)
             }
@@ -279,7 +280,7 @@ fun PinSetupDialog(onDismiss: () -> Unit, onDone: () -> Unit) {
                         }
                     }
                 },
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(ScanRadius.card)
             ) {
                 Text(LanguageManager.getString("save"), fontWeight = FontWeight.Bold)
             }
@@ -418,7 +419,7 @@ fun ForgottenCodeDialog(
                             }
                         }
                     },
-                    shape = RoundedCornerShape(14.dp)
+                    shape = RoundedCornerShape(ScanRadius.card)
                 ) {
                     Text(
                         text = LanguageManager.getString(if (verified) "save" else "unlock"),
@@ -486,7 +487,7 @@ fun GiveUpLockDialog(onDismiss: () -> Unit, onDone: (Int) -> Unit) {
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.error
                 ),
-                shape = RoundedCornerShape(14.dp)
+                shape = RoundedCornerShape(ScanRadius.card)
             ) {
                 Text(
                     text = LanguageManager.getString(if (sure) "delete" else "continue"),
@@ -577,7 +578,7 @@ private fun PhraseField(value: String, label: String, onValueChange: (String) ->
         label = { Text(label) },
         singleLine = true,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(ScanRadius.card),
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -597,7 +598,7 @@ private fun PinField(value: String, label: String, onValueChange: (String) -> Un
         singleLine = true,
         visualTransformation = PasswordVisualTransformation(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
-        shape = RoundedCornerShape(14.dp),
+        shape = RoundedCornerShape(ScanRadius.card),
         modifier = Modifier.fillMaxWidth()
     )
 }

@@ -66,6 +66,7 @@ import com.example.ui.components.EmptyState
 import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimLauncher
 import com.example.ui.components.SimPickerDialog
+import com.example.ui.theme.ScanRadius
 import com.example.ui.util.LanguageManager
 import com.example.ui.util.OperatorColorUtils
 import com.example.viewmodel.AppViewModel
@@ -141,7 +142,7 @@ fun TolotraScreen(
                 },
                 containerColor = theme.mainColor,
                 contentColor = theme.accentColor,
-                shape = RoundedCornerShape(16.dp)
+                shape = RoundedCornerShape(ScanRadius.card)
             ) {
                 Icon(Icons.Rounded.Add, contentDescription = LanguageManager.getString("add_offer"))
             }
@@ -256,7 +257,7 @@ fun TolotraScreen(
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
                 placeholder = { Text(LanguageManager.getString("search_offer")) },
                 singleLine = true,
-                shape = RoundedCornerShape(14.dp),
+                shape = RoundedCornerShape(ScanRadius.card),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -409,9 +410,9 @@ private fun OfferCard(
     val theme = OperatorColorUtils.themeOf(operator)
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(ScanRadius.card),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+            containerColor = MaterialTheme.colorScheme.surfaceContainer
         )
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -506,7 +507,7 @@ private fun OfferCard(
                 Button(
                     onClick = onBuy,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(ScanRadius.chip),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.mainColor,
                         contentColor = theme.accentColor
@@ -519,7 +520,7 @@ private fun OfferCard(
                 Button(
                     onClick = onShare,
                     modifier = Modifier.weight(1f),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(ScanRadius.chip),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = theme.mainColor.copy(alpha = 0.15f),
                         contentColor = theme.mainColor
@@ -579,7 +580,7 @@ private fun ShareOfferDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(ScanRadius.dialog),
         title = { Text(LanguageManager.getString("offer_to_someone"), fontWeight = FontWeight.Bold) },
         text = {
             Column {
@@ -645,7 +646,7 @@ private fun OfferEditorDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(ScanRadius.dialog),
         title = {
             Text(
                 text = if (offer.id == 0) {
