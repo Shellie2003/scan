@@ -80,6 +80,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.font.FontWeight
@@ -583,12 +584,20 @@ fun CameraContent(
         val previewBorderColor = if (showScanSuccessState) cameraSuccess else brandColor.copy(alpha = 0.4f)
         val viewfinderBorderColor = if (showScanSuccessState) cameraSuccess else brandColor
 
+        // A height of its own, not what is left over: inside a scrolling page
+        // there is no leftover, and a preview must have a size the ticket can
+        // be held up to. Measured against the screen all the same — 320 dp of
+        // preview on a 480 dp phone leaves nothing to read the code in.
+        val screenHeight = LocalConfiguration.current.screenHeightDp
+        val previewHeight = when {
+            screenHeight < 560 -> 220.dp
+            screenHeight < 680 -> 270.dp
+            else -> 320.dp
+        }
+
         Box(
             modifier = Modifier
-                // A height of its own, not what is left over: inside a scrolling
-                // page there is no leftover, and a preview must have a size the
-                // ticket can be held up to.
-                .height(320.dp)
+                .height(previewHeight)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(24.dp))
                 .background(Color.Black)

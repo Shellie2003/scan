@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -164,6 +166,9 @@ fun ContactEditorSheet(
                 .padding(horizontal = 20.dp)
                 .padding(bottom = 20.dp)
                 .imePadding()
+                // With the keyboard open on a small screen, the save button
+                // was below the bottom of the sheet and out of reach.
+                .verticalScroll(rememberScrollState())
         ) {
             Text(
                 text = LanguageManager.getString(
@@ -370,8 +375,12 @@ fun ContactDetailsDialog(
         onDismissRequest = onDismiss,
         title = null,
         text = {
+            // A face, a name, a number, and a row of things to do with them:
+            // more than a small screen holds, so it scrolls.
             Column(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .verticalScroll(rememberScrollState()),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 // The picture is changed from the picture: tapping it opens the

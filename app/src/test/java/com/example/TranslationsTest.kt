@@ -75,6 +75,45 @@ class TranslationsTest {
         return file!!.readText()
     }
 
+    /**
+     * Every key the code asks for has to exist.
+     *
+     * A missing key does not crash either: `getString` hands back the key
+     * itself, and the screen shows `lock_phrase_keep` where a sentence was
+     * meant to be. The whole source is read for `getString("…")`, which is how
+     * the application asks, so a key added to the code and forgotten in the
+     * three maps fails here instead of on a phone.
+     */
+    @Test
+    fun `every key asked for by the code is translated`() {
+        val known = LanguageManager.keysOf("mg")
+        val asked = sortedSetOf<String>()
+        sourceFiles().forEach { file ->
+            Regex("getString\\(\\s*\"([a-z0-9_]+)\"")
+                .findAll(file.readText())
+                .forEach { asked.add(it.groupValues[1]) }
+        }
+        assertTrue("no getString call found at all", asked.size > 50)
+        val missing = (asked - known).sorted()
+        assertEquals("asked for but never translated: $missing", emptyList<String>(), missing)
+    }
+
+    /**
+     * Every Kotlin file of the application, wherever the tests run from.
+     *
+     * Except LanguageManager itself: its own `getString` calls are the ones it
+     * makes to the preferences — `selected_language` is a stored setting, not a
+     * sentence to translate.
+     */
+    private fun sourceFiles(): List<java.io.File> {
+        val candidates = listOf(java.io.File("src/main/java"), java.io.File("app/src/main/java"))
+        val root = candidates.firstOrNull { it.isDirectory }
+        assertTrue("sources not found from " + java.io.File(".").absolutePath, root != null)
+        return root!!.walkTopDown()
+            .filter { it.isFile && it.extension == "kt" && it.name != "LanguageManager.kt" }
+            .toList()
+    }
+
     @Test
     fun `no translation is left empty`() {
         LanguageManager.languages.forEach { lang ->
