@@ -84,6 +84,9 @@ android {
     filter {
       excludeTestsMatching("com.example.GreetingScreenshotTest")
       excludeTestsMatching("com.example.ExampleRobolectricTest")
+      // A recorder, not a check: it draws the screens in its own CI step,
+      // and a picture that cannot be drawn must not fail the build.
+      excludeTestsMatching("com.example.RealScreenshotsTest")
     }
   }
 }

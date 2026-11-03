@@ -35,7 +35,7 @@ import org.robolectric.annotation.GraphicsMode
  * hold a device and take a photograph.
  *
  * Robolectric draws the composables on the machine itself, in native graphics
- * mode, at the size of a Pixel 8. What comes out is what Compose produces from
+ * mode, at the size of a Pixel 8 on Android 34 — the newest it can build. What comes out is what Compose produces from
  * this source: the real spacing, the real typeface, the real colours of the
  * theme. The lists are empty because there is no telephone underneath — no
  * contacts provider, no messages, no SIM card — and that emptiness is honest:
@@ -47,7 +47,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [36])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
 class RealScreenshotsTest {
 
     @get:Rule

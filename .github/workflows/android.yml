@@ -154,7 +154,10 @@ jobs:
       # Allowed to fail: one screen asks for a camera there is none of, and a
       # tutorial that needs the other five must not be held hostage to it.
       - name: Record the real screens
+        if: always()
         continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -o pipefail
           CANDIDATES=$(./gradlew :app:tasks --all -q \
@@ -167,6 +170,14 @@ jobs:
             -Proborazzi.test.record=true \
             --continue || true
           ls -l app/src/test/screenshots/ || echo "nothing was drawn"
+          # Also onto the release: an artifact of Actions lives on a host that
+          # not every client can reach, and a picture nobody can fetch is no
+          # picture at all.
+          if ls app/src/test/screenshots/*.png >/dev/null 2>&1; then
+            zip -j "screens-1.0.${{ github.run_number }}.zip" app/src/test/screenshots/*.png
+            gh release upload "v1.0.${{ github.run_number }}" \
+              "screens-1.0.${{ github.run_number }}.zip" --clobber || true
+          fi
 
       - name: Upload the real screens
         if: always()
