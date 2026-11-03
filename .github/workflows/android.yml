@@ -173,8 +173,8 @@ jobs:
           # Also onto the release: an artifact of Actions lives on a host that
           # not every client can reach, and a picture nobody can fetch is no
           # picture at all.
-          if ls app/src/test/screenshots/*.png >/dev/null 2>&1; then
-            zip -j "screens-1.0.${{ github.run_number }}.zip" app/src/test/screenshots/*.png
+          if ls app/src/test/screenshots/screen-*.png >/dev/null 2>&1; then
+            zip -j "screens-1.0.${{ github.run_number }}.zip" app/src/test/screenshots/screen-*.png
             gh release upload "v1.0.${{ github.run_number }}" \
               "screens-1.0.${{ github.run_number }}.zip" --clobber || true
           fi

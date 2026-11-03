@@ -85,8 +85,13 @@ android {
       excludeTestsMatching("com.example.GreetingScreenshotTest")
       excludeTestsMatching("com.example.ExampleRobolectricTest")
       // A recorder, not a check: it draws the screens in its own CI step,
-      // and a picture that cannot be drawn must not fail the build.
-      excludeTestsMatching("com.example.RealScreenshotsTest")
+      // and a picture that cannot be drawn must not fail the build. The
+      // exclusion is lifted exactly when the build is asked to record —
+      // otherwise it also silenced the step whose whole purpose is to run it,
+      // and Gradle answered "no tests found".
+      if (!providers.gradleProperty("roborazzi.test.record").isPresent) {
+        excludeTestsMatching("com.example.RealScreenshotsTest")
+      }
     }
   }
 }
