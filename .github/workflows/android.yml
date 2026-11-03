@@ -149,3 +149,30 @@ jobs:
           # No list of names: the build file leaves out the two Robolectric
           # tests, so every suite added from now on runs here by itself.
           ./gradlew ":app:$TASK"
+
+      # Pictures of the real screens, drawn by the real code on this machine.
+      # Allowed to fail: one screen asks for a camera there is none of, and a
+      # tutorial that needs the other five must not be held hostage to it.
+      - name: Record the real screens
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          CANDIDATES=$(./gradlew :app:tasks --all -q \
+            | grep -oE '^test[A-Za-z]+(UnitTest|HostTest)' | sort -u || true)
+          TASK=$(echo "$CANDIDATES" | grep -i debug | head -1 || true)
+          if [ -z "$TASK" ]; then TASK=$(echo "$CANDIDATES" | head -1 || true); fi
+          echo "Recording with :app:$TASK"
+          ./gradlew ":app:$TASK" \
+            --tests "com.example.RealScreenshotsTest" \
+            -Proborazzi.test.record=true \
+            --continue || true
+          ls -l app/src/test/screenshots/ || echo "nothing was drawn"
+
+      - name: Upload the real screens
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-screens
+          path: app/src/test/screenshots/**
+          if-no-files-found: warn
+          retention-days: 7
