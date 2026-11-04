@@ -43,7 +43,9 @@ import org.robolectric.annotation.GraphicsMode
  * hold a device and take a photograph.
  *
  * Robolectric draws the composables on the machine itself, in native graphics
- * mode, at the size of a Pixel 8 on Android 34 — the newest it can build. What comes out is what Compose produces from
+ * mode, at the size of a Pixel 8 on Android 33 — below the version that
+ * brought the full-screen-call permission, which Robolectric cannot grant
+ * and which would put a card across the top of every picture. What comes out is what Compose produces from
  * this source: the real spacing, the real typeface, the real colours of the
  * theme. The lists are empty because there is no telephone underneath — no
  * contacts provider, no messages, no SIM card — and that emptiness is honest:
@@ -55,7 +57,7 @@ import org.robolectric.annotation.GraphicsMode
  */
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
-@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [34])
+@Config(qualifiers = RobolectricDeviceQualifiers.Pixel8, sdk = [33])
 class RealScreenshotsTest {
 
     @get:Rule
@@ -93,23 +95,13 @@ class RealScreenshotsTest {
             ShadowContentResolver.registerProviderInternal(authority, FakeAndroidData())
         }
 
-        // The two cards at the top of the first screen are not runtime
-        // permissions: one asks to be the telephone application, the other
-        // asks for the right to show a call over the lock screen. Both are
-        // granted here, because a picture of the application should not be a
-        // picture of it asking for things.
+        // Being the telephone application: without it the first screen opens
+        // on a card asking for it, and a picture of the application should
+        // not be a picture of it asking for things.
         runCatching {
-            val telecom = Shadows.shadowOf(
-                app.getSystemService(android.content.Context.TELECOM_SERVICE)
-                    as android.telecom.TelecomManager
-            )
-            telecom.setDefaultDialer(app.packageName)
-        }
-        runCatching {
-            Shadows.shadowOf(
-                app.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
-                    as android.app.NotificationManager
-            ).setCanUseFullScreenIntent(true)
+            val telecom = app.getSystemService(android.content.Context.TELECOM_SERVICE)
+                as android.telecom.TelecomManager
+            Shadows.shadowOf(telecom).setDefaultDialer(app.packageName)
         }
 
         // The operators and the plans the application ships with. Seeded here
