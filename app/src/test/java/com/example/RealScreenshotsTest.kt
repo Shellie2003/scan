@@ -6,6 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.test.performClick
@@ -135,8 +138,8 @@ class RealScreenshotsTest {
 
     private fun shoot(
         name: String,
-        /** Pressed once the screen has settled, before the picture. */
-        then: String? = null,
+        /** Pressed in order once the screen has settled, before the picture. */
+        vararg then: String,
         content: @Composable () -> Unit
     ) {
         rule.setContent {
@@ -154,13 +157,19 @@ class RealScreenshotsTest {
             rule.mainClock.advanceTimeBy(500)
         }
         rule.waitForIdle()
-        if (then != null) {
-            runCatching { rule.onNodeWithText(then).performClick() }
-                .onFailure { println("SCANSHOT could not press " + then) }
-            repeat(4) {
+        then.forEach { label ->
+            runCatching {
+                rule.onAllNodesWithText(label).onFirst().performClick()
+            }.onFailure {
+                // Some are reached by what they are for rather than by their
+                // words: a button with an icon and no label.
+                runCatching { rule.onNodeWithContentDescription(label).performClick() }
+                    .onFailure { println("SCANSHOT could not press " + label) }
+            }
+            repeat(3) {
                 rule.waitForIdle()
                 org.robolectric.shadows.ShadowLooper.idleMainLooper()
-                rule.mainClock.advanceTimeBy(500)
+                rule.mainClock.advanceTimeBy(400)
             }
             rule.waitForIdle()
         }
@@ -211,7 +220,7 @@ class RealScreenshotsTest {
     }
 
     @Test
-    fun contacts_tab() = shoot("screen-contacts", then = "Kontaka") {
+    fun contacts_tab() = shoot("screen-contacts", "Kontaka") {
         val app: AppViewModel = viewModel()
         val phone: PhoneViewModel = viewModel()
         WithSimRouting(app) { launcher ->
@@ -220,7 +229,32 @@ class RealScreenshotsTest {
     }
 
     @Test
-    fun bulk_from_messages() = shoot("screen-bulk-real", then = "Betsaka") {
+    fun bulk_from_messages() = shoot("screen-bulk-real", "Betsaka") {
+        val app: AppViewModel = viewModel()
+        val phone: PhoneViewModel = viewModel()
+        val messages: MessagesViewModel = viewModel()
+        MessagesScreen(
+            app = app,
+            phone = phone,
+            messages = messages,
+            onOpenConversation = { _, _ -> },
+            onOpenThread = {}
+        )
+    }
+
+    /** The keypad, which lives behind the floating button and not in the page. */
+    @Test
+    fun keypad() = shoot("screen-keypad", "Hanokatra ny kitendry") {
+        val app: AppViewModel = viewModel()
+        val phone: PhoneViewModel = viewModel()
+        WithSimRouting(app) { launcher ->
+            PhoneScreen(app = app, phone = phone, launcher = launcher, onMessage = {})
+        }
+    }
+
+    /** Two recipients ticked: what the group message looks like mid-use. */
+    @Test
+    fun bulk_chosen() = shoot("screen-bulk-chosen", "Betsaka", "Rakoto", "Naivo") {
         val app: AppViewModel = viewModel()
         val phone: PhoneViewModel = viewModel()
         val messages: MessagesViewModel = viewModel()
