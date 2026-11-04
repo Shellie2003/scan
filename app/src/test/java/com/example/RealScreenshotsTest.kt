@@ -1,5 +1,7 @@
 package com.example
 
+import android.Manifest
+import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
@@ -19,10 +21,16 @@ import com.example.viewmodel.MessagesViewModel
 import com.example.viewmodel.PhoneViewModel
 import com.github.takahirom.roborazzi.RobolectricDeviceQualifiers
 import com.github.takahirom.roborazzi.captureRoboImage
+import com.example.data.DataSeeder
+import com.example.data.DatabaseProvider
+import kotlinx.coroutines.runBlocking
+import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
+import org.robolectric.shadows.ShadowContentResolver
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
 
@@ -52,6 +60,46 @@ class RealScreenshotsTest {
 
     @get:Rule
     val rule = createAndroidComposeRule<ComponentActivity>()
+
+    /**
+     * What a telephone brings that a build machine does not.
+     *
+     * Without this every screen draws a permission card and an empty list, and
+     * the pictures show an application that has never been allowed to do
+     * anything — which is not what it looks like in a hand.
+     */
+    @Before
+    fun giveItATelephone() {
+        val app = androidx.test.core.app.ApplicationProvider
+            .getApplicationContext<Application>()
+
+        Shadows.shadowOf(app).grantPermissions(
+            Manifest.permission.CAMERA,
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.WRITE_CONTACTS,
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.WRITE_CALL_LOG,
+            Manifest.permission.READ_SMS,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.CALL_PHONE,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_PHONE_NUMBERS,
+            Manifest.permission.POST_NOTIFICATIONS
+        )
+
+        // The contacts, the messages and the call history.
+        FakeAndroidData.AUTHORITIES.forEach { authority ->
+            ShadowContentResolver.registerProviderInternal(authority, FakeAndroidData())
+        }
+
+        // The operators and the plans the application ships with. Seeded here
+        // and waited for: the application seeds on a coroutine of its own, and
+        // a picture taken before it finishes shows an empty catalogue.
+        runBlocking {
+            DataSeeder.seed(app, DatabaseProvider.getDatabase(app))
+        }
+    }
 
     private fun shoot(name: String, content: @Composable () -> Unit) {
         rule.setContent {
