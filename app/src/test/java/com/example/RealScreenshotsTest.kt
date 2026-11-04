@@ -6,7 +6,9 @@ import androidx.activity.ComponentActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
+import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performClick
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.ScanScreen
 import com.example.ui.TolotraScreen
@@ -108,20 +110,26 @@ class RealScreenshotsTest {
         // and waited for: the application seeds on a coroutine of its own, and
         // a picture taken before it finishes shows an empty catalogue.
         runBlocking {
+            // Opening it is what starts the application's own seeding, on a
+            // coroutine of its own. Let that finish, wipe, then seed once —
+            // otherwise every operator and every plan comes out twice, which
+            // is what the first populated picture showed.
             val db = DatabaseProvider.getDatabase(app)
+            repeat(4) {
+                org.robolectric.shadows.ShadowLooper.idleMainLooper()
+                kotlinx.coroutines.delay(20)
+            }
+            db.clearAllTables()
             DataSeeder.seed(app, db)
-            // Asked out loud: two rounds were spent guessing why a list was
-            // empty. The log says which side is at fault — the data, or the
-            // moment the picture is taken.
-            println("SCANSHOT operators=" + db.operatorDao().getAllOperatorsOnce().size)
-            println("SCANSHOT contacts=" +
-                com.example.telephony.ContactsRepository.load(app).size)
-            println("SCANSHOT calls=" +
-                com.example.telephony.CallLogRepository.load(app).size)
         }
     }
 
-    private fun shoot(name: String, content: @Composable () -> Unit) {
+    private fun shoot(
+        name: String,
+        /** Pressed once the screen has settled, before the picture. */
+        then: String? = null,
+        content: @Composable () -> Unit
+    ) {
         rule.setContent {
             LanguageManager.init(LocalContext.current)
             LanguageManager.setLanguageForTest("mg")
@@ -137,6 +145,16 @@ class RealScreenshotsTest {
             rule.mainClock.advanceTimeBy(500)
         }
         rule.waitForIdle()
+        if (then != null) {
+            runCatching { rule.onNodeWithText(then).performClick() }
+                .onFailure { println("SCANSHOT could not press " + then) }
+            repeat(4) {
+                rule.waitForIdle()
+                org.robolectric.shadows.ShadowLooper.idleMainLooper()
+                rule.mainClock.advanceTimeBy(500)
+            }
+            rule.waitForIdle()
+        }
         rule.onRoot().captureRoboImage(filePath = "src/test/screenshots/$name.png")
     }
 
@@ -181,6 +199,29 @@ class RealScreenshotsTest {
         val phone: PhoneViewModel = viewModel()
         val messages: MessagesViewModel = viewModel()
         BulkMessagesTab(app = app, phone = phone, messages = messages)
+    }
+
+    @Test
+    fun contacts_tab() = shoot("screen-contacts", then = "Kontaka") {
+        val app: AppViewModel = viewModel()
+        val phone: PhoneViewModel = viewModel()
+        WithSimRouting(app) { launcher ->
+            PhoneScreen(app = app, phone = phone, launcher = launcher, onMessage = {})
+        }
+    }
+
+    @Test
+    fun bulk_from_messages() = shoot("screen-bulk-real", then = "Betsaka") {
+        val app: AppViewModel = viewModel()
+        val phone: PhoneViewModel = viewModel()
+        val messages: MessagesViewModel = viewModel()
+        MessagesScreen(
+            app = app,
+            phone = phone,
+            messages = messages,
+            onOpenConversation = { _, _ -> },
+            onOpenThread = {}
+        )
     }
 
     /** The one that may well refuse: it wants a camera. */
