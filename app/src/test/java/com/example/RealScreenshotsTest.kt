@@ -95,20 +95,29 @@ class RealScreenshotsTest {
             ShadowContentResolver.registerProviderInternal(authority, FakeAndroidData())
         }
 
-        // Being the telephone application: without it the first screen opens
-        // on a card asking for it, and a picture of the application should
-        // not be a picture of it asking for things.
+        // Being the telephone application. From Android 10 the application
+        // asks the RoleManager, not the TelecomManager — setting the default
+        // dialer on the second changed nothing, and the card stayed.
         runCatching {
-            val telecom = app.getSystemService(android.content.Context.TELECOM_SERVICE)
-                as android.telecom.TelecomManager
-            Shadows.shadowOf(telecom).setDefaultDialer(app.packageName)
-        }
+            val roles = app.getSystemService(android.content.Context.ROLE_SERVICE)
+                as android.app.role.RoleManager
+            Shadows.shadowOf(roles).addHeldRole(android.app.role.RoleManager.ROLE_DIALER)
+        }.onFailure { println("SCANSHOT role: " + it) }
 
         // The operators and the plans the application ships with. Seeded here
         // and waited for: the application seeds on a coroutine of its own, and
         // a picture taken before it finishes shows an empty catalogue.
         runBlocking {
-            DataSeeder.seed(app, DatabaseProvider.getDatabase(app))
+            val db = DatabaseProvider.getDatabase(app)
+            DataSeeder.seed(app, db)
+            // Asked out loud: two rounds were spent guessing why a list was
+            // empty. The log says which side is at fault — the data, or the
+            // moment the picture is taken.
+            println("SCANSHOT operators=" + db.operatorDao().getAllOperatorsOnce().size)
+            println("SCANSHOT contacts=" +
+                com.example.telephony.ContactsRepository.load(app).size)
+            println("SCANSHOT calls=" +
+                com.example.telephony.CallLogRepository.load(app).size)
         }
     }
 
