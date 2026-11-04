@@ -109,19 +109,28 @@ class RealScreenshotsTest {
         // The operators and the plans the application ships with. Seeded here
         // and waited for: the application seeds on a coroutine of its own, and
         // a picture taken before it finishes shows an empty catalogue.
-        runBlocking {
-            // Opening it is what starts the application's own seeding, on a
-            // coroutine of its own. Let that finish, wipe, then seed once —
-            // otherwise every operator and every plan comes out twice, which
-            // is what the first populated picture showed.
-            val db = DatabaseProvider.getDatabase(app)
-            repeat(4) {
-                org.robolectric.shadows.ShadowLooper.idleMainLooper()
-                kotlinx.coroutines.delay(20)
+        // Guarded as a whole: this runs before every picture, and a database
+        // that will not cooperate must cost one empty list, not all eight
+        // screens. It already did once.
+        runCatching {
+            runBlocking {
+                // Opening it is what starts the application's own seeding, on
+                // a coroutine of its own. Let that finish, wipe, then seed
+                // once — otherwise every operator and every plan comes out
+                // twice, which is what the first populated picture showed.
+                val db = DatabaseProvider.getDatabase(app)
+                repeat(4) {
+                    org.robolectric.shadows.ShadowLooper.idleMainLooper()
+                    kotlinx.coroutines.delay(20)
+                }
+                // Room refuses this one on the main thread, and refuses it by
+                // throwing: it took the whole @Before down with it.
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                    db.clearAllTables()
+                }
+                DataSeeder.seed(app, db)
             }
-            db.clearAllTables()
-            DataSeeder.seed(app, db)
-        }
+        }.onFailure { println("SCANSHOT seed: " + it) }
     }
 
     private fun shoot(
