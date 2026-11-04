@@ -93,6 +93,25 @@ class RealScreenshotsTest {
             ShadowContentResolver.registerProviderInternal(authority, FakeAndroidData())
         }
 
+        // The two cards at the top of the first screen are not runtime
+        // permissions: one asks to be the telephone application, the other
+        // asks for the right to show a call over the lock screen. Both are
+        // granted here, because a picture of the application should not be a
+        // picture of it asking for things.
+        runCatching {
+            val telecom = Shadows.shadowOf(
+                app.getSystemService(android.content.Context.TELECOM_SERVICE)
+                    as android.telecom.TelecomManager
+            )
+            telecom.setDefaultDialer(app.packageName)
+        }
+        runCatching {
+            Shadows.shadowOf(
+                app.getSystemService(android.content.Context.NOTIFICATION_SERVICE)
+                    as android.app.NotificationManager
+            ).setCanUseFullScreenIntent(true)
+        }
+
         // The operators and the plans the application ships with. Seeded here
         // and waited for: the application seeds on a coroutine of its own, and
         // a picture taken before it finishes shows an empty catalogue.
@@ -107,6 +126,16 @@ class RealScreenshotsTest {
             LanguageManager.setLanguageForTest("mg")
             ScanTheme(darkTheme = false, dynamicColor = false) { content() }
         }
+        // Let it settle. The lists arrive on coroutines of their own, and the
+        // first run of this caught a call history that was there and a
+        // contact list that was not — the same screen, a few milliseconds
+        // apart.
+        repeat(6) {
+            rule.waitForIdle()
+            org.robolectric.shadows.ShadowLooper.idleMainLooper()
+            rule.mainClock.advanceTimeBy(500)
+        }
+        rule.waitForIdle()
         rule.onRoot().captureRoboImage(filePath = "src/test/screenshots/$name.png")
     }
 
