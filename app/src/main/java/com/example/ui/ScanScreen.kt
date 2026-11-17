@@ -94,6 +94,8 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.data.AppSettings
 import com.example.data.model.Operator
 import com.example.data.model.ScanHistory
+import com.example.telephony.RoutingStatus
+import com.example.telephony.SimCard
 import com.example.telephony.UssdFormatter
 import com.example.ui.components.SimIndicator
 import com.example.ui.components.SimLauncher
@@ -186,6 +188,22 @@ fun CameraContent(
     val phoneStatePermissionState = rememberPermissionState(Manifest.permission.READ_PHONE_STATE)
 
     var dialedCodesHistory by remember { mutableStateOf(setOf<String>()) }
+
+    /**
+     * The digits last read, and how many frames in a row read exactly them.
+     *
+     * A single reading is not a code. The recogniser misreads a scratched
+     * ticket under a bad light — an 8 for a 6, a 1 for a 7 — and the misread is
+     * still fourteen digits long, so it looked exactly as valid as the right
+     * one and went straight to the operator. A wrong recharge code, sent again
+     * and again, is what makes an operator block the line for safety.
+     *
+     * So a code has to be read [READINGS_NEEDED] times, identically, before the
+     * application will touch it. Two readings of the same fourteen digits by
+     * two different frames almost never happen by accident; one does, often.
+     */
+    var candidate by remember { mutableStateOf("") }
+    var readings by remember { mutableStateOf(0) }
     var safetyWarning by remember { mutableStateOf<String?>(null) }
 
     var isCooldownActive by remember { mutableStateOf(false) }
@@ -197,7 +215,21 @@ fun CameraContent(
 
     // Number of digits printed on the ticket, taken from the operator settings.
     val expectedLength = selectedOperator?.codeLength ?: 14
-    val routing = remember(selectedOperator, sims) { app.routeFor(selectedOperator) }
+
+    /**
+     * The card picked on this screen, for this screen only.
+     *
+     * A choice made in the picker used to be dropped unless the user also
+     * ticked "remember": the line shown above the viewfinder stayed the old one
+     * and the recharge left on the old one too. Cleared when the operator
+     * changes, because a card of Yas has nothing to do with a code of Orange.
+     */
+    var pickedSim by remember(selectedOperator?.id) { mutableStateOf<SimCard?>(null) }
+
+    val baseRouting = remember(selectedOperator, sims) { app.routeFor(selectedOperator) }
+    val routing = remember(baseRouting, pickedSim) {
+        pickedSim?.let { baseRouting.copy(sim = it, status = RoutingStatus.READY) } ?: baseRouting
+    }
 
     // The page scrolls, so the recharge button can sit below the fold on a small
     // screen. A code that has just been read brings it into view by itself:
@@ -247,7 +279,8 @@ fun CameraContent(
             operator = operator,
             kind = ScanHistory.KIND_RECHARGE,
             label = LanguageManager.getString("recharge") + " " + operator.name,
-            rawCode = code
+            rawCode = code,
+            sim = pickedSim
         )
 
         coroutineScope.launch {
@@ -257,6 +290,10 @@ fun CameraContent(
             }
             isCooldownActive = false
             scannedCode = ""
+            // The next ticket is read from nothing: the digits of this one must
+            // not count as the first reading of the next.
+            candidate = ""
+            readings = 0
         }
     }
 
@@ -369,12 +406,19 @@ fun CameraContent(
                                         val match = regex.find(line.text)
                                         if (match != null) {
                                             val code = match.value.filter { it.isDigit() }
-                                            if (code.length == length && scannedCode != code) {
+                                            if (code.length != length) continue
+                                            // Counted, not trusted. The same
+                                            // digits twice are a code; once is
+                                            // a guess, and a guess sent to the
+                                            // operator is a recharge lost.
+                                            readings = if (code == candidate) readings + 1 else 1
+                                            candidate = code
+                                            if (readings >= READINGS_NEEDED && scannedCode != code) {
                                                 scannedCode = code
                                                 toneGenerator?.startTone(ToneGenerator.TONE_PROP_BEEP)
                                                 haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                                return@addOnSuccessListener
                                             }
+                                            return@addOnSuccessListener
                                         }
                                     }
                                 }
@@ -974,8 +1018,19 @@ fun CameraContent(
             onDismiss = { showSimPicker = false },
             onPick = { sim, save ->
                 showSimPicker = false
+                // Taken into account whatever the box says. The box only
+                // decides whether the next recharge starts on it too.
+                pickedSim = sim
                 if (save) app.setPreferredSim(selectedOperator, sim)
             }
         )
     }
 }
+
+/**
+ * How many frames must read the very same digits before a code is accepted.
+ *
+ * Two. One is what the application used to accept, and a single misreading of
+ * a scratched ticket was then sent to the operator as a recharge.
+ */
+private const val READINGS_NEEDED = 2

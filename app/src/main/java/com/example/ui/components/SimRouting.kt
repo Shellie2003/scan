@@ -40,6 +40,7 @@ import com.example.telephony.OngoingCallStore
 import com.example.telephony.DialOutcome
 import com.example.telephony.RoutingStatus
 import com.example.telephony.SimCard
+import com.example.telephony.SimManager
 import com.example.telephony.SimRouting
 import com.example.telephony.UssdFormatter
 import com.example.telephony.UssdResult
@@ -62,7 +63,14 @@ sealed class DialRequest {
         val label: String = "",
         val rawCode: String = "",
         val requireConfirm: Boolean = false,
-        val warning: String? = null
+        val warning: String? = null,
+        /**
+         * The card the screen is showing, when the user picked it there.
+         *
+         * Without this the choice was thrown away unless the user also ticked
+         * "remember": the screen said one line and the code left on another.
+         */
+        val sim: SimCard? = null
     ) : DialRequest()
 }
 
@@ -80,11 +88,14 @@ class SimLauncher internal constructor(private val onRequest: (DialRequest) -> U
         label: String = "",
         rawCode: String = "",
         requireConfirm: Boolean = false,
-        warning: String? = null
+        warning: String? = null,
+        sim: SimCard? = null
     ) {
         if (code.isNotBlank()) {
             onRequest(
-                DialRequest.Code(code, operator, kind, label, rawCode, requireConfirm, warning)
+                DialRequest.Code(
+                    code, operator, kind, label, rawCode, requireConfirm, warning, sim
+                )
             )
         }
     }
@@ -108,6 +119,28 @@ fun WithSimRouting(
     var pendingConfirm by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
     var pendingNoLine by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
     var ussdAnswer by remember { mutableStateOf<String?>(null) }
+
+    /**
+     * A code whose answer the telephone could not read, waiting on the user.
+     *
+     * The application used to dial it again by itself. It must not: the code
+     * had very often reached the operator already — the dialog of the operator
+     * was on the screen — and sending it a second time is both a second
+     * operation and, repeated, what makes an operator block the line.
+     */
+    var ussdTrouble by remember { mutableStateOf<Pair<DialRequest, SimRouting>?>(null) }
+
+    /**
+     * `true` from the moment a code is handed to the modem until it answers.
+     *
+     * One operation at a time. Two USSD sessions at once is what put two and
+     * three dialogs of the telephone on top of each other before anything had
+     * been done.
+     */
+    var ussdInFlight by remember { mutableStateOf(false) }
+
+    /** When the last operation was started, so that a double tap sends one code. */
+    var lastStart by remember { mutableStateOf(0L) }
 
     /** The code the answer being shown came from, and what it was doing. */
     var answeredRequest by remember { mutableStateOf<DialRequest?>(null) }
@@ -134,6 +167,18 @@ fun WithSimRouting(
         val failed = CallManager.dial(context, code, sim, direct = true) == DialOutcome.FAILED
         if (failed) toast("action_failed")
         return !failed
+    }
+
+    /** Writes an operation to the history — only ever one that really went out. */
+    fun record(request: DialRequest.Code, sim: SimCard?) {
+        app.record(
+            operator = request.operator,
+            code = request.rawCode.ifBlank { request.code },
+            dialedCode = request.code,
+            sim = sim,
+            kind = request.kind,
+            label = request.label
+        )
     }
 
     fun execute(request: DialRequest, routing: SimRouting) {
@@ -165,18 +210,16 @@ fun WithSimRouting(
                 val useInApp = AppSettings.inAppUssd(context) &&
                     AppSettings.inAppUssdWorks(context) &&
                     UssdRunner.isAvailable(context, code)
-                // The history is written only for a code that actually went
-                // out. It used to be written whatever happened, so a recharge
-                // the phone had refused was listed as done — and the duplicate
-                // guard then refused to send it again for a day.
-                var sent = true
                 if (useInApp) {
+                    ussdInFlight = true
                     UssdRunner.run(context, code, sim) { result ->
+                        ussdInFlight = false
                         when (result) {
                             is UssdResult.Success -> {
                                 AppSettings.recordInAppUssdSuccess(context)
                                 ussdAnswer = result.response
                                 answeredRequest = request
+                                record(request, sim)
                                 // After a recharge, what follows is usually a
                                 // plan: the two most often bought are fetched
                                 // while the user reads the answer.
@@ -184,29 +227,31 @@ fun WithSimRouting(
                                     scope.launch { habits = app.mostBoughtOffers(2) }
                                 }
                             }
-                            // The operator answer could not be read in the app.
-                            // The code itself is good: it is dialled straight
-                            // away instead of asking the user to try again, and
-                            // a phone that keeps refusing stops being asked.
+                            // The channel does not exist on this telephone, so
+                            // the code never left: it is dialled, and that is
+                            // the end of it.
+                            is UssdResult.Unsupported -> {
+                                AppSettings.recordInAppUssdFailure(context)
+                                if (dialCode(code, sim)) record(request, sim)
+                            }
+                            // A refusal, or nothing at all. What is certain is
+                            // only this: the application cannot tell whether
+                            // the operator got the code — very often it did,
+                            // and its own dialog is on the screen behind. The
+                            // user can see that; the application cannot. So it
+                            // dials nothing, writes nothing, and asks.
                             else -> {
-                                val giveUp = AppSettings.recordInAppUssdFailure(context)
-                                toast(if (giveUp) "ussd_direct_from_now" else "ussd_falling_back")
-                                dialCode(code, sim)
+                                AppSettings.recordInAppUssdFailure(context)
+                                ussdTrouble = request to routing
                             }
                         }
                     }
-                } else {
-                    sent = dialCode(code, sim)
-                }
-                if (sent) {
-                    app.record(
-                        operator = request.operator,
-                        code = request.rawCode.ifBlank { code },
-                        dialedCode = code,
-                        sim = sim,
-                        kind = request.kind,
-                        label = request.label
-                    )
+                } else if (dialCode(code, sim)) {
+                    // The history is written only for a code that actually went
+                    // out. It used to be written whatever happened, so a
+                    // recharge the phone had refused was listed as done — and
+                    // the duplicate guard then refused to send it again.
+                    record(request, sim)
                 }
             }
         }
@@ -214,10 +259,44 @@ fun WithSimRouting(
 
     fun routeOf(request: DialRequest): SimRouting = when (request) {
         is DialRequest.Call -> app.routeForNumber(request.number)
-        is DialRequest.Code -> app.routeFor(request.operator)
+        is DialRequest.Code -> {
+            val base = app.routeFor(request.operator)
+            // A card named by the screen is the card the code goes out on.
+            // There is nothing left to choose, so no picker is raised either.
+            val chosen = request.sim
+            if (chosen == null) {
+                base
+            } else {
+                base.copy(
+                    sim = chosen,
+                    status = RoutingStatus.READY,
+                    isFallback = request.operator != null &&
+                        !SimManager.matches(chosen, request.operator)
+                )
+            }
+        }
     }
 
     fun start(request: DialRequest) {
+        // A code already on its way is the only thing the modem can hold. A
+        // second one started now opens a second session, and the telephone puts
+        // up a second dialog over the first.
+        if (ussdInFlight) {
+            toast("ussd_busy")
+            return
+        }
+        // A code sent during a conversation is refused by the modem, and what
+        // reaches the user is a telephony error rather than their recharge.
+        if (request is DialRequest.Code && OngoingCallStore.hasRealCall()) {
+            toast("call_in_progress")
+            return
+        }
+        // And a button pressed twice is one operation, not two. A recharge sent
+        // twice is money sent twice.
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastStart < DOUBLE_TAP_MS) return
+        lastStart = now
+
         val routing = routeOf(request)
         val needsConfirm = request is DialRequest.Code &&
             (request.requireConfirm || AppSettings.confirmBeforeDial(context))
@@ -417,11 +496,71 @@ fun WithSimRouting(
         )
     }
 
-    // There was a third dialog here, offering to retry a USSD code that failed.
-    // Nothing could open it any more: a failure now dials the code straight
-    // away rather than asking the user to press "retry" on a code that was
-    // never wrong. Dead state and dead UI are worse than no UI.
+    // The answer of the operator could not be read inside the application. The
+    // code may have gone through all the same — that is the usual case, and the
+    // words of the operator are on the screen behind this dialog. So it says
+    // what is true, and leaves the decision to send it again to the user.
+    ussdTrouble?.let { (request, routing) ->
+        if (request is DialRequest.Code) {
+            AlertDialog(
+                onDismissRequest = { ussdTrouble = null },
+                icon = {
+                    Icon(
+                        imageVector = Icons.Rounded.Warning,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error
+                    )
+                },
+                title = {
+                    Text(
+                        text = LanguageManager.getString("ussd_unread_title"),
+                        fontWeight = FontWeight.Bold
+                    )
+                },
+                text = {
+                    Column(modifier = Modifier.verticalScroll(rememberScrollState())) {
+                        Text(
+                            text = LanguageManager.getString("ussd_unread_desc"),
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                        Spacer(Modifier.height(8.dp))
+                        Text(
+                            text = request.code,
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                },
+                confirmButton = {
+                    Button(onClick = {
+                        val code = request.code
+                        val sim = routing.sim
+                        ussdTrouble = null
+                        // Dialled the ordinary way this time, which is the path
+                        // that works on these telephones — and written to the
+                        // history, because this one did leave.
+                        if (dialCode(code, sim)) record(request, sim)
+                    }) {
+                        Text(LanguageManager.getString("send_again"))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { ussdTrouble = null }) {
+                        Text(LanguageManager.getString("cancel"))
+                    }
+                }
+            )
+        }
+    }
 }
+
+/**
+ * How long two presses count as one.
+ *
+ * Long enough to swallow a double tap and the twitch of a thumb on a cheap
+ * touchscreen, short enough that a user who meant two recharges gets two.
+ */
+private const val DOUBLE_TAP_MS = 1_200L
 
 /**
  * `true` when the answer of the operator says nothing but goodbye.

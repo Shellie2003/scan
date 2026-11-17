@@ -62,9 +62,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -138,6 +140,9 @@ fun InCallScreen(onFinished: () -> Unit) {
     val calls by OngoingCallStore.calls.collectAsState()
     val muted by OngoingCallStore.muted.collectAsState()
     val speakerOn by OngoingCallStore.speakerOn.collectAsState()
+    // Only ever true on a phone whose system refused the proximity wake lock:
+    // elsewhere the display is already off and nothing of this is drawn.
+    val nearEar by OngoingCallStore.nearEar.collectAsState()
     var showKeypad by remember { mutableStateOf(false) }
 
     /** Id of the call a written answer is being chosen for, `null` when none is. */
@@ -174,6 +179,25 @@ fun InCallScreen(onFinished: () -> Unit) {
             .systemBarsPadding()
             .padding(24.dp)
     ) {
+        // Held against the ear. Drawn above everything and swallowing every
+        // touch: this is what stops a cheek from turning the conversation into
+        // a hands-free one, or from hanging up on it.
+        if (nearEar) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .zIndex(1f)
+                    .background(Color.Black)
+                    .pointerInput(Unit) {
+                        awaitPointerEventScope {
+                            while (true) {
+                                awaitPointerEvent().changes.forEach { it.consume() }
+                            }
+                        }
+                    }
+            )
+        }
+
         if (call == null) {
             Text(
                 text = LanguageManager.getString("call_ended"),

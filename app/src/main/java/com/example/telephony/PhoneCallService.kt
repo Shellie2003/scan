@@ -43,6 +43,20 @@ class PhoneCallService : InCallService() {
     /** Whether the band is currently carried by the service itself. */
     private var foreground = false
 
+    /**
+     * Keeps a cheek from pressing the buttons of the call screen.
+     *
+     * Owned here rather than by the screen: the lock it takes turns the display
+     * off, which on some phones stops the activity — and an activity that is
+     * stopped would release the lock and light the screen straight back up.
+     */
+    private val proximity by lazy {
+        ProximityGuard(this) { near -> OngoingCallStore.setNearEar(near) }
+    }
+
+    /** `true` while the guard is meant to be watching. */
+    private var guarding = false
+
     override fun onCreate() {
         super.onCreate()
         // The notification follows the call instead of being written once: it
@@ -60,14 +74,35 @@ class PhoneCallService : InCallService() {
                     ?: calls.firstOrNull { it.isActive }
                     ?: calls.firstOrNull { !it.isDisconnected }
                 if (call == null) cancelNotification() else notifyCall(call)
+                // A conversation in progress, at the ear: the screen is given
+                // to the proximity sensor. A ringing call is not — the phone is
+                // in a hand or on a table and the buttons must answer.
+                watchProximity(calls.any { it.isActive })
             }
         }
+    }
+
+    /**
+     * Starts or stops the proximity guard.
+     *
+     * Not while the loudspeaker is on: the telephone is then flat on a table
+     * and whatever passes over it must not blank the screen.
+     */
+    private fun watchProximity(callInProgress: Boolean) {
+        val wanted = callInProgress && !OngoingCallStore.speakerOn.value
+        if (wanted == guarding) return
+        guarding = wanted
+        if (wanted) proximity.start() else proximity.stop()
     }
 
     override fun onDestroy() {
         // Before the scope dies: a band left behind would stay on the screen
         // with no call behind it and no way to dismiss it.
         cancelNotification()
+        // And the screen goes back to the user, whatever state the sensor left
+        // it in.
+        guarding = false
+        proximity.stop()
         super.onDestroy()
         scope.cancel()
     }
@@ -249,6 +284,10 @@ class PhoneCallService : InCallService() {
         @Suppress("DEPRECATION")
         super.onCallAudioStateChanged(audioState)
         OngoingCallStore.onAudioStateChanged(audioState)
+        // Switching to the loudspeaker puts the phone down on a table: the
+        // sensor stops deciding what the screen does. Switching back to the
+        // earpiece hands it over again.
+        watchProximity(OngoingCallStore.calls.value.any { !it.isServiceCode && it.isActive })
     }
 
     /**

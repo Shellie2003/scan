@@ -96,11 +96,15 @@ object AppSettings {
     }
 
     /**
-     * `false` once the in-app USSD channel has failed twice on this phone.
+     * `false` once the in-app USSD channel has failed on this phone.
      *
-     * `sendUssdRequest` is refused outright by some manufacturers. Asking it
-     * every time costs the user two taps and a failed dialog before the code
-     * finally goes through the dialer, so the app stops asking.
+     * `sendUssdRequest` is refused outright by some manufacturers, and on
+     * others it hands the code to the modem, lets the telephone put up its own
+     * dialog, and then never answers. One failure is all the evidence needed:
+     * each further attempt costs the user a wrong error message, a dialog that
+     * belongs to nothing, and the doubt of not knowing whether their recharge
+     * went out. From the first refusal the codes go straight through the
+     * dialer, which is the path that works on these telephones.
      */
     fun inAppUssdWorks(context: Context): Boolean =
         prefs(context).getInt("in_app_ussd_failures", 0) < IN_APP_USSD_GIVE_UP
@@ -121,7 +125,7 @@ object AppSettings {
         prefs(context).edit().putInt("in_app_ussd_failures", 0).apply()
     }
 
-    private const val IN_APP_USSD_GIVE_UP = 2
+    private const val IN_APP_USSD_GIVE_UP = 1
 
     // ---------------------------------------------------------------- messages
 

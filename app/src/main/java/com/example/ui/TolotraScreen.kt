@@ -61,6 +61,8 @@ import com.example.data.model.Offer
 import com.example.data.model.Operator
 import com.example.data.model.ScanHistory
 import com.example.telephony.NumberUtils
+import com.example.telephony.RoutingStatus
+import com.example.telephony.SimCard
 import com.example.telephony.UssdFormatter
 import com.example.ui.components.EmptyState
 import com.example.ui.components.SimIndicator
@@ -104,7 +106,19 @@ fun TolotraScreen(
         operators.firstOrNull { it.name == selectedOperatorName } ?: operators.firstOrNull()
     }
     val theme = OperatorColorUtils.themeOf(operator)
-    val routing = remember(operator, sims) { app.routeFor(operator) }
+
+    /**
+     * The card picked here, for the plans of this screen.
+     *
+     * The choice was dropped unless the user ticked "remember": the line shown
+     * above the list stayed the old one, and the plan was bought on the old one.
+     */
+    var pickedSim by remember(operator?.id) { mutableStateOf<SimCard?>(null) }
+
+    val baseRouting = remember(operator, sims) { app.routeFor(operator) }
+    val routing = remember(baseRouting, pickedSim) {
+        pickedSim?.let { baseRouting.copy(sim = it, status = RoutingStatus.READY) } ?: baseRouting
+    }
 
     val categories = remember(offers, operator) {
         val fromOffers = offers.filter { it.operatorName.equals(operator?.name, true) }
@@ -284,7 +298,8 @@ fun TolotraScreen(
                                     operator = operator,
                                     kind = ScanHistory.KIND_OFFER,
                                     label = offer.title,
-                                    rawCode = offer.ussdCode
+                                    rawCode = offer.ussdCode,
+                                    sim = pickedSim
                                 )
                             },
                             onShare = { sharing = offer },
@@ -300,7 +315,8 @@ fun TolotraScreen(
                                     kind = ScanHistory.KIND_INFO,
                                     label = LanguageManager.getString("check_remaining") +
                                         " " + offer.title,
-                                    rawCode = infoCode
+                                    rawCode = infoCode,
+                                    sim = pickedSim
                                 )
                             }
                         )
@@ -318,6 +334,8 @@ fun TolotraScreen(
             onDismiss = { showSimPicker = false },
             onPick = { sim, save ->
                 showSimPicker = false
+                // Used right away, whatever the box says.
+                pickedSim = sim
                 if (save) app.setPreferredSim(operator, sim)
             }
         )
@@ -376,6 +394,7 @@ fun TolotraScreen(
                     kind = ScanHistory.KIND_OFFER,
                     label = offer.title + " → " + number,
                     rawCode = offer.shareCode,
+                    sim = pickedSim,
                     requireConfirm = true,
                     warning = if (operator?.templatesVerified == false) {
                         LanguageManager.getString("verify_code_warning")

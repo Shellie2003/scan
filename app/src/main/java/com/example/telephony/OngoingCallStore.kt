@@ -80,6 +80,21 @@ object OngoingCallStore {
     private val _speakerOn = MutableStateFlow(false)
     val speakerOn: StateFlow<Boolean> = _speakerOn.asStateFlow()
 
+    /**
+     * `true` while something is right against the screen — an ear.
+     *
+     * Only set on a telephone whose system refused the proximity wake lock. On
+     * every other phone the display is off by then and nothing is drawn at all.
+     * The call screen covers itself when this is true, so that a cheek cannot
+     * press the loudspeaker button in the middle of a conversation.
+     */
+    private val _nearEar = MutableStateFlow(false)
+    val nearEar: StateFlow<Boolean> = _nearEar.asStateFlow()
+
+    fun setNearEar(near: Boolean) {
+        _nearEar.value = near
+    }
+
     /** Contact names resolved asynchronously, keyed by national number. */
     private val nameCache = HashMap<String, String>()
 
@@ -154,6 +169,14 @@ object OngoingCallStore {
     }
 
     fun hasCalls(): Boolean = tracked.isNotEmpty()
+
+    /**
+     * `true` when a conversation is going on — a code is not one.
+     *
+     * A USSD code handed to the modem while a call is up is refused, and the
+     * user is shown a telephony error in place of their recharge.
+     */
+    fun hasRealCall(): Boolean = _calls.value.any { !it.isServiceCode && !it.isDisconnected }
 
     // ------------------------------------------------------------------ actions
 
