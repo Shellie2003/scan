@@ -48,17 +48,27 @@ object NumberUtils {
     }
 
     /**
-     * `true` for a code the telephone answers itself, with a dialog of its own.
+     * `true` for a code the telephone answers itself, in a dialog of its own.
      *
-     * Narrower than [isServiceCode] on purpose: a four-digit short number is a
-     * correspondent that rings, and this must not call it a code. Only the star
-     * and the hash make a string the telephone hands to the network instead of
-     * placing a call — and nothing ever appears in the list of calls for it,
-     * which is the whole reason this exists.
+     * The test is on the *first* character, and that is the whole point. A
+     * string beginning with a star or a hash — `#321#`, `*114*500*1#` — is
+     * handed to the network by the telephone, which puts up its own dialog and
+     * never creates a call. Hiding it from the call screen is right.
+     *
+     * A string that merely carries a star somewhere in the middle is a
+     * different animal. The plans of Orange are dialled as `222*1`, `224*30*2`,
+     * `202*3*1`: the telephone places a plain call with that dial string and
+     * shows no dialog at all. Calling those "codes the telephone answers
+     * itself" is what made the application hide the one thing that was
+     * happening — so a plan bought on Orange showed nothing whatsoever,
+     * anywhere. They are calls, and they are shown as calls.
+     *
+     * Narrower than [isServiceCode] on both counts: a short number rings, and a
+     * dial string with a star in it is still a call.
      */
     fun isMmi(raw: String): Boolean {
         val s = sanitize(raw)
-        return s.contains('*') || s.contains('#')
+        return s.startsWith("*") || s.startsWith("#")
     }
 
     /** Two numbers belong to the same subscriber. */

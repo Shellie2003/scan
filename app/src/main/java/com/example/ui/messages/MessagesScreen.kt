@@ -85,6 +85,7 @@ import com.example.ui.components.InitialsAvatar
 import com.example.ui.components.NotificationPermissionBanner
 import com.example.ui.theme.ScanRadius
 import com.example.ui.util.LanguageManager
+import com.example.ui.util.TimeLabels
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
 import com.example.viewmodel.PhoneViewModel
@@ -216,11 +217,17 @@ fun MessagesScreen(
                         fontWeight = FontWeight.ExtraBold,
                         color = MaterialTheme.colorScheme.primary
                     )
-                    Text(
-                        text = LanguageManager.getString("messages_desc"),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                    // "Send the same message to several contacts at once" is
+                    // what the Betsaka tab does. It sat above the inbox, over a
+                    // list of ordinary conversations, describing something else
+                    // entirely. It is shown where it is true.
+                    if (tab == MessagesTab.BULK) {
+                        Text(
+                            text = LanguageManager.getString("messages_desc"),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
             }
 
@@ -811,11 +818,7 @@ private fun MessageMatchRow(
         }
         Spacer(Modifier.width(8.dp))
         Text(
-            text = android.text.format.DateUtils.getRelativeTimeSpanString(
-                date,
-                System.currentTimeMillis(),
-                android.text.format.DateUtils.MINUTE_IN_MILLIS
-            ).toString(),
+            text = TimeLabels.relative(LocalContext.current, date),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
@@ -945,11 +948,7 @@ private fun ThreadRow(
         Spacer(Modifier.width(8.dp))
         Column(horizontalAlignment = Alignment.End) {
             Text(
-                text = android.text.format.DateUtils.getRelativeTimeSpanString(
-                    thread.date,
-                    System.currentTimeMillis(),
-                    android.text.format.DateUtils.MINUTE_IN_MILLIS
-                ).toString(),
+                text = TimeLabels.relative(LocalContext.current, thread.date),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )

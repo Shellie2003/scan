@@ -78,6 +78,7 @@ import com.example.ui.components.SimSelector
 import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
+import com.example.ui.util.TimeLabels
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.MessagesViewModel
 
@@ -575,11 +576,8 @@ private fun MessageBubble(
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(
-                    text = android.text.format.DateUtils.getRelativeTimeSpanString(
-                        message.date,
-                        System.currentTimeMillis(),
-                        android.text.format.DateUtils.MINUTE_IN_MILLIS
-                    ).toString() + if (message.isFailed) " • !" else "",
+                    text = TimeLabels.relative(LocalContext.current, message.date) +
+                        if (message.isFailed) " • !" else "",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (message.isFailed) {
                         MaterialTheme.colorScheme.error

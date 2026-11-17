@@ -109,6 +109,7 @@ import com.example.ui.components.SimSelector
 import com.example.ui.theme.ScanRadius
 import com.example.ui.theme.scanColors
 import com.example.ui.util.LanguageManager
+import com.example.ui.util.TimeLabels
 import com.example.viewmodel.AppViewModel
 import com.example.viewmodel.PhoneViewModel
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
@@ -787,7 +788,16 @@ private fun RecentsTab(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                TextButton(onClick = onClear) {
+                // Quiet. It erases the whole history, and it sat above the list
+                // in the colour of the application, drawing the eye harder than
+                // any call underneath it. A destructive thing should be
+                // findable, never the brightest thing on the screen.
+                TextButton(
+                    onClick = onClear,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.Delete,
                         contentDescription = null,
@@ -883,11 +893,10 @@ private fun CallRow(
                 )
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    text = DateUtils.getRelativeTimeSpanString(
-                        entry.date,
-                        System.currentTimeMillis(),
-                        DateUtils.MINUTE_IN_MILLIS
-                    ).toString(),
+                    // The heading above already says which day. What was
+                    // missing from the row was the hour, and it printed the
+                    // date a second time instead.
+                    text = TimeLabels.clock(LocalContext.current, entry.date),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
@@ -900,19 +909,31 @@ private fun CallRow(
                 }
             }
         }
+        // One coloured thing per row, not two. Five rows carried five saturated
+        // greens and five saturated blues, side by side, and the eye had
+        // nowhere to rest: that is most of what made the list look old. The
+        // message is quiet, calling keeps its green — but inside a soft disc,
+        // which is what tells a thumb where to land.
         IconButton(onClick = onMessage) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.Message,
                 contentDescription = LanguageManager.getString("send_message"),
-                tint = MaterialTheme.colorScheme.primary,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.size(20.dp)
             )
         }
-        IconButton(onClick = onCall) {
+        FilledIconButton(
+            onClick = onCall,
+            colors = IconButtonDefaults.filledIconButtonColors(
+                containerColor = MaterialTheme.scanColors.successContainer,
+                contentColor = MaterialTheme.scanColors.success
+            ),
+            modifier = Modifier.size(40.dp)
+        ) {
             Icon(
                 imageVector = Icons.Rounded.Call,
                 contentDescription = LanguageManager.getString("call"),
-                tint = MaterialTheme.scanColors.success
+                modifier = Modifier.size(20.dp)
             )
         }
 

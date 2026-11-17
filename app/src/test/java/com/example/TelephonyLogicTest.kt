@@ -56,20 +56,29 @@ class TelephonyLogicTest {
     }
 
     /**
-     * The telephone answers a star-or-hash code itself, and nothing is ever
-     * added to the list of calls for it. The watchdog that re-places a call
-     * that never appeared must therefore leave these alone — it used to fire on
-     * every single one, announce that the call had not gone through, and send
-     * the code a second time, which is what put a second dialog of the operator
-     * on top of the first.
+     * A code the telephone answers itself begins with a star or a hash. It puts
+     * up its own dialog and creates no call, so the call screen stays away and
+     * the watchdog that re-places a call never fires on it.
      *
-     * A short number is the opposite case: it rings, so it is not one of these.
+     * The two cases that must not be swept in with it:
+     *
+     *  - a short number rings, so it is a call;
+     *  - the plans of Orange are dialled `222*1`, `224*30*2`, `202*3*1`. The
+     *    star is in the middle, the telephone places a plain call and shows no
+     *    dialog. Treating them as codes it answers itself is what hid the only
+     *    thing happening, so buying a plan on Orange showed nothing at all.
      */
     @Test
-    fun `only a star or a hash makes a code the telephone answers itself`() {
+    fun `a code the telephone answers itself begins with a star or a hash`() {
         assertTrue(NumberUtils.isMmi("#321#"))
         assertTrue(NumberUtils.isMmi("*114*500*1#"))
-        assertTrue(NumberUtils.isMmi("222*1"))
+        assertTrue(NumberUtils.isMmi("*100#"))
+
+        // Orange: a dial string, placed as a call, shown as a call.
+        assertFalse(NumberUtils.isMmi("222*1"))
+        assertFalse(NumberUtils.isMmi("224*30*2"))
+        assertFalse(NumberUtils.isMmi("202*3*1"))
+
         assertFalse(NumberUtils.isMmi("111"))
         assertFalse(NumberUtils.isMmi("0341234567"))
         assertFalse(NumberUtils.isMmi(""))

@@ -15,12 +15,14 @@ import androidx.compose.material.icons.rounded.Dialpad
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -143,6 +145,17 @@ fun WithSimRouting(
     /** When the last operation was started, so that a double tap sends one code. */
     var lastStart by remember { mutableStateOf(0L) }
 
+    /**
+     * The code on its way out, shown for as long as it is.
+     *
+     * Pressing a plan used to do nothing visible at all. On Orange it still
+     * does nothing visible for a moment — the code leaves as a call and the
+     * network takes a second to answer — and a user with a customer waiting
+     * presses again. This says, the instant the finger lifts, that the tap was
+     * taken and what is being sent.
+     */
+    var sending by remember { mutableStateOf<Sending?>(null) }
+
     /** The code the answer being shown came from, and what it was doing. */
     var answeredRequest by remember { mutableStateOf<DialRequest?>(null) }
 
@@ -196,15 +209,21 @@ fun WithSimRouting(
                 // app is the phone app it can see the call appear; if nothing
                 // appears, the call is placed again the ordinary way.
                 //
-                // Never for a code, though. A string with a star or a hash is
-                // not a call: the telephone hands it to the network and answers
-                // in a dialog of its own, and nothing is ever added to the list
-                // of calls for it. The watchdog therefore found nothing every
-                // single time — and said "the call did not go through, trying
-                // again" over the operator's own dialog, then opened a second
-                // one by sending the code a second time. That is the popup
-                // between the two dialogs, and this is where it came from.
-                val isCode = NumberUtils.isMmi(request.number)
+                // Never for a code, though — and here the wide meaning of the
+                // word is the right one: a string with a star or a hash
+                // anywhere, and a short number too.
+                //
+                // A true code the telephone answers itself creates no call, so
+                // the watchdog found nothing every single time — and said "the
+                // call did not go through, trying again" over the operator's
+                // own dialog, then sent the code a second time, which opened a
+                // second dialog. That is the popup between the two.
+                //
+                // And a code that does go out as a call must not be placed
+                // twice either: `222*1` buys a plan, and a plan bought twice is
+                // paid twice. Nothing with a star in it, and no short number,
+                // is ever re-placed behind the user.
+                val isCode = NumberUtils.isServiceCode(request.number)
                 if (!isCode &&
                     outcome == DialOutcome.CALLED &&
                     DefaultDialerManager.isDefaultDialer(context)
@@ -221,6 +240,12 @@ fun WithSimRouting(
 
             is DialRequest.Code -> {
                 val code = request.code
+                sending = Sending(
+                    label = request.label,
+                    code = code,
+                    simLabel = sim?.title,
+                    ownDialog = NumberUtils.isMmi(code)
+                )
                 val useInApp = AppSettings.inAppUssd(context) &&
                     AppSettings.inAppUssdWorks(context) &&
                     UssdRunner.isAvailable(context, code)
@@ -231,6 +256,7 @@ fun WithSimRouting(
                         when (result) {
                             is UssdResult.Success -> {
                                 AppSettings.recordInAppUssdSuccess(context)
+                                sending = null
                                 ussdAnswer = result.response
                                 answeredRequest = request
                                 record(request, sim)
@@ -246,6 +272,7 @@ fun WithSimRouting(
                             // the end of it.
                             is UssdResult.Unsupported -> {
                                 AppSettings.recordInAppUssdFailure(context)
+                                sending = null
                                 if (dialCode(code, sim)) record(request, sim)
                             }
                             // A refusal, or nothing at all. What is certain is
@@ -256,6 +283,7 @@ fun WithSimRouting(
                             // dials nothing, writes nothing, and asks.
                             else -> {
                                 AppSettings.recordInAppUssdFailure(context)
+                                sending = null
                                 ussdTrouble = request to routing
                             }
                         }
@@ -326,6 +354,68 @@ fun WithSimRouting(
     }
 
     content(SimLauncher(::start))
+
+    // The indicator never stays. It goes when the answer comes, when the
+    // telephone takes the code as a call — the call screen is then coming up by
+    // itself — and otherwise on its own, because an indicator that outlives
+    // what it indicates is worse than none.
+    LaunchedEffect(sending) {
+        val current = sending ?: return@LaunchedEffect
+        var waited = 0L
+        while (waited < SENDING_TIMEOUT_MS) {
+            delay(200)
+            waited += 200
+            if (sending !== current) return@LaunchedEffect
+            if (OngoingCallStore.hasCalls()) break
+        }
+        if (sending === current) sending = null
+    }
+
+    sending?.let { state ->
+        AlertDialog(
+            onDismissRequest = { sending = null },
+            icon = {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(28.dp),
+                    strokeWidth = 3.dp
+                )
+            },
+            title = {
+                Text(
+                    text = state.label.ifBlank {
+                        LanguageManager.getString("sending_code")
+                    },
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = state.code,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                    state.simLabel?.let { label ->
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = label,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(
+                        text = LanguageManager.getString(
+                            if (state.ownDialog) "sending_wait_dialog" else "sending_wait_call"
+                        ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            },
+            confirmButton = {}
+        )
+    }
 
     pendingNoLine?.let { (request, routing) ->
         val missingPermission = routing.status == RoutingStatus.NO_PERMISSION
@@ -567,6 +657,24 @@ fun WithSimRouting(
         }
     }
 }
+
+/**
+ * What is on its way out, for the indicator that says so.
+ *
+ * [ownDialog] separates the two shapes a code can take. One begins with a star
+ * or a hash and the telephone answers it in a dialog of its own; the other is a
+ * dial string such as `222*1`, which leaves as a call. The user is told which,
+ * because what they should expect to see next is not the same.
+ */
+private data class Sending(
+    val label: String,
+    val code: String,
+    val simLabel: String?,
+    val ownDialog: Boolean
+)
+
+/** How long the indicator waits before taking itself away. */
+private const val SENDING_TIMEOUT_MS = 6_000L
 
 /**
  * How long two presses count as one.
