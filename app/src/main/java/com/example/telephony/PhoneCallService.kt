@@ -132,7 +132,7 @@ class PhoneCallService : InCallService() {
      */
     private fun isServiceCode(call: Call): Boolean {
         val number = call.details?.handle?.schemeSpecificPart.orEmpty()
-        return number.contains('*') || number.contains('#')
+        return NumberUtils.isMmi(number)
     }
 
     /**

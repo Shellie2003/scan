@@ -38,6 +38,7 @@ import com.example.telephony.CallManager
 import com.example.telephony.DefaultDialerManager
 import com.example.telephony.OngoingCallStore
 import com.example.telephony.DialOutcome
+import com.example.telephony.NumberUtils
 import com.example.telephony.RoutingStatus
 import com.example.telephony.SimCard
 import com.example.telephony.SimManager
@@ -194,7 +195,20 @@ fun WithSimRouting(
                 // a refused phone account, a modem that says nothing. When the
                 // app is the phone app it can see the call appear; if nothing
                 // appears, the call is placed again the ordinary way.
-                if (outcome == DialOutcome.CALLED && DefaultDialerManager.isDefaultDialer(context)) {
+                //
+                // Never for a code, though. A string with a star or a hash is
+                // not a call: the telephone hands it to the network and answers
+                // in a dialog of its own, and nothing is ever added to the list
+                // of calls for it. The watchdog therefore found nothing every
+                // single time — and said "the call did not go through, trying
+                // again" over the operator's own dialog, then opened a second
+                // one by sending the code a second time. That is the popup
+                // between the two dialogs, and this is where it came from.
+                val isCode = NumberUtils.isMmi(request.number)
+                if (!isCode &&
+                    outcome == DialOutcome.CALLED &&
+                    DefaultDialerManager.isDefaultDialer(context)
+                ) {
                     scope.launch {
                         delay(CALL_WATCHDOG_MS)
                         if (!OngoingCallStore.hasCalls()) {

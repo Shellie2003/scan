@@ -47,6 +47,20 @@ object NumberUtils {
         return s.contains('*') || s.contains('#') || (s.length in 1..6 && !s.startsWith("+"))
     }
 
+    /**
+     * `true` for a code the telephone answers itself, with a dialog of its own.
+     *
+     * Narrower than [isServiceCode] on purpose: a four-digit short number is a
+     * correspondent that rings, and this must not call it a code. Only the star
+     * and the hash make a string the telephone hands to the network instead of
+     * placing a call — and nothing ever appears in the list of calls for it,
+     * which is the whole reason this exists.
+     */
+    fun isMmi(raw: String): Boolean {
+        val s = sanitize(raw)
+        return s.contains('*') || s.contains('#')
+    }
+
     /** Two numbers belong to the same subscriber. */
     fun sameNumber(a: String, b: String): Boolean {
         val na = toNational(a)

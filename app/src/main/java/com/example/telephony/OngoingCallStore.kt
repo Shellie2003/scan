@@ -56,7 +56,7 @@ data class CallSnapshot(
      * A star or a hash is what marks such a code. A short number without one is
      * a real number — customer service — and keeps its call screen.
      */
-    val isServiceCode: Boolean get() = number.contains('*') || number.contains('#')
+    val isServiceCode: Boolean get() = NumberUtils.isMmi(number)
 }
 
 /**

@@ -55,6 +55,26 @@ class TelephonyLogicTest {
         assertFalse(NumberUtils.isServiceCode("0341234567"))
     }
 
+    /**
+     * The telephone answers a star-or-hash code itself, and nothing is ever
+     * added to the list of calls for it. The watchdog that re-places a call
+     * that never appeared must therefore leave these alone — it used to fire on
+     * every single one, announce that the call had not gone through, and send
+     * the code a second time, which is what put a second dialog of the operator
+     * on top of the first.
+     *
+     * A short number is the opposite case: it rings, so it is not one of these.
+     */
+    @Test
+    fun `only a star or a hash makes a code the telephone answers itself`() {
+        assertTrue(NumberUtils.isMmi("#321#"))
+        assertTrue(NumberUtils.isMmi("*114*500*1#"))
+        assertTrue(NumberUtils.isMmi("222*1"))
+        assertFalse(NumberUtils.isMmi("111"))
+        assertFalse(NumberUtils.isMmi("0341234567"))
+        assertFalse(NumberUtils.isMmi(""))
+    }
+
     @Test
     fun `a pasted list is split on every usual separator`() {
         val numbers = NumberUtils.splitNumbers("0341234567, 0321234567; 0331234567\n0341234567")
