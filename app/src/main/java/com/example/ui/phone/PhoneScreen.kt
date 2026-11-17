@@ -1099,12 +1099,11 @@ private fun DayHeader(date: Long) {
         DateUtils.isToday(date + DateUtils.DAY_IN_MILLIS) ->
             LanguageManager.getString("yesterday")
 
-        else -> DateUtils.formatDateTime(
-            LocalContext.current,
-            date,
-            DateUtils.FORMAT_SHOW_DATE or DateUtils.FORMAT_ABBREV_MONTH or
-                DateUtils.FORMAT_SHOW_YEAR
-        )
+        // In figures, like every other date in the application. This heading
+        // was the last place still writing "Nov 1, 2025" — the month named in
+        // the language of the telephone, over rows written in the language the
+        // user chose. Half-translated is worse than either.
+        else -> TimeLabels.shortDate(date)
     }
     Text(
         text = label,
